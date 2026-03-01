@@ -32,11 +32,8 @@
         "hostinger-api-mcp@latest"
       ],
       "env": {
-        "API_TOKEN": "tjdnK4jr7UJ651wFZoWogqOVauhBdtqyRHs5n23E3c8118c3"
+        "API_TOKEN": "${input:api_token}"
       }
-    },
-    "glean_default": {
-      "httpUrl": "https://singlestore-be.glean.com/mcp/default"
     }
   }
 }

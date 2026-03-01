@@ -9,6 +9,10 @@ on:
 env:
   NODE_VERSION: "20"
 
+permissions:
+  contents: read
+  packages: read
+
 jobs:
   # ─── JOB 1: Fast type + lint check ────────────────────────────
   typecheck:
