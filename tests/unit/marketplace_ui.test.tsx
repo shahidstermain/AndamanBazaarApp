@@ -101,11 +101,13 @@ describe('Marketplace UI Logic (Vitest)', () => {
         const clearBtn = screen.getByRole('button', { name: /Clear All/i });
         fireEvent.click(clearBtn);
 
-        // After clearing, the filter panel closes, and the "All" category becomes active
+        // After clearing, the filter panel remains open, "All" category becomes active, and switch is reset to unchecked
         await waitFor(() => {
             const allCategory = screen.getByText(/🌊 All/i);
             expect(allCategory.className).toContain('bg-teal-600');
-            expect(screen.queryByRole('switch', { name: /Toggle verified sellers only/i })).toBeNull();
+            const switchEl = screen.queryByRole('switch', { name: /Toggle verified sellers only/i });
+            expect(switchEl).not.toBeNull();
+            expect(switchEl).not.toBeChecked();
         });
     });
 });

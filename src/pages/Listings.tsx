@@ -230,7 +230,6 @@ export const Listings: React.FC = () => {
     setMaxPrice('');
     setSortBy('newest');
     setShowVerifiedOnly(false);
-    setShowFilters(false);
     const newParams = new URLSearchParams(searchParams);
     newParams.delete('verified');
     setSearchParams(newParams);
