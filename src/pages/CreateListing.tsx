@@ -604,7 +604,7 @@ export const CreateListing: React.FC = () => {
                 <div className="space-y-3 pt-1">
                   <div className="flex items-center justify-between px-1">
                     <label htmlFor="isNegotiable" className="text-sm font-bold text-midnight-700">Negotiable</label>
-                    <input id="isNegotiable" title="Toggle negotiability" type="checkbox" checked={isNegotiable} onChange={e => setIsNegotiable(e.target.checked)} className="toggle toggle-accent" />
+                    <input id="isNegotiable" title="Toggle negotiability" type="checkbox" role="switch" checked={isNegotiable} onChange={e => setIsNegotiable(e.target.checked)} className="toggle toggle-accent" />
                   </div>
                   {isNegotiable && (
                     <div className="space-y-2">
