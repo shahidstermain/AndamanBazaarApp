@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@andaman-planner/shared": ["../../packages/shared/src/index.ts"],
+      "@andaman-planner/ui": ["../../packages/ui/src/index.ts"],
+      "@andaman-planner/supabase": ["../../packages/supabase/src/index.ts"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}

@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* No global CSS resets — safe to embed alongside AndamanBazaar */
+
+@layer base {
+  :root {
+    --planner-teal: #0d6e8e;
+    --planner-teal-light: #0d9e8a;
+    --planner-coral: #ff6b4a;
+    --planner-sandy: #f5c842;
+  }
+}
+
+/* Print styles for itinerary export */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  .print-break {
+    page-break-before: always;
+  }
+}

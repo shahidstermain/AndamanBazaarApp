@@ -1,0 +1,33 @@
+{
+  "name": "@andaman-planner/ui",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Portable React UI components for Andaman Planner Pro. No Next.js primitives. Works in Vite and Next.js.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./PlannerForm": "./src/PlannerForm.tsx",
+    "./ItineraryView": "./src/ItineraryView.tsx",
+    "./ItineraryCard": "./src/ItineraryCard.tsx"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "build": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "dependencies": {
+    "@andaman-planner/shared": "*",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.2",
+    "lucide-react": "^0.292.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.5.4"
+  }
+}

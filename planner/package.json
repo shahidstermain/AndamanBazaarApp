@@ -1,0 +1,23 @@
+{
+  "name": "andaman-planner-pro",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Andaman Planner Pro — AI-powered itinerary planner. Integration-safe monorepo for AndamanBazaar.in",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/planner-next",
+    "dev:vite": "npm run dev --workspace=apps/planner-vite",
+    "build": "npm run build --workspace=packages/shared && npm run build --workspace=packages/supabase && npm run build --workspace=packages/ui && npm run build --workspace=apps/planner-next",
+    "build:next": "npm run build --workspace=apps/planner-next",
+    "build:vite": "npm run build --workspace=apps/planner-vite",
+    "type-check": "npm run type-check --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

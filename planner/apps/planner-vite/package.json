@@ -1,0 +1,33 @@
+{
+  "name": "@andaman-planner/vite-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vite demo harness proving @andaman-planner/ui embeds cleanly in a Vite React app (mirrors AndamanBazaar.in environment)",
+  "scripts": {
+    "dev": "vite --port 5174",
+    "build": "tsc && vite build",
+    "preview": "vite preview --port 5174",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@andaman-planner/shared": "*",
+    "@andaman-planner/ui": "*",
+    "@supabase/supabase-js": "^2.45.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.292.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.0",
+    "tailwind-merge": "^2.5.2"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.24",
+    "postcss": "^8.4.41",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.21"
+  }
+}
