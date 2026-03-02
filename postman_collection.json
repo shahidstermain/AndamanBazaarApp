@@ -1,0 +1,92 @@
+{
+  "info": {
+    "name": "AndamanBazaar API",
+    "_postman_id": "dbb944ff-2a8a-4f95-b11a-0d6f307b458f",
+    "description": "Manual testing collection for AndamanBazaar backend APIs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Activities",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/activities?location=North%20Bay&type=Adventure",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "activities"],
+          "query": [
+            { "key": "location", "value": "North Bay" },
+            { "key": "type", "value": "Adventure" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Activity by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/activities/{{activityId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "activities", "{{activityId}}"]
+        }
+      }
+    },
+    {
+      "name": "Create Lead",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Rahul Das\",\n  \"phone\": \"9876543210\",\n  \"email\": \"rahul@example.com\",\n  \"preferred_date\": \"2026-07-20\",\n  \"location\": \"North Bay\",\n  \"activities\": [\"Scuba Diving\"],\n  \"adults\": 2,\n  \"children\": 0,\n  \"swimming_ability\": \"Beginner\",\n  \"budget\": 9000,\n  \"referral_source\": \"Instagram\",\n  \"special_requests\": \"Need underwater photos\",\n  \"consent\": true\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/leads",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "leads"]
+        }
+      }
+    },
+    {
+      "name": "Get Admin Leads",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "x-api-key", "value": "{{adminApiKey}}" }],
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/leads?status=new",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "leads"],
+          "query": [{ "key": "status", "value": "new" }]
+        }
+      }
+    },
+    {
+      "name": "Update Lead Status",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "x-api-key", "value": "{{adminApiKey}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"contacted\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/admin/leads/{{leadId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "admin", "leads", "{{leadId}}"]
+        }
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000" },
+    { "key": "adminApiKey", "value": "replace_with_admin_key" },
+    { "key": "activityId", "value": "replace_activity_id" },
+    { "key": "leadId", "value": "replace_lead_id" }
+  ]
+}

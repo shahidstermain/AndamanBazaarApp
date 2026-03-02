@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum LeadStatus {
+  new
+  contacted
+  confirmed
+}
+
+model Operator {
+  id         String     @id @default(cuid())
+  name       String
+  email      String?
+  phone      String?
+  location   String
+  activities Activity[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+model Activity {
+  id               String    @id @default(cuid())
+  slug             String    @unique
+  title            String
+  description      String
+  location         String
+  types            String[]
+  duration_minutes Int
+  price_min        Int
+  price_max        Int
+  age_min          Int?
+  images           String[]
+  safety_notes     String
+  operator_id      String?
+  operator         Operator? @relation(fields: [operator_id], references: [id])
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model Lead {
+  id               String     @id @default(cuid())
+  name             String
+  phone            String
+  email            String?
+  preferred_date   DateTime
+  location         String
+  activities       String[]
+  adults           Int
+  children         Int        @default(0)
+  swimming_ability String
+  budget           Int
+  referral_source  String?
+  special_requests String?
+  consent          Boolean
+  status           LeadStatus @default(new)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+}
