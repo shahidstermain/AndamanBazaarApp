@@ -8,6 +8,7 @@ import {
   Filter, ChevronDown
 } from 'lucide-react';
 import { useToast } from '../components/Toast';
+import { COPY } from '../lib/localCopy';
 
 export const Admin: React.FC = () => {
   const navigate = useNavigate();
@@ -160,7 +161,7 @@ export const Admin: React.FC = () => {
                 <ShieldAlert size={12} className="text-coral-400" /> Admin Console
               </div>
               <h1 className="text-3xl md:text-4xl font-heading font-black tracking-tight">Dashboard Overview</h1>
-              <p className="text-white/60 mt-2 font-medium">Manage listings, reports, and user safety.</p>
+              <p className="text-white/60 mt-2 font-medium">{COPY.ADMIN.DASHBOARD_GREETING}</p>
             </div>
             
             <div className="flex gap-3">
@@ -199,7 +200,7 @@ export const Admin: React.FC = () => {
           <div className="p-6 md:p-8 border-b border-warm-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-heading font-black text-midnight-700">Moderation Queue</h2>
-              <p className="text-sm text-warm-400 font-medium">Review reported listings and user flags</p>
+              <p className="text-sm text-warm-400 font-medium">{stats.pendingReports > 0 ? COPY.ADMIN.PENDING_QUEUE(stats.pendingReports) : 'Review reported listings and user flags'}</p>
             </div>
             
             <div className="flex items-center gap-3">

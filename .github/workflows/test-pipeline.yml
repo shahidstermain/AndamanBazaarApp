@@ -1,0 +1,131 @@
+name: Test Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  VITE_SUPABASE_URL: https://mock.supabase.co
+  VITE_SUPABASE_ANON_KEY: mock-anon-key-for-testing-only-must-be-long-enough
+  VITE_CASHFREE_ENV: sandbox
+  NODE_ENV: test
+
+jobs:
+  # ─── Unit Tests + Coverage ──────────────────────────────────────────────────
+  unit-tests:
+    name: Unit Tests (Vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run Vitest with coverage
+        run: npx vitest run --coverage --reporter=json --outputFile=test-results.json
+
+      - name: Check coverage thresholds
+        run: |
+          npx vitest run --coverage 2>&1 | tee coverage-output.txt
+          # Fail if coverage below 70%
+          if grep -q "ERROR" coverage-output.txt; then
+            echo "::error::Coverage thresholds not met"
+            exit 1
+          fi
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+
+  # ─── Security Tests ─────────────────────────────────────────────────────────
+  security-tests:
+    name: Security Audit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Run security tests
+        run: npx vitest run tests/security/
+
+  # ─── E2E Tests (Playwright) ─────────────────────────────────────────────────
+  e2e-tests:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright E2E tests
+        run: npx playwright test --project=chromium --reporter=html
+        env:
+          VITE_E2E_BYPASS_AUTH: 'true'
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
+
+  # ─── TypeScript Type Check ──────────────────────────────────────────────────
+  typecheck:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+  # ─── Notification on Failure ────────────────────────────────────────────────
+  notify-failure:
+    name: Notify on Failure
+    runs-on: ubuntu-latest
+    needs: [unit-tests, security-tests, e2e-tests, typecheck]
+    if: failure()
+    steps:
+      - name: Send failure notification
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          payload: |
+            {
+              "text": "🔴 AndamanBazaar test pipeline FAILED on ${{ github.ref_name }}\nCommit: ${{ github.event.head_commit.message }}\nAuthor: ${{ github.actor }}\nRun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true

@@ -116,6 +116,12 @@ export const BoostListingModal: React.FC<BoostListingModalProps> = ({
         }
     };
 
+    const tierTaglines: Record<string, string> = {
+        spark: COPY.BOOST.TIER_49,
+        boost: COPY.BOOST.TIER_99,
+        power: COPY.BOOST.TIER_199,
+    };
+
     const selectedTierData = BOOST_TIERS.find(t => t.key === selectedTier)!;
 
     return (
@@ -182,6 +188,7 @@ export const BoostListingModal: React.FC<BoostListingModalProps> = ({
                                             <span className="text-xs text-warm-400 font-medium ml-1">/ {tier.duration}</span>
                                         </div>
                                     </div>
+                                    <p className="text-[11px] text-warm-500 font-medium mt-0.5">{tierTaglines[tier.key]}</p>
 
                                     {selectedTier === tier.key && (
                                         <ul className="mt-3 space-y-1.5 animate-fade-in">

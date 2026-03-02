@@ -7,6 +7,7 @@ import { Listing, Profile } from '../types';
 import { MapPin, Shield, Share2, MessageSquare, Heart, ChevronLeft, AlertCircle, Edit3, Loader2, Tag, Clock, ShieldCheck, Package, Phone, MessageCircle, BadgeCheck, Rocket, Star } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { BoostListingModal } from '../components/BoostListingModal';
+import { COPY } from '../lib/localCopy';
 
 export const ListingDetail: React.FC = () => {
   const { id } = useParams();
@@ -145,14 +146,14 @@ export const ListingDetail: React.FC = () => {
       } else {
         // Fallback: copy to clipboard
         await navigator.clipboard.writeText(shareUrl);
-        showToast('Link copied to clipboard!', 'success');
+        showToast(COPY.TOAST.SAVE_SUCCESS, 'success');
       }
     } catch (err: any) {
       // User cancelled share dialog, or share failed — copy to clipboard as fallback
       if (err?.name !== 'AbortError' && err?.message !== 'Share canceled') {
         try {
           await navigator.clipboard.writeText(shareUrl);
-          showToast('Link copied to clipboard!', 'success');
+          showToast(COPY.TOAST.SAVE_SUCCESS, 'success');
         } catch {
           showToast('Could not copy link.', 'error');
         }

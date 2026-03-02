@@ -262,7 +262,7 @@ export const Profile: React.FC = () => {
       fetchProfileAndStats();
       setDeleteConfirmationId(null);
       setActiveMenuId(null);
-      showToast('Listing has been removed.', 'success');
+      showToast(COPY.TOAST.LISTING_DELETED, 'success');
     } catch (err) { showToast('Could not delete listing.', 'error'); }
   };
 
@@ -272,7 +272,7 @@ export const Profile: React.FC = () => {
     const url = `${window.location.origin}/#/listings/${id}`;
     try {
       if (navigator.share) await navigator.share({ title: 'Check out this listing on AndamanBazaar!', url });
-      else { await navigator.clipboard.writeText(url); showToast('Link copied to clipboard!', 'success'); }
+      else { await navigator.clipboard.writeText(url); showToast(COPY.TOAST.SAVE_SUCCESS, 'success'); }
     } catch (err) { console.error('Error sharing:', err); }
     setActiveMenuId(null);
   };

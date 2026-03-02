@@ -7,6 +7,7 @@ import { Send, ChevronLeft, ShieldCheck, Check, CheckCheck } from 'lucide-react'
 import { messageSchema, sanitizePlainText } from '../lib/validation';
 import { checkRateLimit, logAuditEvent, sanitizeErrorMessage } from '../lib/security';
 import { useToast } from '../components/Toast';
+import { COPY } from '../lib/localCopy';
 
 export const ChatRoom: React.FC = () => {
   const { chatId } = useParams();
@@ -267,7 +268,8 @@ export const ChatRoom: React.FC = () => {
 
   if (!chat) return (
     <div className="h-screen flex flex-col items-center justify-center p-8 text-center bg-white">
-      <h2 className="text-2xl font-black mb-4 uppercase tracking-tighter">Chat Unavailable</h2>
+      <h2 className="text-2xl font-black mb-2 uppercase tracking-tighter">Chat Unavailable</h2>
+      <p className="text-sm text-slate-500 font-medium mb-4">{COPY.CHAT.SELLER_UNAVAILABLE}</p>
       <Link to="/chats" className="bg-ocean-700 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest">Back to Inbox</Link>
     </div>
   );
@@ -315,7 +317,7 @@ export const ChatRoom: React.FC = () => {
           </div>
         )}
         <div className="text-center py-6">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] bg-slate-100 inline-block px-4 py-1 rounded-full">Conversation Started</p>
+          <p className="text-[11px] font-bold text-slate-500 bg-slate-100 inline-block px-4 py-1.5 rounded-full">{COPY.CHAT.CONVERSATION_STARTED}</p>
         </div>
 
         {messages.map((msg) => {

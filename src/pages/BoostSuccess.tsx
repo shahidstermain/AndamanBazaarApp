@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { CheckCircle, XCircle, ArrowLeft, Loader2 } from 'lucide-react';
+import { COPY } from '../lib/localCopy';
 
 export const BoostSuccess: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -79,7 +80,7 @@ export const BoostSuccess: React.FC = () => {
                         </div>
                         <h2 className="text-2xl font-black font-heading text-midnight-800 mb-2">Payment Successful!</h2>
                         <p className="text-warm-600 mb-8">
-                            Your listing is now boosted and will receive priority placement.
+                            {COPY.SUCCESS.BOOST_ACTIVATED}
                         </p>
                         <button
                             onClick={() => navigate(listingId ? `/listings/${listingId}` : '/profile')}

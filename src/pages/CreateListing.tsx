@@ -860,7 +860,7 @@ export const CreateListing: React.FC = () => {
                       onClick={() => {
                         const url = `${window.location.origin}/listings/${createdListingId}`;
                         navigator.clipboard.writeText(url);
-                        showToast('Link copied to clipboard!', 'success');
+                        showToast(COPY.TOAST.SAVE_SUCCESS, 'success');
                         logAuditEvent({ action: 'share_intent', resource_type: 'listing', resource_id: createdListingId, metadata: { platform: 'copy_link' } });
                       }}
                       className="w-14 h-14 rounded-2xl bg-warm-100 text-midnight-600 flex items-center justify-center hover:bg-warm-200 hover:scale-105 transition-all shadow-sm"

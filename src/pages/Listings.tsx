@@ -6,6 +6,7 @@ import { Listing } from '../types';
 import { Search, MapPin, Heart, Sparkles, Filter, X, ChevronDown, ArrowUpDown, Loader2 } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { getDemoListings, isDemoListing } from '../lib/demoListings';
+import { COPY } from '../lib/localCopy';
 
 const CATEGORIES = [
   { label: '🌊 All', slug: 'all' },
@@ -400,8 +401,8 @@ export const Listings: React.FC = () => {
           <div className="col-span-full py-24 text-center space-y-5 bg-warm-50 rounded-3xl border-2 border-dashed border-warm-200 animate-fade-in">
             <div className="text-5xl animate-float">🏝️</div>
             <div className="space-y-1.5">
-              <h3 className="text-xl font-heading font-bold text-midnight-700">Nothing found yet</h3>
-              <p className="text-warm-400 text-sm max-w-xs mx-auto">The island network is live — try different keywords or clear your filters.</p>
+              <h3 className="text-xl font-heading font-bold text-midnight-700">{COPY.EMPTY_STATE.NO_SEARCH_RESULTS}</h3>
+              <p className="text-warm-400 text-sm max-w-xs mx-auto">{COPY.EMPTY_STATE.NO_LISTINGS}</p>
             </div>
             <button onClick={handleClearFilters} className="btn-primary text-sm py-2.5">Clear Filters</button>
           </div>
