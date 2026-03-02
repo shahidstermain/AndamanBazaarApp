@@ -1,199 +1,289 @@
-# 🏝️ AndamanBazaar
+# AndamanBazaar Water Adventures Platform
 
-[![CI/CD Pipeline](https://github.com/shahidster1711/AndamanBazaarApp/actions/workflows/ci.yml/badge.svg)](https://github.com/shahidster1711/AndamanBazaarApp/actions/workflows/ci.yml)
+Full-stack monorepo for listing Andaman water adventures and capturing booking leads.
 
-**AndamanBazaar** is a modern, full-stack marketplace web application built for the Andaman Islands community. It enables users to create, browse, and manage listings, communicate via real-time chat, and boost their listings with integrated payment processing.
+## Tech Stack
 
-## ✨ Features
+- **Frontend**: React + Vite + TypeScript + Tailwind CSS
+- **Backend**: Node.js + Express + TypeScript + Zod
+- **Database**: PostgreSQL + Prisma ORM (migrations + seed)
+- **Notifications**: Pluggable providers (Nodemailer local + SendGrid placeholder) + webhook retry/backoff
+- **Tests**:
+  - Backend: Jest + Supertest
+  - Frontend: React Testing Library + Vitest
+- **Infra**: Docker + Docker Compose + GitHub Actions
 
-- **🛒 Marketplace Listings** – Create, edit, and browse product/service listings with image uploads
-- **💬 Real-time Chat** – Communicate with buyers/sellers via integrated chat system
-- **🔐 Authentication** – Secure user authentication powered by Supabase Auth
-- **📊 User Dashboard** – Manage your listings, view analytics, and track activity
-- **⚡ Listing Boost** – Promote listings with integrated Cashfree payment processing
-- **📧 Invoice Generation** – Automated invoice creation and email delivery
-- **🔒 Security First** – XSS protection, input sanitization, rate limiting, and CSRF protection
-- **♿ Accessibility** – WCAG 2.1 Level AA compliant
-- **📱 Responsive Design** – Mobile-first design with Tailwind CSS
-- **🌐 PWA Ready** – Progressive Web App capabilities for offline access
+## Features
 
-## 🛠️ Tech Stack
+- Public listing pages:
+  - `/` Featured activities + filter/search
+  - `/activities` Paginated all activities
+  - `/activities/:slug` Activity details with booking CTA
+- Lead capture form with validation and prefill from activity pages
+- Success message after lead submission:
+  - **"Thank you — we usually reach out within 12 hours of submission. Kindly wait."**
+- Admin lead management:
+  - `/admin/leads`
+  - Filter by status (`new`, `contacted`, `confirmed`)
+  - Update lead status
+  - Protected via API key or basic auth
+- Lead notifications:
+  - Email to operator
+  - Optional webhook POST with retry/backoff
+- Rate limiting for lead creation (10 requests/IP/hour)
 
-| Category | Technologies |
-|----------|-------------|
-| **Frontend** | React 18, TypeScript, Vite, Tailwind CSS, DaisyUI |
-| **Backend** | Supabase (PostgreSQL, Auth, Storage, Edge Functions) |
-| **Payments** | Cashfree Payment Gateway |
-| **AI** | Google Generative AI (optional features) |
-| **Testing** | Vitest, Playwright, React Testing Library, axe-core |
-| **CI/CD** | GitHub Actions, Docker, Nginx/Caddy |
-| **Hosting** | Firebase Hosting / cPanel (rsync deploy) |
+---
 
-## 📋 Prerequisites
+## Project Structure
 
-- **Node.js** 20.x or higher
-- **npm** 9.x or higher
-- **Supabase** account and project
-- **Firebase CLI** (optional, for Firebase Hosting)
-
-## 🚀 Getting Started
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/shahidster1711/AndamanBazaarApp.git
-cd AndamanBazaarApp
+```text
+.
+├── backend/
+│   ├── prisma/
+│   │   ├── migrations/
+│   │   ├── schema.prisma
+│   │   └── seed.ts
+│   ├── scripts/
+│   │   ├── export-leads-csv.ts
+│   │   └── init.sh
+│   ├── src/
+│   │   ├── controllers/
+│   │   ├── middlewares/
+│   │   ├── routes/
+│   │   ├── schemas/
+│   │   ├── services/
+│   │   └── ...
+│   └── tests/
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── pages/
+│   │   ├── lib/
+│   │   └── ...
+│   └── ...
+├── docs/
+│   └── api-contract.json
+├── docker-compose.yml
+├── postman_collection.json
+└── .github/workflows/ci.yml
 ```
 
-### 2. Install dependencies
+---
 
-```bash
-npm install
-```
+## Environment Variables
 
-### 3. Configure environment variables
-
-Copy the example environment file and fill in your values:
+Copy `.env.example` to `.env` and update values:
 
 ```bash
 cp .env.example .env
 ```
 
-Required variables:
-```env
-VITE_SUPABASE_URL=https://your-project-id.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key-here
-VITE_SUPABASE_PROJECT_ID=your-project-id-here
-# Optional: For AI-powered features
-VITE_GOOGLE_AI_API_KEY=your-google-ai-key
-```
+Required keys:
 
-### 4. Start the development server
+- `DATABASE_URL`
+- `PORT`
+- `ADMIN_API_KEY`
+- `OPERATOR_EMAIL`
+- `EMAIL_SMTP_HOST`
+- `EMAIL_SMTP_PORT`
+- `EMAIL_SMTP_USER`
+- `EMAIL_SMTP_PASS`
+- `LEAD_WEBHOOK_URL`
+- `VITE_API_URL`
+
+Optional:
+
+- `ADMIN_BASIC_USER`
+- `ADMIN_BASIC_PASS`
+- `EMAIL_PROVIDER` (`nodemailer` or `sendgrid`)
+- `WEBHOOK_RETRY_ATTEMPTS`
+- `WEBHOOK_RETRY_BASE_MS`
+
+---
+
+## Run with Docker (recommended)
 
 ```bash
+docker compose up --build
+```
+
+Services:
+
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:4000/api
+- Postgres: localhost:5432
+
+The backend container runs:
+1. Prisma generate
+2. Prisma migration deploy
+3. Prisma seed
+4. API server startup
+
+---
+
+## Local Development (without Docker)
+
+### 1) Backend
+
+```bash
+cd backend
+npm install
+npm run prisma:generate
+npm run prisma:migrate:deploy
+npm run prisma:seed
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`
-
-## 🧪 Testing
+### 2) Frontend
 
 ```bash
-# Run all tests
+cd frontend
+npm install
+npm run dev
+```
+
+---
+
+## Database & Seed Commands
+
+```bash
+cd backend
+npm run prisma:migrate:deploy
+npm run prisma:seed
+```
+
+Export leads to CSV:
+
+```bash
+cd backend
+npm run export:leads -- ./leads.csv
+```
+
+---
+
+## Testing
+
+### Backend
+
+```bash
+cd backend
 npm test
-
-# Run unit tests only
-npm run test:unit
-
-# Run integration tests
-npm run test:integration
-
-# Run E2E tests (requires Playwright)
-npm run test:e2e
-
-# Run security tests
-npm run test:security
-
-# Run accessibility tests
-npm run test:accessibility
-
-# Generate coverage report
-npm run test:coverage
-
-# Run all test suites
-npm run test:all
 ```
 
-## 📦 Building for Production
+### Frontend
 
 ```bash
-# Build the application
+cd frontend
+npm test
+```
+
+---
+
+## Lint & Build
+
+### Backend
+
+```bash
+cd backend
+npm run lint
 npm run build
-
-# Preview production build locally
-npm run preview
 ```
 
-## 🚢 Deployment
-
-### Option 1: Firebase Hosting
+### Frontend
 
 ```bash
-# Login to Firebase
-firebase login
-
-# Initialize hosting (first time only)
-firebase init hosting
-
-# Deploy
-firebase deploy --only hosting
+cd frontend
+npm run lint
+npm run build
 ```
 
-### Option 2: Docker
+---
+
+## API Quick Examples (curl)
+
+### Get activities with filters
 
 ```bash
-# Build and run with Docker Compose
-docker-compose up -d
+curl "http://localhost:4000/api/activities?location=North%20Bay&type=Adventure&priceMin=1000&priceMax=8000"
 ```
 
-### Option 3: cPanel/VPS (rsync)
+### Get one activity by id
 
-The CI/CD pipeline automatically deploys to cPanel on push to `main` branch via rsync over SSH.
-
-For more details, see [DEPLOYMENT.md](./DEPLOYMENT.md).
-
-## 📁 Project Structure
-
-```
-AndamanBazaarApp/
-├── src/
-│   ├── components/     # Reusable UI components
-│   ├── pages/          # Route page components
-│   ├── hooks/          # Custom React hooks
-│   ├── lib/            # Utilities, helpers, and services
-│   └── types.ts        # TypeScript type definitions
-├── supabase/
-│   ├── functions/      # Edge Functions (webhooks, invoices)
-│   └── migrations/     # Database migrations
-├── tests/
-│   ├── unit/           # Unit tests
-│   ├── integration/    # Integration tests
-│   ├── e2e/            # End-to-end tests (Playwright)
-│   ├── security/       # Security tests
-│   └── accessibility/  # Accessibility tests
-├── public/             # Static assets
-└── stitch/             # Design prototypes (HTML mockups)
+```bash
+curl "http://localhost:4000/api/activities/<activity_id>"
 ```
 
-## 📖 Documentation
+### Create lead
 
-| Document | Description |
-|----------|-------------|
-| [DEPLOYMENT.md](./DEPLOYMENT.md) | Deployment guides for Firebase and cPanel |
-| [CI_CD_STRATEGY.md](./CI_CD_STRATEGY.md) | CI/CD pipeline and visual testing strategy |
-| [TEST_PLAN.md](./TEST_PLAN.md) | Comprehensive test plan and coverage targets |
-| [PERFORMANCE_OPTIMIZATIONS.md](./PERFORMANCE_OPTIMIZATIONS.md) | Performance optimization details |
-| [SECURITY.md](./SECURITY.md) | Security policy and vulnerability reporting |
+```bash
+curl -X POST "http://localhost:4000/api/leads" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Rahul Das",
+    "phone": "9876543210",
+    "email": "rahul@example.com",
+    "preferred_date": "2026-07-20",
+    "location": "North Bay",
+    "activities": ["Scuba Diving", "Jet Skiing"],
+    "adults": 2,
+    "children": 0,
+    "swimming_ability": "Beginner",
+    "budget": 10000,
+    "referral_source": "Instagram",
+    "special_requests": "Need underwater photos",
+    "consent": true
+  }'
+```
 
-## 🔐 Security
+### List admin leads
 
-Please report security vulnerabilities by emailing **shahidstalker@gmail.com** rather than opening a public GitHub issue.
+```bash
+curl "http://localhost:4000/api/admin/leads?status=new" \
+  -H "x-api-key: <ADMIN_API_KEY>"
+```
 
-See [SECURITY.md](./SECURITY.md) for our full security policy.
+### Update lead status
 
-## 🤝 Contributing
+```bash
+curl -X PATCH "http://localhost:4000/api/admin/leads/<lead_id>" \
+  -H "x-api-key: <ADMIN_API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"contacted"}'
+```
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Run tests and ensure they pass (`npm run test:all`)
-4. Commit your changes (`git commit -m 'Add amazing feature'`)
-5. Push to the branch (`git push origin feature/amazing-feature`)
-6. Open a Pull Request
+---
 
-## 📄 License
+## API Contract & Manual Testing
 
-This project is licensed under the terms specified in the [LICENSE](./LICENSE) file.
+- API contract: `docs/api-contract.json`
+- Postman collection: `postman_collection.json`
 
-## 📧 Contact
+---
 
-For questions or support, please open an issue or contact the maintainers at **shahidstalker@gmail.com**.
+## Make Targets
+
+```bash
+make up          # docker compose up --build
+make down        # stop containers
+make db-init     # run migrations + seed
+make backend-test
+make frontend-test
+```
+
+---
+
+## Deployment Notes
+
+### Option A: Single VM (Docker Compose)
+1. Provision VM (Ubuntu)
+2. Install Docker + Compose plugin
+3. Clone repo and set `.env`
+4. Run `docker compose up -d --build`
+5. Put reverse proxy (Nginx/Caddy) in front for HTTPS
+
+### Option B: Split deployment
+- Deploy backend container to Render/Fly.io/AWS ECS
+- Deploy frontend to Vercel/Netlify with `VITE_API_URL` set to backend URL
+- Use managed Postgres (Neon/RDS/Supabase Postgres)
+

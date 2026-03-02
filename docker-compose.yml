@@ -1,37 +1,58 @@
 services:
-  app:
-    build:
-      context: .
-      args:
-        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
-        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
-        VITE_SUPABASE_PROJECT_ID: ${VITE_SUPABASE_PROJECT_ID}
-        VITE_GOOGLE_AI_API_KEY: ${VITE_GOOGLE_AI_API_KEY:-}
-    container_name: andamanbazaar-app
+  db:
+    image: postgres:17-alpine
     restart: unless-stopped
-    networks:
-      - web
-
-  caddy:
-    image: caddy:2-alpine
-    container_name: andamanbazaar-caddy
-    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: andamanbazaar
     ports:
-      - "80:80"
-      - "443:443"
+      - "5432:5432"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d andamanbazaar"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
     depends_on:
-      - app
-    networks:
-      - web
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/andamanbazaar?schema=public
+      FRONTEND_ORIGIN: http://localhost:5173
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-dev-admin-key}
+      ADMIN_BASIC_USER: ${ADMIN_BASIC_USER:-admin}
+      ADMIN_BASIC_PASS: ${ADMIN_BASIC_PASS:-andaman123}
+      OPERATOR_EMAIL: ${OPERATOR_EMAIL:-operator@example.com}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-nodemailer}
+      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST:-}
+      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT:-587}
+      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER:-}
+      EMAIL_SMTP_PASS: ${EMAIL_SMTP_PASS:-}
+      LEAD_WEBHOOK_URL: ${LEAD_WEBHOOK_URL:-}
+      WEBHOOK_RETRY_ATTEMPTS: ${WEBHOOK_RETRY_ATTEMPTS:-3}
+      WEBHOOK_RETRY_BASE_MS: ${WEBHOOK_RETRY_BASE_MS:-800}
+    ports:
+      - "4000:4000"
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
+    ports:
+      - "5173:5173"
 
 volumes:
-  caddy_data:
-  caddy_config:
-
-networks:
-  web:
-    driver: bridge
+  postgres_data:

@@ -1,160 +1,108 @@
-name: CI/CD Pipeline
+name: AndamanBazaar CI
 
 on:
   push:
-    branches: [main]
+    branches: ["main"]
   pull_request:
-    branches: [main]
+    branches: ["main"]
 
 env:
-  NODE_VERSION: "20"
-
-permissions:
-  contents: read
-  packages: read
+  NODE_VERSION: "22"
 
 jobs:
-  # ─── JOB 1: Fast type + lint check ────────────────────────────
-  typecheck:
-    name: Type Check & Lint
+  backend:
+    name: Backend - lint, test, build
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Type Check
-        run: npx tsc --noEmit
-
-  # ─── JOB 2: Unit tests (parallel with typecheck) ───────────────
-  unit-tests:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run Unit Tests
-        run: npm run test:unit
+    services:
+      postgres:
+        image: postgres:17-alpine
         env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          CI: true
-
-      - name: Upload Coverage
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage/
-          retention-days: 7
-
-  # ─── JOB 3: Build (depends on type+unit passing) ───────────────
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    needs: [typecheck, unit-tests]
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: andamanbazaar_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d andamanbazaar_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/andamanbazaar_test?schema=public
+      OPERATOR_EMAIL: operator@example.com
+      ADMIN_API_KEY: test-admin-key
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
 
-      - name: Install dependencies
+      - name: Install backend dependencies
+        working-directory: backend
         run: npm ci
 
-      - name: Build Application
+      - name: Generate Prisma client
+        working-directory: backend
+        run: npm run prisma:generate
+
+      - name: Run migrations
+        working-directory: backend
+        run: npm run prisma:migrate:deploy
+
+      - name: Lint backend
+        working-directory: backend
+        run: npm run lint
+
+      - name: Test backend
+        working-directory: backend
+        run: npm test
+
+      - name: Build backend
+        working-directory: backend
         run: npm run build
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
-          VITE_GOOGLE_AI_API_KEY: ${{ secrets.VITE_GOOGLE_AI_API_KEY }}
 
-      - name: Upload dist artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist-build
-          path: dist/
-          retention-days: 1
-
-  # ─── JOB 4: Deploy (only on main push, reuses build artifact) ──
-  deploy:
-    name: Deploy to cPanel (FTP)
+  frontend:
+    name: Frontend - lint, test, build
     runs-on: ubuntu-latest
-    needs: [build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    steps:
-      - name: Download dist artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dist-build
-          path: dist/
-
-      - name: Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ftp.shahidster.site
-          username: shahidster.site
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: dist/
-          server-dir: public_html/andamanbazaar/
-
-  # ─── JOB 5: E2E (non-blocking, runs in parallel with deploy) ───
-  e2e:
-    name: E2E Tests (non-blocking)
-    runs-on: ubuntu-latest
-    needs: [build]
-    if: github.event_name == 'push'
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
-      - name: Install dependencies
+      - name: Install frontend dependencies
+        working-directory: frontend
         run: npm ci
 
-      - name: Install Playwright (chromium only)
-        run: npx playwright install chromium --with-deps
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint
 
-      - name: Download dist artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: dist-build
-          path: dist/
+      - name: Test frontend
+        working-directory: frontend
+        run: npm test
 
-      - name: Run E2E Tests
-        run: npx playwright test
-        env:
-          CI: true
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
 
-      - name: Upload Playwright Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 7
+  docker-build:
+    name: Build Docker images
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build -t andamanbazaar/backend:ci ./backend
+
+      - name: Build frontend image
+        run: docker build -t andamanbazaar/frontend:ci ./frontend

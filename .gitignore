@@ -8,6 +8,8 @@ firebase-debug.log
 .gemini/
 .env.test
 .env.*
+!.env.example
+!**/.env.example
 .DS_Store
 .vscode/
 playwright-report/

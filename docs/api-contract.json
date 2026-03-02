@@ -1,0 +1,93 @@
+{
+  "name": "AndamanBazaar API Contract",
+  "version": "1.0.0",
+  "baseUrl": "/api",
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/activities",
+      "query": {
+        "location": "string (optional)",
+        "type": "string (optional)",
+        "priceMin": "number (optional)",
+        "priceMax": "number (optional)",
+        "page": "number (optional, default: 1)",
+        "pageSize": "number (optional, default: 10)",
+        "featured": "boolean (optional)"
+      },
+      "response": {
+        "data": "Activity[]",
+        "meta": {
+          "total": "number",
+          "page": "number",
+          "pageSize": "number",
+          "totalPages": "number"
+        }
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/activities/:id",
+      "response": {
+        "data": "Activity"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/activities/slug/:slug",
+      "response": {
+        "data": "Activity"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/leads",
+      "body": {
+        "name": "string (required)",
+        "phone": "string (required)",
+        "email": "string (optional)",
+        "preferred_date": "ISO date string (required)",
+        "location": "string (required)",
+        "activities": "string[] (required, min 1)",
+        "adults": "number (required, min 1)",
+        "children": "number (optional, default 0)",
+        "swimming_ability": "string (required)",
+        "budget": "number (required)",
+        "referral_source": "string (optional)",
+        "special_requests": "string (optional)",
+        "consent": "boolean (required, must be true)"
+      },
+      "response": {
+        "ok": "true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/admin/leads",
+      "auth": "x-api-key OR basic auth",
+      "query": {
+        "status": "new | contacted | confirmed (optional)"
+      },
+      "response": {
+        "data": "Lead[]",
+        "meta": {
+          "total": "number",
+          "page": "number",
+          "pageSize": "number",
+          "totalPages": "number"
+        }
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/admin/leads/:id",
+      "auth": "x-api-key OR basic auth",
+      "body": {
+        "status": "new | contacted | confirmed"
+      },
+      "response": {
+        "data": "Lead"
+      }
+    }
+  ]
+}
