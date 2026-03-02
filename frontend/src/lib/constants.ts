@@ -1,3 +1,5 @@
+import { LEAD_ACTIVITY_OPTIONS } from "./waterAdventureGuide";
+
 export const KNOWN_LOCATIONS = [
   "Port Blair",
   "North Bay",
@@ -34,23 +36,4 @@ export const KNOWN_TYPES = [
   "Underwater",
 ];
 
-export const KNOWN_ACTIVITY_NAMES = [
-  "Scuba Diving",
-  "Sea Walking",
-  "Snorkeling",
-  "Parasailing",
-  "Jet Skiing",
-  "Speed Boat",
-  "Banana Boat",
-  "Glass Bottom Boat",
-  "Semi-Submarine",
-  "Kayaking",
-  "Windsurfing",
-  "Sea Karting",
-  "Sport Fishing",
-  "Seaplane",
-  "Harbour Cruise",
-  "SUP",
-  "Water Skiing",
-  "Mangrove Kayaking",
-];
+export const KNOWN_ACTIVITY_NAMES = LEAD_ACTIVITY_OPTIONS.map((option) => option.label);

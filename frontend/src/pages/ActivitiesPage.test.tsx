@@ -43,6 +43,7 @@ describe("ActivitiesPage", () => {
     );
 
     expect(screen.getByRole("heading", { name: "All Activities" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Complete Water Adventure Guide" })).toBeInTheDocument();
     expect(await screen.findByText("Scuba Diving")).toBeInTheDocument();
     expect(screen.getAllByText("North Bay").length).toBeGreaterThan(0);
   });

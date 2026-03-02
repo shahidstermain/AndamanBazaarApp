@@ -3,7 +3,7 @@ import { ActivityCard } from "../components/ActivityCard";
 import { ActivityFilters, type FilterValues } from "../components/ActivityFilters";
 import { LeadFormModal } from "../components/LeadFormModal";
 import { useActivities } from "../hooks/useActivities";
-import { KNOWN_LOCATIONS, KNOWN_TYPES } from "../lib/constants";
+import { KNOWN_ACTIVITY_NAMES, KNOWN_LOCATIONS, KNOWN_TYPES } from "../lib/constants";
 import type { Activity } from "../types";
 
 const defaultFilters: FilterValues = {
@@ -28,7 +28,9 @@ export const HomePage = () => {
     featured: true,
   });
 
-  const activityNames = useMemo(() => activities.map((item) => item.title), [activities]);
+  const activityNames = useMemo(() => {
+    return Array.from(new Set([...KNOWN_ACTIVITY_NAMES, ...activities.map((item) => item.title)]));
+  }, [activities]);
 
   const openLeadModal = (activity?: Activity) => {
     setLeadPrefill(

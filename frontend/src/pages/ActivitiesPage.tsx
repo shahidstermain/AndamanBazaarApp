@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ActivityCard } from "../components/ActivityCard";
+import { AdventureGuideSection } from "../components/AdventureGuideSection";
 import { ActivityFilters, type FilterValues } from "../components/ActivityFilters";
 import { LeadFormModal } from "../components/LeadFormModal";
 import { useActivities } from "../hooks/useActivities";
@@ -37,12 +38,19 @@ export const ActivitiesPage = () => {
     setLeadOpen(true);
   };
 
+  const openPlanningModal = () => {
+    setLeadPrefill({});
+    setLeadOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <header>
         <h1 className="text-3xl font-bold">All Activities</h1>
         <p className="mt-1 text-slate-600">Browse and compare water adventures across the islands.</p>
       </header>
+
+      <AdventureGuideSection onPlanRequest={openPlanningModal} />
 
       <ActivityFilters
         values={filters}

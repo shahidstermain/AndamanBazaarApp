@@ -1,5 +1,14 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api";
+import {
+  BUDGET_RANGE_OPTIONS,
+  LEAD_ACTIVITY_OPTIONS,
+  LEAD_LOCATION_OPTIONS,
+  REFERRAL_SOURCE_OPTIONS,
+  SWIMMING_ABILITY_OPTIONS,
+  normalizeActivityName,
+  normalizeLeadLocation,
+} from "../lib/waterAdventureGuide";
 
 type LeadFormModalProps = {
   isOpen: boolean;
@@ -28,6 +37,11 @@ type FormState = {
 };
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
+
+type ActivityDisplayOption = {
+  label: string;
+  emoji?: string;
+};
 
 const initialState: FormState = {
   name: "",
@@ -58,7 +72,8 @@ const validate = (values: FormState): FormErrors => {
   if (Number(values.adults) < 1) errors.adults = "At least one adult is required.";
   if (!values.swimming_ability.trim())
     errors.swimming_ability = "Please select your swimming ability.";
-  if (!values.budget || Number(values.budget) <= 0) errors.budget = "Please enter your budget.";
+  if (!values.budget || Number(values.budget) <= 0)
+    errors.budget = "Please select your budget range.";
   if (values.email && !emailRegex.test(values.email)) errors.email = "Please enter a valid email.";
   if (!values.consent) errors.consent = "Consent is required to continue.";
 
@@ -80,17 +95,39 @@ export const LeadFormModal = ({
   const [isSuccess, setIsSuccess] = useState(false);
   const firstInputRef = useRef<HTMLInputElement | null>(null);
 
-  const uniqueActivities = useMemo(
-    () => Array.from(new Set(availableActivities)).sort(),
-    [availableActivities],
+  const uniqueActivities = useMemo<ActivityDisplayOption[]>(() => {
+    const canonicalOptions = new Map<string, ActivityDisplayOption>();
+    for (const option of LEAD_ACTIVITY_OPTIONS) {
+      canonicalOptions.set(option.label, { label: option.label, emoji: option.emoji });
+    }
+
+    const extraOptions = new Set<string>();
+    for (const activity of availableActivities) {
+      const normalized = normalizeActivityName(activity);
+      if (!canonicalOptions.has(normalized)) {
+        extraOptions.add(normalized);
+      }
+    }
+
+    const merged = [...canonicalOptions.values()];
+    for (const extra of Array.from(extraOptions).sort()) {
+      merged.push({ label: extra, emoji: "🌊" });
+    }
+
+    return merged;
+  }, [availableActivities]);
+
+  const knownLocationValues = useMemo(
+    () => new Set(LEAD_LOCATION_OPTIONS.map((option) => option.value)),
+    [],
   );
 
   useEffect(() => {
     if (!isOpen) return;
     setFormState({
       ...initialState,
-      location: prefill?.location ?? "",
-      activities: prefill?.activity ? [prefill.activity] : [],
+      location: prefill?.location ? normalizeLeadLocation(prefill.location) : "",
+      activities: prefill?.activity ? [normalizeActivityName(prefill.activity)] : [],
     });
     setErrors({});
     setSubmitError("");
@@ -179,7 +216,7 @@ export const LeadFormModal = ({
       >
         <div className="mb-4 flex items-start justify-between">
           <h2 id="lead-form-title" className="text-xl font-bold">
-            Request Booking
+            Lead Generation Form
           </h2>
           <button type="button" onClick={onClose} className="rounded-md px-2 py-1 hover:bg-slate-100">
             Close
@@ -188,7 +225,8 @@ export const LeadFormModal = ({
 
         {isSuccess ? (
           <p className="rounded-md bg-emerald-50 p-4 font-medium text-emerald-800">
-            Thank you — we usually reach out within 12 hours of submission. Kindly wait.
+            Thank you for your submission. We will get back to you as soon as possible. We usually
+            reach out within 12 hours of submission. Kindly wait.
           </p>
         ) : (
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
@@ -255,13 +293,23 @@ export const LeadFormModal = ({
                 <label htmlFor="location" className="mb-1 block text-sm font-medium">
                   Location *
                 </label>
-                <input
+                <select
                   id="location"
                   value={formState.location}
                   onChange={(event) => setField("location", event.target.value)}
                   className="w-full rounded-md border px-3 py-2"
                   aria-invalid={Boolean(errors.location)}
-                />
+                >
+                  <option value="">Select location</option>
+                  {LEAD_LOCATION_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                  {formState.location && !knownLocationValues.has(formState.location) && (
+                    <option value={formState.location}>{formState.location}</option>
+                  )}
+                </select>
                 {errors.location && <p className="mt-1 text-sm text-red-600">{errors.location}</p>}
               </div>
               <div>
@@ -276,10 +324,11 @@ export const LeadFormModal = ({
                   aria-invalid={Boolean(errors.swimming_ability)}
                 >
                   <option value="">Select</option>
-                  <option value="Non-swimmer">Non-swimmer</option>
-                  <option value="Beginner">Beginner</option>
-                  <option value="Intermediate">Intermediate</option>
-                  <option value="Advanced">Advanced</option>
+                  {SWIMMING_ABILITY_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
                 </select>
                 {errors.swimming_ability && (
                   <p className="mt-1 text-sm text-red-600">{errors.swimming_ability}</p>
@@ -302,7 +351,7 @@ export const LeadFormModal = ({
               </div>
               <div>
                 <label htmlFor="children" className="mb-1 block text-sm font-medium">
-                  Children
+                  Children (below 12)
                 </label>
                 <input
                   id="children"
@@ -315,43 +364,64 @@ export const LeadFormModal = ({
               </div>
               <div>
                 <label htmlFor="budget" className="mb-1 block text-sm font-medium">
-                  Budget *
+                  Budget Range (per person) *
                 </label>
-                <input
+                <select
                   id="budget"
-                  type="number"
-                  min={0}
                   value={formState.budget}
                   onChange={(event) => setField("budget", event.target.value)}
                   className="w-full rounded-md border px-3 py-2"
                   aria-invalid={Boolean(errors.budget)}
-                />
+                >
+                  <option value="">Select budget range</option>
+                  {BUDGET_RANGE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
                 {errors.budget && <p className="mt-1 text-sm text-red-600">{errors.budget}</p>}
               </div>
               <div>
                 <label htmlFor="referral_source" className="mb-1 block text-sm font-medium">
                   Referral Source
                 </label>
-                <input
+                <select
                   id="referral_source"
                   value={formState.referral_source}
                   onChange={(event) => setField("referral_source", event.target.value)}
                   className="w-full rounded-md border px-3 py-2"
-                />
+                >
+                  <option value="">Select referral source</option>
+                  {REFERRAL_SOURCE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
             <fieldset className="rounded-md border p-3">
               <legend className="px-1 text-sm font-medium">Activities * (multi-select)</legend>
-              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {uniqueActivities.map((activity) => (
-                  <label key={activity} className="inline-flex items-center gap-2 text-sm">
+                  <label
+                    key={activity.label}
+                    className="inline-flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1 text-sm"
+                  >
                     <input
                       type="checkbox"
-                      checked={formState.activities.includes(activity)}
-                      onChange={() => toggleActivity(activity)}
+                      aria-label={activity.label}
+                      checked={formState.activities.includes(activity.label)}
+                      onChange={() => toggleActivity(activity.label)}
                     />
-                    {activity}
+                    {activity.emoji && (
+                      <span aria-hidden="true" className="text-base">
+                        {activity.emoji}
+                      </span>
+                    )}
+                    <span>{activity.label}</span>
                   </label>
                 ))}
               </div>
@@ -367,6 +437,7 @@ export const LeadFormModal = ({
                 rows={3}
                 value={formState.special_requests}
                 onChange={(event) => setField("special_requests", event.target.value)}
+                placeholder="Accessibility needs, medical notes, group discounts, or other requests"
                 className="w-full rounded-md border px-3 py-2"
               />
             </div>
