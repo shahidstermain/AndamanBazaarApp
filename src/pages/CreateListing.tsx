@@ -362,12 +362,23 @@ export const CreateListing: React.FC = () => {
       }
       setCreatedListingId(newListingId);
 
-      const newPhotos = photos.filter(p => p.file);
-      for (let i = 0; i < newPhotos.length; i++) {
-        const photo = newPhotos[i];
-        const displayOrder = photos.indexOf(photo);
+      // Filter out any photos that don't have a valid file or id
+      const validPhotos = photos.filter(p => p.file || p.id);
+      
+      // Determine the next available display_order index
+      // If we are in edit mode, existing photos will keep their relative order in the update loop below
+      // New photos should be appended after existing ones or filled in if we re-order
+      
+      // Actually, simplest approach:
+      // The `photos` array in state REPRESENTS the user's desired order.
+      // So we should just use the index `i` from the `photos` array loop for everything.
+      
+      const newPhotosWithIndex = photos.map((p, index) => ({ ...p, desiredIndex: index })).filter(p => p.file);
+
+      for (const item of newPhotosWithIndex) {
+        const { file, desiredIndex } = item;
         const fileName = `${user.id}/${safeRandomUUID()}.webp`;
-        const { error: uploadError } = await supabase.storage.from('listings').upload(fileName, photo.file!, { contentType: 'image/webp' });
+        const { error: uploadError } = await supabase.storage.from('listings').upload(fileName, file!, { contentType: 'image/webp' });
         if (uploadError) {
           console.warn('Image upload failed, skipping:', uploadError.message);
           continue;
@@ -375,14 +386,16 @@ export const CreateListing: React.FC = () => {
 
         const { data: urlData } = supabase.storage.from('listings').getPublicUrl(fileName);
         if (newListingId && urlData.publicUrl) {
-          await supabase.from('listing_images').insert({ listing_id: newListingId, image_url: urlData.publicUrl, display_order: displayOrder });
+          await supabase.from('listing_images').insert({ listing_id: newListingId, image_url: urlData.publicUrl, display_order: desiredIndex });
         } else {
           console.warn('Could not get public URL for uploaded image.');
         }
       }
+
       for (let i = 0; i < photos.length; i++) {
         const photo = photos[i];
         if (photo.id) {
+          // Update existing photo's order to match current UI state
           await supabase.from('listing_images').update({ display_order: i }).eq('id', photo.id);
         }
       }

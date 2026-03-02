@@ -141,8 +141,8 @@ export const BoostListingModal: React.FC<BoostListingModalProps> = ({
                             <h2 className="text-xl font-heading font-black text-midnight-700 tracking-tight">
                                 Boost Your Listing
                             </h2>
-                            <p className="text-xs text-warm-500 mt-1 font-medium">
-                                {COPY.BOOST.NUDGE}
+                            <p className="text-xs text-warm-500 mt-1 font-medium line-clamp-1">
+                                {listingTitle}
                             </p>
                         </div>
                         <button
