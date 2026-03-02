@@ -362,17 +362,7 @@ export const CreateListing: React.FC = () => {
       }
       setCreatedListingId(newListingId);
 
-      // Filter out any photos that don't have a valid file or id
-      const validPhotos = photos.filter(p => p.file || p.id);
-      
-      // Determine the next available display_order index
-      // If we are in edit mode, existing photos will keep their relative order in the update loop below
-      // New photos should be appended after existing ones or filled in if we re-order
-      
-      // Actually, simplest approach:
-      // The `photos` array in state REPRESENTS the user's desired order.
-      // So we should just use the index `i` from the `photos` array loop for everything.
-      
+      // Preserve UI order by using each photo's index as display_order.
       const newPhotosWithIndex = photos.map((p, index) => ({ ...p, desiredIndex: index })).filter(p => p.file);
 
       for (const item of newPhotosWithIndex) {
