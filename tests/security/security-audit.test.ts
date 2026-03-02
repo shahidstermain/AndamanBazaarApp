@@ -88,8 +88,8 @@ describe('🔴 File Upload Security', () => {
     const file = makeFile('shell.php.jpg', 'image/jpeg', 1)
     const result = validateFileUpload(file)
     // Even if MIME is correct, suspicious patterns in name should be caught
-    expect(result.valid).toBe(true) // Current impl only checks extension suffix, not double extensions
-    // 🟠 FLAG: Double extension bypass — shell.php.jpg passes current validation
+    expect(result.valid).toBe(false)
+    // 🟠 FLAG: Double extension bypass — shell.php.jpg must not pass validation
   })
 
   it('rejects .exe with image MIME type', () => {
