@@ -290,9 +290,17 @@ export const CreateListing: React.FC = () => {
   };
 
   const handleSave = async () => {
+    console.log('[DEBUG ee0545] handleSave called', { photosCount: photos.length, editId });
     setLoading(true);
+    // #region agent log
+    fetch('http://127.0.0.1:7614/ingest/556d2fa9-8084-4e76-985f-24d23c8680e2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ee0545'},body:JSON.stringify({sessionId:'ee0545',location:'CreateListing.tsx:handleSave:entry',message:'handleSave started',data:{photosCount:photos.length,hasEditId:!!editId},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      // #region agent log
+      console.log('[DEBUG ee0545] Auth check completed', { hasUser: !!user, userId: user?.id });
+      fetch('http://127.0.0.1:7614/ingest/556d2fa9-8084-4e76-985f-24d23c8680e2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ee0545'},body:JSON.stringify({sessionId:'ee0545',location:'CreateListing.tsx:handleSave:afterAuth',message:'Auth check completed',data:{hasUser:!!user,userId:user?.id},timestamp:Date.now(),hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       if (!user) throw new Error('Please login first.');
 
       const sanitizedTitle = sanitizePlainText(title);
@@ -348,8 +356,15 @@ export const CreateListing: React.FC = () => {
       Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
 
       let newListingId = editId;
+      // #region agent log
+      console.log('[DEBUG ee0545] Before DB insert/update', { isEdit: !!editId, payloadKeys: Object.keys(payload) });
+      fetch('http://127.0.0.1:7614/ingest/556d2fa9-8084-4e76-985f-24d23c8680e2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ee0545'},body:JSON.stringify({sessionId:'ee0545',location:'CreateListing.tsx:handleSave:beforeDbOp',message:'Before DB insert/update',data:{isEdit:!!editId,payloadKeys:Object.keys(payload)},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       if (editId) {
         const { error: updateError } = await supabase.from('listings').update(payload).eq('id', editId);
+        // #region agent log
+        fetch('http://127.0.0.1:7614/ingest/556d2fa9-8084-4e76-985f-24d23c8680e2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ee0545'},body:JSON.stringify({sessionId:'ee0545',location:'CreateListing.tsx:handleSave:afterUpdate',message:'After listing update',data:{updateError:updateError?.message},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         if (updateError) throw updateError;
         if (deletedPhotoIds.length > 0) await supabase.from('listing_images').delete().in('id', deletedPhotoIds);
         if (editId) {
@@ -357,6 +372,10 @@ export const CreateListing: React.FC = () => {
         }
       } else {
         const { data, error: insertError } = await supabase.from('listings').insert(payload).select('id').single();
+        // #region agent log
+        console.log('[DEBUG ee0545] After listing insert', { hasData: !!data, listingId: data?.id, insertError: insertError?.message });
+        fetch('http://127.0.0.1:7614/ingest/556d2fa9-8084-4e76-985f-24d23c8680e2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ee0545'},body:JSON.stringify({sessionId:'ee0545',location:'CreateListing.tsx:handleSave:afterInsert',message:'After listing insert',data:{hasData:!!data,listingId:data?.id,insertError:insertError?.message},timestamp:Date.now(),hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         if (insertError || !data) throw insertError || new Error('Failed to create listing.');
         newListingId = data.id;
         await logAuditEvent({ action: 'listing_created', resource_type: 'listing', resource_id: data.id, status: 'success', metadata: { category: catId, city } });
@@ -364,9 +383,19 @@ export const CreateListing: React.FC = () => {
       setCreatedListingId(newListingId);
 
       const newPhotos = photos.filter(p => p.file);
-      for (const photo of newPhotos) {
+      // #region agent log
+      fetch('http://127.0.0.1:7614/ingest/556d2fa9-8084-4e76-985f-24d23c8680e2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ee0545'},body:JSON.stringify({sessionId:'ee0545',location:'CreateListing.tsx:handleSave:beforeImageUploads',message:'Starting image uploads',data:{newPhotosCount:newPhotos.length,existingPhotosCount:photos.filter(p=>p.id).length},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      for (let i = 0; i < newPhotos.length; i++) {
+        const photo = newPhotos[i];
         const fileName = `${user.id}/${safeRandomUUID()}.webp`;
+        // #region agent log
+        fetch('http://127.0.0.1:7614/ingest/556d2fa9-8084-4e76-985f-24d23c8680e2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ee0545'},body:JSON.stringify({sessionId:'ee0545',location:'CreateListing.tsx:handleSave:beforeUpload',message:`Uploading image ${i+1}/${newPhotos.length}`,data:{fileName,fileSize:photo.file?.size},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         const { error: uploadError } = await supabase.storage.from('listings').upload(fileName, photo.file!, { contentType: 'image/webp' });
+        // #region agent log
+        fetch('http://127.0.0.1:7614/ingest/556d2fa9-8084-4e76-985f-24d23c8680e2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ee0545'},body:JSON.stringify({sessionId:'ee0545',location:'CreateListing.tsx:handleSave:afterUpload',message:`Upload ${i+1} completed`,data:{uploadError:uploadError?.message},timestamp:Date.now(),hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         if (uploadError) {
           console.warn('Image upload failed, skipping:', uploadError.message);
           continue;
@@ -374,11 +403,20 @@ export const CreateListing: React.FC = () => {
 
         const { data: urlData } = supabase.storage.from('listings').getPublicUrl(fileName);
         if (newListingId && urlData.publicUrl) {
+          // #region agent log
+          fetch('http://127.0.0.1:7614/ingest/556d2fa9-8084-4e76-985f-24d23c8680e2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ee0545'},body:JSON.stringify({sessionId:'ee0545',location:'CreateListing.tsx:handleSave:beforeImageInsert',message:'Inserting image record',data:{listingId:newListingId,publicUrl:urlData.publicUrl.substring(0,50)},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
           await supabase.from('listing_images').insert({ listing_id: newListingId, image_url: urlData.publicUrl, display_order: photos.indexOf(photo) });
+          // #region agent log
+          fetch('http://127.0.0.1:7614/ingest/556d2fa9-8084-4e76-985f-24d23c8680e2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ee0545'},body:JSON.stringify({sessionId:'ee0545',location:'CreateListing.tsx:handleSave:afterImageInsert',message:'Image record inserted',data:{},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
         } else {
           console.warn('Could not get public URL for uploaded image.');
         }
       }
+      // #region agent log
+      fetch('http://127.0.0.1:7614/ingest/556d2fa9-8084-4e76-985f-24d23c8680e2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ee0545'},body:JSON.stringify({sessionId:'ee0545',location:'CreateListing.tsx:handleSave:beforeExistingPhotosUpdate',message:'Updating existing photo orders',data:{existingCount:photos.filter(p=>p.id).length},timestamp:Date.now(),hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       for (const photo of photos.filter(p => p.id)) {
         if (photo.id) { // Guard against undefined id
           await supabase.from('listing_images').update({ display_order: photos.indexOf(photo) }).eq('id', photo.id);
@@ -388,12 +426,23 @@ export const CreateListing: React.FC = () => {
       saveContactPreferences(contactPrefs);
       if (userId) clearDraft(userId);
 
+      // #region agent log
+      fetch('http://127.0.0.1:7614/ingest/556d2fa9-8084-4e76-985f-24d23c8680e2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ee0545'},body:JSON.stringify({sessionId:'ee0545',location:'CreateListing.tsx:handleSave:success',message:'All operations completed successfully, setting step to 5',data:{createdListingId:newListingId},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       setStep(5);
     } catch (err: any) {
+      // #region agent log
+      console.log('[DEBUG ee0545] Error caught', { errorMessage: err?.message, errorStack: err?.stack?.substring(0, 200) });
+      fetch('http://127.0.0.1:7614/ingest/556d2fa9-8084-4e76-985f-24d23c8680e2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ee0545'},body:JSON.stringify({sessionId:'ee0545',location:'CreateListing.tsx:handleSave:catch',message:'Error caught in handleSave',data:{errorMessage:err?.message,errorStack:err?.stack?.substring(0,200)},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       const safeError = sanitizeErrorMessage(err);
       showToast(safeError, 'error');
       await logAuditEvent({ action: editId ? 'listing_update_failed' : 'listing_creation_failed', status: 'failed', metadata: { error: safeError } });
     } finally {
+      // #region agent log
+      console.log('[DEBUG ee0545] Finally block reached');
+      fetch('http://127.0.0.1:7614/ingest/556d2fa9-8084-4e76-985f-24d23c8680e2',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'ee0545'},body:JSON.stringify({sessionId:'ee0545',location:'CreateListing.tsx:handleSave:finally',message:'Finally block reached, setting loading to false',data:{},timestamp:Date.now(),hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       setLoading(false);
     }
   };
