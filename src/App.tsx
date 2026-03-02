@@ -20,6 +20,7 @@ import { TermsOfService } from './pages/TermsOfService';
 import { About } from './pages/About';
 import { Pricing } from './pages/Pricing';
 import { ContactUs } from './pages/ContactUs';
+import Planner from './pages/Planner';
 import { NotFound } from './pages/NotFound';
 
 import { Layout } from './components/Layout';
@@ -159,6 +160,7 @@ const App: React.FC = () => {
               <Route path="/about" element={<About />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/contact" element={<ContactUs />} />
+              <Route path="/planner" element={<RequireAuth user={user} loading={loading}><Planner /></RequireAuth>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Layout>

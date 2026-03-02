@@ -25,6 +25,8 @@ export const env = {
   LEAD_WEBHOOK_URL: process.env.LEAD_WEBHOOK_URL,
   WEBHOOK_RETRY_ATTEMPTS: toNumber(process.env.WEBHOOK_RETRY_ATTEMPTS, 3),
   WEBHOOK_RETRY_BASE_MS: toNumber(process.env.WEBHOOK_RETRY_BASE_MS, 800),
+  SUPABASE_URL: process.env.SUPABASE_URL ?? "",
+  SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY ?? "",
 };
 
 export const isProduction = env.NODE_ENV === "production";

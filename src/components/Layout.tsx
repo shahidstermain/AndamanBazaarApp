@@ -74,6 +74,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
           {/* Desktop Left Nav */}
           <div className="hidden md:flex flex-1 items-center gap-6">
             <NavLink to="/listings" active={isActive('/listings')}>Explore</NavLink>
+            <NavLink to="/planner" active={isActive('/planner')}>Trip Planner</NavLink>
             <NavLink to="/listings?verified=true" active={false}>
               <BadgeCheck size={14} className="inline mr-1 text-teal-500" />Verified
             </NavLink>
@@ -207,6 +208,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
             <h4 className="font-black text-sandy-400 mb-4 text-[11px] uppercase tracking-widest">Marketplace</h4>
             <ul className="space-y-2 text-sm text-warm-400">
               <li><Link to="/listings" className="hover:text-white transition-colors">Browse All Listings</Link></li>
+              <li><Link to="/planner" className="hover:text-white transition-colors">AI Trip Planner</Link></li>
               <li><Link to="/post" className="hover:text-white transition-colors">Sell an Item</Link></li>
               <li><Link to="/listings?category=fresh-catch" className="hover:text-white transition-colors">🐟 Fresh Catch</Link></li>
               <li><Link to="/listings?category=experiences" className="hover:text-white transition-colors">🤿 Experiences</Link></li>

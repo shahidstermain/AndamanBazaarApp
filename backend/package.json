@@ -25,6 +25,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@prisma/adapter-pg": "^7.4.2",
     "@prisma/client": "^7.4.2",
     "axios": "^1.13.6",
@@ -40,6 +41,7 @@
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
     "prisma": "^7.4.2",
+    "@supabase/supabase-js": "^2.45.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

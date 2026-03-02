@@ -65,6 +65,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@andaman/planner-ui': path.resolve(__dirname, './packages/planner-ui/src'),
+      '@andaman/planner-shared': path.resolve(__dirname, './packages/planner-shared/src'),
     },
   },
   test: {

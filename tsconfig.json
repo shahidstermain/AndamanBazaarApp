@@ -27,13 +27,17 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "src/*"
-      ]
+      "@/*": ["src/*"],
+      "@andaman/planner-ui": ["packages/planner-ui/src/index.ts"],
+      "@andaman/planner-ui/*": ["packages/planner-ui/src/*"],
+      "@andaman/planner-shared": ["packages/planner-shared/src/index.ts"],
+      "@andaman/planner-shared/*": ["packages/planner-shared/src/*"]
     }
   },
   "include": [
     "src",
+    "packages/planner-ui/src",
+    "packages/planner-shared/src",
     "types.ts",
     "vite.config.ts",
     "vitest.config.ts"
