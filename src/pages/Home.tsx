@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getFeaturedDemos, getTrendingDemos, getDemoListings, isDemoListing } from '../lib/demoListings';
 import { useToast } from '../components/Toast';
+import { COPY } from '../lib/localCopy';
 import {
   Search, ArrowRight, Loader2, Heart, MapPin, Flame,
   Fish, Leaf, Shell, Compass,
@@ -241,7 +242,7 @@ export const Home: React.FC = () => {
             {/* Subtext */}
             <div className="reveal reveal-delay-2">
               <p className="text-teal-100/70 text-base md:text-lg max-w-md mx-auto leading-relaxed font-sans">
-                Join thousands of islanders trading safely. From Port Blair to Diglipur — one marketplace for every island.
+                {COPY.HOME.HERO_SUBTITLE}
               </p>
             </div>
 
@@ -486,7 +487,7 @@ export const Home: React.FC = () => {
                   className="group bg-white text-midnight-700 font-heading font-bold px-8 py-3.5 rounded-full border border-warm-200 shadow-card hover:shadow-card-hover hover:border-teal-200 transition-all duration-500 disabled:opacity-50 flex items-center gap-2 ease-out-expo"
                 >
                   {loadingMore && <Loader2 size={16} className="animate-spin" />}
-                  {loadingMore ? 'Loading…' : 'Load More Listings'}
+                  {loadingMore ? COPY.LOADING.PULL_REFRESH : 'Load More Listings'}
                   {!loadingMore && <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />}
                 </button>
               </div>

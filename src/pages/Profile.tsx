@@ -11,6 +11,7 @@ import { logAuditEvent, sanitizeErrorMessage } from '../lib/security';
 import { logout } from '../lib/auth';
 import { useToast } from '../components/Toast';
 import { BoostListingModal } from '../components/BoostListingModal';
+import { COPY } from '../lib/localCopy';
 
 export const Profile: React.FC = () => {
   const navigate = useNavigate();
@@ -130,7 +131,7 @@ export const Profile: React.FC = () => {
       if (updateError) throw updateError;
 
       await fetchProfileAndStats();
-      showToast('Profile updated successfully!', 'success');
+      showToast(COPY.SUCCESS.SETTINGS_SAVED, 'success');
       setIsEditing(false);
       setAvatarFile(null);
     } catch (err: any) {
@@ -333,6 +334,9 @@ export const Profile: React.FC = () => {
                 <div className="absolute bottom-2 right-2 w-12 h-12 bg-accent text-primary rounded-full flex items-center justify-center shadow-xl border-4 border-base-100"><ShieldCheck size={28} strokeWidth={2.5} /></div>
               )}
             </div>
+            {!isEditing && !profile?.profile_photo_url && (
+              <p className="text-center text-sm text-warm-400 font-medium mt-3 max-w-[200px]">{COPY.PROFILE.COMPLETION_NUDGE}</p>
+            )}
           </div>
         </div>
 
@@ -397,7 +401,7 @@ export const Profile: React.FC = () => {
         {listings.length === 0 ? (
           <div className="py-24 text-center bg-base-100 rounded-[40px] border-4 border-dashed border-secondary/10 animate-in fade-in">
             <h3 className="text-3xl font-heading font-black tracking-tight">No Items Here!</h3>
-            <p className="text-secondary font-bold text-lg max-w-sm mx-auto mt-2">This section is empty. Why not post something new?</p>
+            <p className="text-secondary font-bold text-lg max-w-sm mx-auto mt-2">{COPY.EMPTY_STATE.PROFILE_NO_LISTINGS}</p>
             <Link to="/post" className="mt-8 inline-block bg-accent text-primary px-10 py-4 rounded-2xl font-black uppercase text-sm tracking-widest shadow-2xl active:scale-95 transition-all">Create a Listing</Link>
           </div>
         ) : (

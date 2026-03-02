@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { Zap, Rocket, Crown, X, Loader2, CheckCircle, ArrowRight, Shield, Star, Clock } from 'lucide-react';
 import { useToast } from './Toast';
 import { BOOST_TIERS as SHARED_TIERS } from '../lib/pricing';
+import { COPY } from '../lib/localCopy';
 
 // ============================================================
 // Boost Listing Modal
@@ -134,8 +135,8 @@ export const BoostListingModal: React.FC<BoostListingModalProps> = ({
                             <h2 className="text-xl font-heading font-black text-midnight-700 tracking-tight">
                                 Boost Your Listing
                             </h2>
-                            <p className="text-xs text-warm-400 mt-1 font-medium line-clamp-1">
-                                {listingTitle}
+                            <p className="text-xs text-warm-500 mt-1 font-medium">
+                                {COPY.BOOST.NUDGE}
                             </p>
                         </div>
                         <button

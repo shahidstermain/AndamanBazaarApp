@@ -15,6 +15,7 @@ import {
 import { useToast } from '../components/Toast';
 import { safeRandomUUID } from '../lib/random';
 import { BoostListingModal } from '../components/BoostListingModal';
+import { COPY } from '../lib/localCopy';
 
 // ===== STEP COMPONENTS =====
 
@@ -352,9 +353,7 @@ export const CreateListing: React.FC = () => {
         const { error: updateError } = await supabase.from('listings').update(payload).eq('id', editId);
         if (updateError) throw updateError;
         if (deletedPhotoIds.length > 0) await supabase.from('listing_images').delete().in('id', deletedPhotoIds);
-        if (editId) {
-          await logAuditEvent({ action: 'listing_updated', resource_type: 'listing', resource_id: editId, status: 'success' });
-        }
+        await logAuditEvent({ action: 'listing_updated', resource_type: 'listing', resource_id: editId, status: 'success' });
       } else {
         const { data, error: insertError } = await supabase.from('listings').insert(payload).select('id').single();
         if (insertError || !data) throw insertError || new Error('Failed to create listing.');
@@ -364,7 +363,9 @@ export const CreateListing: React.FC = () => {
       setCreatedListingId(newListingId);
 
       const newPhotos = photos.filter(p => p.file);
-      for (const photo of newPhotos) {
+      for (let i = 0; i < newPhotos.length; i++) {
+        const photo = newPhotos[i];
+        const displayOrder = photos.indexOf(photo);
         const fileName = `${user.id}/${safeRandomUUID()}.webp`;
         const { error: uploadError } = await supabase.storage.from('listings').upload(fileName, photo.file!, { contentType: 'image/webp' });
         if (uploadError) {
@@ -374,14 +375,15 @@ export const CreateListing: React.FC = () => {
 
         const { data: urlData } = supabase.storage.from('listings').getPublicUrl(fileName);
         if (newListingId && urlData.publicUrl) {
-          await supabase.from('listing_images').insert({ listing_id: newListingId, image_url: urlData.publicUrl, display_order: photos.indexOf(photo) });
+          await supabase.from('listing_images').insert({ listing_id: newListingId, image_url: urlData.publicUrl, display_order: displayOrder });
         } else {
           console.warn('Could not get public URL for uploaded image.');
         }
       }
-      for (const photo of photos.filter(p => p.id)) {
-        if (photo.id) { // Guard against undefined id
-          await supabase.from('listing_images').update({ display_order: photos.indexOf(photo) }).eq('id', photo.id);
+      for (let i = 0; i < photos.length; i++) {
+        const photo = photos[i];
+        if (photo.id) {
+          await supabase.from('listing_images').update({ display_order: i }).eq('id', photo.id);
         }
       }
 
@@ -457,7 +459,7 @@ export const CreateListing: React.FC = () => {
                 ) : photos.length === 0 ? (
                   <>
                     <Camera size={48} className="text-warm-300 mb-3 group-hover:text-teal-400 transition-colors" />
-                    <span className="font-heading font-bold text-midnight-700 text-lg">Tap to add photos</span>
+                    <span className="font-heading font-bold text-midnight-700 text-lg">{COPY.CREATE_LISTING.PHOTO_HINT}</span>
                     <span className="font-medium text-warm-400 text-sm mt-1">Up to 8 · AI-optimized automatically</span>
                   </>
                 ) : (
@@ -536,6 +538,12 @@ export const CreateListing: React.FC = () => {
                     )
                   })}
                 </div>
+                {preCategory && ['fresh-catch', 'produce'].includes(preCategory) && (
+                  <p className="text-sm text-teal-600 font-medium mt-2 px-1">{COPY.CREATE_LISTING.CATEGORY_FISH}</p>
+                )}
+                {category === 'Vehicles' && (
+                  <p className="text-sm text-teal-600 font-medium mt-2 px-1">{COPY.CREATE_LISTING.CATEGORY_VEHICLES}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
@@ -589,7 +597,7 @@ export const CreateListing: React.FC = () => {
                   <label className="text-xs font-bold text-warm-400 uppercase tracking-widest">Expected Price (₹)</label>
                   <input
                     type="number"
-                    placeholder="Enter amount"
+                    placeholder={COPY.CREATE_LISTING.PRICE_PLACEHOLDER}
                     value={price}
                     onChange={e => setPrice(e.target.value)}
                     className="w-full p-4 bg-white rounded-2xl border border-warm-200 focus:border-teal-400 focus:ring-4 focus:ring-teal-100 outline-none font-heading font-black text-2xl text-midnight-700 transition-all"
@@ -812,7 +820,7 @@ export const CreateListing: React.FC = () => {
               <div className="text-7xl animate-float">🏝️</div>
               <div className="space-y-2">
                 <h2 className="text-3xl font-heading font-black text-midnight-700">{editId ? 'Listing Updated!' : 'Published!'}</h2>
-                <p className="text-warm-400 font-medium">Your item is now live for the island community.</p>
+                <p className="text-warm-400 font-medium">{COPY.SUCCESS.LISTING_PUBLISHED}</p>
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-teal-50 text-teal-700 rounded-full text-sm font-bold mt-2 border border-teal-100">
                   <span className="w-2 h-2 bg-teal-500 rounded-full animate-pulse" /> Live Now
                 </div>

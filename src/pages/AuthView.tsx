@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { COPY } from '../lib/localCopy';
 import {
   Loader2,
   AlertCircle,
@@ -188,6 +189,8 @@ export const AuthView: React.FC = () => {
                 </button>
               </div>
             );
+          } else if (error.message?.includes('Invalid login credentials')) {
+            setError(COPY.AUTH.WRONG_PASSWORD);
           } else {
             throw error;
           }
@@ -223,7 +226,7 @@ export const AuthView: React.FC = () => {
           }
         });
         if (error) throw error;
-        setSuccessMsg(`Success! A verification link has been sent to ${email}. Note: If the link in the email is broken (localhost), you need to set your Site URL in the Supabase Dashboard > Authentication > URL Configuration.`);
+        setSuccessMsg(COPY.AUTH.EMAIL_VERIFICATION_SENT);
         setMode('login');
       }
     } catch (err: any) {
@@ -240,7 +243,7 @@ export const AuthView: React.FC = () => {
           <div className="absolute top-0 right-0 w-40 h-40 bg-white rounded-full opacity-10 blur-3xl translate-x-12 -translate-y-12"></div>
           <div className="absolute bottom-0 left-0 w-24 h-24 bg-coral-500 rounded-full opacity-20 blur-2xl -translate-x-8 translate-y-8"></div>
           <h2 className="text-4xl font-heading font-black tracking-tight relative z-10">AndamanBazaar</h2>
-          <p className="mt-3 text-ocean-100 font-bold relative z-10 text-sm tracking-wide">The Islands' Trusted Marketplace</p>
+          <p className="mt-3 text-ocean-100 font-bold relative z-10 text-sm tracking-wide">{COPY.AUTH.SIGNUP_SUBTITLE}</p>
         </div>
 
         <div className="p-8 md:p-10">
@@ -319,7 +322,7 @@ export const AuthView: React.FC = () => {
               </div>
             )}
             <button type="submit" disabled={loading} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] hover:bg-black transition-all shadow-xl shadow-slate-900/20 active:scale-[0.98] disabled:opacity-50">
-              {loading ? <Loader2 className="animate-spin mx-auto" size={18} /> :
+              {loading ? <span className="flex items-center justify-center gap-2"><Loader2 className="animate-spin" size={18} />{COPY.LOADING.AUTH}</span> :
                 mode === 'login' ? 'Sign In Securely' :
                   mode === 'signup' ? 'Create Island Account' :
                     mode === 'phone' ? 'Get OTP' : 'Verify & Sign In'}
