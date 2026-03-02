@@ -21,6 +21,7 @@ import { About } from './pages/About';
 import { Pricing } from './pages/Pricing';
 import { ContactUs } from './pages/ContactUs';
 import { NotFound } from './pages/NotFound';
+import { WaterAdventures } from './pages/WaterAdventures';
 
 import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -159,6 +160,7 @@ const App: React.FC = () => {
               <Route path="/about" element={<About />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/contact" element={<ContactUs />} />
+              <Route path="/water-adventures" element={<WaterAdventures />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Layout>

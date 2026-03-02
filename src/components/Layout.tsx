@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase';
 import { useNotifications } from '../hooks/useNotifications';
 import {
   Home, Search, PlusCircle, MessageCircle, User as UserIcon,
-  BadgeCheck, Bell
+  BadgeCheck, Bell, Waves
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -76,6 +76,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
             <NavLink to="/listings" active={isActive('/listings')}>Explore</NavLink>
             <NavLink to="/listings?verified=true" active={false}>
               <BadgeCheck size={14} className="inline mr-1 text-teal-500" />Verified
+            </NavLink>
+            <NavLink to="/water-adventures" active={isActive('/water-adventures')}>
+              <Waves size={14} className="inline mr-1 text-teal-500" />Adventures
             </NavLink>
           </div>
 
@@ -210,6 +213,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
               <li><Link to="/post" className="hover:text-white transition-colors">Sell an Item</Link></li>
               <li><Link to="/listings?category=fresh-catch" className="hover:text-white transition-colors">🐟 Fresh Catch</Link></li>
               <li><Link to="/listings?category=experiences" className="hover:text-white transition-colors">🤿 Experiences</Link></li>
+              <li><Link to="/water-adventures" className="hover:text-white transition-colors">🌊 Water Adventures</Link></li>
             </ul>
           </div>
 
