@@ -28,6 +28,8 @@ hapi
 # Security: SSH keys and deploy keys
 ghdeploykey
 ghdeploykey.pub
+gh_deploy_key
+gh_deploy_key.pub
 *.pem
 *.key
 id_rsa
