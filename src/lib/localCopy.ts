@@ -33,7 +33,7 @@ export const COPY = {
   },
 
   HOME: {
-    HERO_SUBTITLE: 'Fresh listings, Andaman style — BARGE ticket bhi nahi chahiye 🌴',
+    HERO_SUBTITLE: 'Buy and sell locally across the Andaman & Nicobar Islands',
   },
 
   CREATE_LISTING: {

@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { getFeaturedDemos, getTrendingDemos, getDemoListings, isDemoListing } from '../lib/demoListings';
+import { isDemoListing } from '../lib/demoListings';
 import { useToast } from '../components/Toast';
 import { COPY } from '../lib/localCopy';
 import {
   Search, ArrowRight, Loader2, Heart, MapPin, Flame,
   Fish, Leaf, Shell, Compass,
-  BadgeCheck, Star
+  BadgeCheck
 } from 'lucide-react';
 
 // ============================================================
@@ -31,6 +31,7 @@ const SEARCH_PLACEHOLDERS = [
 ];
 
 const RECENT_PAGE_SIZE = 8;
+const FLASH_DEALS_ENABLED = false;
 
 // ============================================================
 //  TYPES
@@ -107,12 +108,10 @@ export const Home: React.FC = () => {
         .order('created_at', { ascending: false })
         .limit(10);
       const real = data || [];
-      // Pad with demo listings if real data is sparse
-      const demos = real.length < 4 ? getFeaturedDemos().slice(0, 4 - real.length) : [];
-      setFeaturedListings([...real, ...demos]);
+      setFeaturedListings(real);
     } catch (err) {
       console.error('Featured fetch error:', err);
-      setFeaturedListings(getFeaturedDemos());
+      setFeaturedListings([]);
     } finally {
       setLoadingFeatured(false);
     }
@@ -128,11 +127,10 @@ export const Home: React.FC = () => {
         .order('views_count', { ascending: false })
         .limit(6);
       const real = data || [];
-      const demos = real.length < 4 ? getTrendingDemos(6 - real.length) : [];
-      setTrendingListings([...real, ...demos]);
+      setTrendingListings(real);
     } catch (err) {
       console.error('Trending fetch error:', err);
-      setTrendingListings(getTrendingDemos(6));
+      setTrendingListings([]);
     } finally {
       setLoadingTrending(false);
     }
@@ -151,18 +149,14 @@ export const Home: React.FC = () => {
         .order('created_at', { ascending: false })
         .range(from, to);
       const real = data || [];
-      if (pageIndex === 0 && real.length < 4) {
-        // Pad first page with demo listings
-        const demos = getDemoListings().slice(0, RECENT_PAGE_SIZE - real.length);
-        setRecentListings([...real, ...demos]);
-      } else if (data) {
+      if (data) {
         setRecentListings(prev => pageIndex === 0 ? data : [...prev, ...data]);
       }
       setHasMore(real.length === RECENT_PAGE_SIZE);
       setPage(pageIndex);
     } catch (err) {
       console.error('Recent fetch error:', err);
-      if (pageIndex === 0) setRecentListings(getDemoListings());
+      if (pageIndex === 0) setRecentListings([]);
     } finally {
       setLoadingRecent(false);
       setLoadingMore(false);
@@ -281,10 +275,6 @@ export const Home: React.FC = () => {
                 GPS Verified Sellers
               </span>
               <span className="flex items-center gap-1.5">
-                <Star size={14} className="text-sandy-400/70" />
-                4,000+ Listings
-              </span>
-              <span className="flex items-center gap-1.5">
                 <MapPin size={14} className="text-coral-300/70" />
                 All Islands Covered
               </span>
@@ -323,6 +313,7 @@ export const Home: React.FC = () => {
       </section>
 
       {/* ── FLASH DEALS ── */}
+      {FLASH_DEALS_ENABLED && (
       <section className="px-4 mb-10">
         <div className="app-container">
           <div className="relative rounded-[28px] overflow-hidden reveal">
@@ -363,38 +354,45 @@ export const Home: React.FC = () => {
           </div>
         </div>
       </section>
+      )}
 
       {/* ── FEATURED LISTINGS ── */}
-      {(loadingFeatured || featuredListings.length > 0) && (
-        <section className="px-4 mb-10">
-          <div className="app-container">
-            <div className="section-header px-0 reveal">
-              <div>
-                <h2 className="font-heading font-extrabold text-xl text-midnight-700 tracking-tight flex items-center gap-2">
-                  Featured <span className="text-amber-500">Picks</span>
-                </h2>
-                <p className="text-xs text-warm-400 font-medium mt-1">Top rated island treasures</p>
-              </div>
-            </div>
-            <div className="overflow-x-auto hide-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
-              <div className="flex gap-4 w-max pb-2">
-                {loadingFeatured
-                  ? [1, 2, 3].map(n => <HorizontalCardSkeleton key={n} />)
-                  : featuredListings.map((listing, i) => (
-                    <HorizontalListingCard
-                      key={listing.id}
-                      listing={listing}
-                      rank={i + 1}
-                      saved={savedListings.has(listing.id)}
-                      onSave={toggleSave}
-                    />
-                  ))
-                }
-              </div>
+      <section className="px-4 mb-10">
+        <div className="app-container">
+          <div className="section-header px-0 reveal">
+            <div>
+              <h2 className="font-heading font-extrabold text-xl text-midnight-700 tracking-tight flex items-center gap-2">
+                Featured <span className="text-amber-500">Picks</span>
+              </h2>
+              <p className="text-xs text-warm-400 font-medium mt-1">Example Listings</p>
             </div>
           </div>
-        </section>
-      )}
+          <div className="overflow-x-auto hide-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
+            <div className="flex gap-4 w-max pb-2">
+              {loadingFeatured
+                ? [1, 2, 3].map(n => <HorizontalCardSkeleton key={n} />)
+                : featuredListings.length === 0 ? (
+                  <div className="empty-state py-12 px-8 text-center rounded-3xl border-2 border-dashed border-warm-200 bg-warm-50 min-w-[280px]">
+                    <h3 className="font-heading font-bold text-midnight-700 mb-1">🛍️ No listings yet</h3>
+                    <p className="text-sm text-warm-400 mb-4">Be the first to list something in your island!</p>
+                    <Link to="/create" className="btn-primary text-sm py-2.5 inline-block">
+                      Post a Free Listing
+                    </Link>
+                  </div>
+                ) : featuredListings.map((listing, i) => (
+                  <HorizontalListingCard
+                    key={listing.id}
+                    listing={listing}
+                    rank={i + 1}
+                    saved={savedListings.has(listing.id)}
+                    onSave={toggleSave}
+                  />
+                ))
+              }
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ── TRENDING ON THE ISLANDS ── */}
       <section className="px-4 mb-10">
@@ -404,7 +402,7 @@ export const Home: React.FC = () => {
               <h2 className="font-heading font-extrabold text-xl text-midnight-700 tracking-tight flex items-center gap-2">
                 Today's <span className="text-coral-500">Hot Picks</span>
               </h2>
-              <p className="text-xs text-warm-400 font-medium mt-1">Handpicked deals just for you</p>
+              <p className="text-xs text-warm-400 font-medium mt-1">Sample listings from across the islands</p>
             </div>
             <Link to="/listings?sort=popular" className="section-link">All <ArrowRight size={14} /></Link>
           </div>
@@ -412,7 +410,15 @@ export const Home: React.FC = () => {
             <div className="flex gap-4 w-max pb-2">
               {loadingTrending
                 ? [1, 2, 3].map(n => <HorizontalCardSkeleton key={n} />)
-                : trendingListings.slice(0, 5).map((listing, i) => (
+                : trendingListings.length === 0 ? (
+                  <div className="empty-state py-12 px-8 text-center rounded-3xl border-2 border-dashed border-warm-200 bg-warm-50 min-w-[280px]">
+                    <h3 className="font-heading font-bold text-midnight-700 mb-1">🛍️ No listings yet</h3>
+                    <p className="text-sm text-warm-400 mb-4">Be the first to list something in your island!</p>
+                    <Link to="/create" className="btn-primary text-sm py-2.5 inline-block">
+                      Post a Free Listing
+                    </Link>
+                  </div>
+                ) : trendingListings.slice(0, 5).map((listing, i) => (
                   <HorizontalListingCard
                     key={listing.id}
                     listing={listing}
@@ -466,7 +472,15 @@ export const Home: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {loadingRecent
               ? [1, 2, 3, 4].map(n => <ListingCardSkeleton key={n} />)
-              : recentListings.map((listing, i) => (
+              : recentListings.length === 0 ? (
+                <div className="col-span-full empty-state py-16 text-center rounded-3xl border-2 border-dashed border-warm-200 bg-warm-50">
+                  <h3 className="font-heading font-bold text-midnight-700 text-lg mb-2">🛍️ No listings yet</h3>
+                  <p className="text-sm text-warm-400 mb-4">Be the first to list something in your island!</p>
+                  <Link to="/create" className="btn-primary text-sm py-2.5 inline-block">
+                    Post a Free Listing
+                  </Link>
+                </div>
+              ) : recentListings.map((listing, i) => (
                 <ListingCard
                   key={listing.id}
                   listing={listing}

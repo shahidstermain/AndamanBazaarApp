@@ -265,7 +265,7 @@ export const Pricing: React.FC = () => {
                                 <span className="text-accent underline decoration-8 underline-offset-8">making money?</span>
                             </h2>
                             <p className="text-secondary text-lg md:text-xl font-medium max-w-lg mx-auto lg:mx-0">
-                                Join thousands of locals buying and selling daily.
+                                Buy and sell locally across the Andaman & Nicobar Islands.
                                 Listing takes less than 60 seconds.
                             </p>
                             <div className="pt-4">
