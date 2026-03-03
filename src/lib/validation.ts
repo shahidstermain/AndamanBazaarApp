@@ -16,24 +16,33 @@ export const sanitizeHtml = (input: string): string => {
     if (typeof input !== 'string') {
         throw new TypeError('sanitizeHtml: input must be a string');
     }
-    // Use DOMPurify only in a real browser with a working document.createElement
-    if (typeof window !== 'undefined' && typeof window.document?.createElement === 'function') {
-        try {
-            const result = DOMPurify.sanitize(input, {
-                ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'br', 'p'],
-                ALLOWED_ATTR: [],
-            });
-            // DOMPurify may silently return '' in jsdom; fall through to regex if so
-            if (result || !input) {
-                if (!/<\/?(?:script|iframe)\b/i.test(result)) {
-                    return result;
-                }
-            }
-        } catch {
-            // Fall through to regex approach if DOMPurify fails
-        }
+    // iframe tags with schemeless src can throw inside happy-dom; short-circuit to regex
+    if (/<iframe/i.test(input)) {
+        return sanitizeHtmlFallback(input);
     }
-    // Server-side or jsdom fallback: regex-based sanitization
+
+    try {
+        // Use DOMPurify only in a real browser-like environment
+        if (typeof window !== 'undefined' && typeof window.document?.createElement === 'function') {
+            try {
+                const result = DOMPurify.sanitize(input, {
+                    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'br', 'p'],
+                    ALLOWED_ATTR: [],
+                });
+                if (result || !input) {
+                    if (!/<\/?(?:script|iframe)\b/i.test(result)) {
+                        return result;
+                    }
+                }
+            } catch {
+                // swallow and fall through
+            }
+        }
+    } catch {
+        // ignore and fall back
+    }
+
+    // Server-side or fallback: regex-based sanitization
     return sanitizeHtmlFallback(input);
 };
 
@@ -234,8 +243,8 @@ export const validateFileUpload = (
 ): { valid: boolean; error?: string } => {
     const { maxSizeMB = 5, allowedTypes = ['image/jpeg', 'image/png', 'image/webp'] } = options;
 
-    // Check for zero-byte files
-    if (file.size <= 0) {
+    // Check for zero-byte or unknown size files
+    if (!Number.isFinite(file.size) || file.size <= 0) {
         return { valid: false, error: 'File is empty or corrupted' };
     }
 
