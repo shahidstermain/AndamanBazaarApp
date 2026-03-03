@@ -7,6 +7,13 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'happy-dom',
+    environmentOptions: {
+      happyDOM: {
+        settings: {
+          disableIframePageLoading: true,
+        },
+      },
+    },
     setupFiles: ['./tests/setup.ts'],
     exclude: [
       '**/node_modules/**',
@@ -17,6 +24,8 @@ export default defineConfig({
       'tests/integration/**',
       'tests/accessibility/**',
       'e2e/**',
+      'backend/**',
+      'frontend/**',
     ],
     coverage: {
       provider: 'v8',

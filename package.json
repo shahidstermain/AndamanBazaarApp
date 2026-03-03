@@ -16,7 +16,8 @@
     "test:accessibility": "vitest run tests/accessibility",
     "test:performance": "lighthouse http://localhost:5173 --output=html --output-path=./reports/performance.html",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:security && npm run test:accessibility",
-    "audit:fix": "npm audit fix"
+    "audit:fix": "npm audit fix",
+    "firebase-deploy": "npm run build && firebase deploy"
   },
   "dependencies": {
     "@google/generative-ai": "0.24.1",

@@ -56,7 +56,7 @@ describe('Listings View', () => {
       </MemoryRouter>
     );
     await waitFor(() => {
-      expect(screen.getByText(/Nothing found yet/i)).toBeInTheDocument();
+      expect(screen.getByText(/Andaman mein koi seller nahi/i)).toBeInTheDocument();
     });
   });
 });

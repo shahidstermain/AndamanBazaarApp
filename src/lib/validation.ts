@@ -234,6 +234,11 @@ export const validateFileUpload = (
 ): { valid: boolean; error?: string } => {
     const { maxSizeMB = 5, allowedTypes = ['image/jpeg', 'image/png', 'image/webp'] } = options;
 
+    // Check for zero-byte files
+    if (file.size <= 0) {
+        return { valid: false, error: 'File is empty or corrupted' };
+    }
+
     // Check file size
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
     if (file.size > maxSizeBytes) {

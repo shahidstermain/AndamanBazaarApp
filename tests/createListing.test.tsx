@@ -58,7 +58,7 @@ describe('CreateListing View', () => {
         renderCreateListing();
 
         await waitFor(() => {
-            expect(screen.getByText(/Tap to add photos/i)).toBeInTheDocument();
+            expect(screen.getByText(/photo lagao/i)).toBeInTheDocument();
             expect(screen.getByText(/AI-optimized automatically/i)).toBeInTheDocument();
         });
     });
