@@ -16,7 +16,8 @@
     "test:accessibility": "vitest run tests/accessibility",
     "test:performance": "lighthouse http://localhost:5173 --output=html --output-path=./reports/performance.html",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:security && npm run test:accessibility",
-    "audit:fix": "npm audit fix"
+    "audit:fix": "npm audit fix",
+    "firebase-deploy": "npm run build && firebase deploy"
   },
   "dependencies": {
     "@google/generative-ai": "0.24.1",
@@ -67,6 +68,7 @@
     "eslint-plugin-react-hooks": "4.6.2",
     "eslint-plugin-react-refresh": "0.4.26",
     "happy-dom": "20.0.2",
+    "jsdom": "^28.1.0",
     "lighthouse": "11.7.0",
     "msw": "2.12.10",
     "playwright": "1.58.2",

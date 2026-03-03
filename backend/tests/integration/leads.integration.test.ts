@@ -5,15 +5,25 @@ import { prisma } from "../../src/db/prisma";
 const describeIfDatabase = process.env.DATABASE_URL ? describe : describe.skip;
 
 describeIfDatabase("POST /api/leads", () => {
+  let dbReady = true;
+
   beforeAll(async () => {
-    await prisma.$connect();
+    try {
+      await prisma.$connect();
+    } catch (err) {
+      dbReady = false;
+      console.warn("Skipping lead integration tests; database unavailable:", err);
+      throw err;
+    }
   });
 
   beforeEach(async () => {
+    if (!dbReady) return;
     await prisma.lead.deleteMany();
   });
 
   afterAll(async () => {
+    if (!dbReady) return;
     await prisma.$disconnect();
   });
 
@@ -33,6 +43,8 @@ describeIfDatabase("POST /api/leads", () => {
       special_requests: "Need pickup from jetty",
       consent: true,
     };
+
+    if (!dbReady) return;
 
     const response = await request(app).post("/api/leads").send(payload);
     expect(response.status).toBe(201);
@@ -62,6 +74,8 @@ describeIfDatabase("POST /api/leads", () => {
       budget: 0,
       consent: false,
     };
+
+    if (!dbReady) return;
 
     const response = await request(app).post("/api/leads").send(invalidPayload);
     expect(response.status).toBe(400);

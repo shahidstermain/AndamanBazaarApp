@@ -59,7 +59,7 @@ describe('BoostSuccess View', () => {
 
         await waitFor(() => {
             expect(screen.getByText('Payment Successful!')).toBeInTheDocument();
-            expect(screen.getByText(/Your listing is now boosted/i)).toBeInTheDocument();
+            expect(screen.getByText(/Boost active!/i)).toBeInTheDocument();
         });
     });
 

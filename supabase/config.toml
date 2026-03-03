@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.cashfree-webhook]
 verify_jwt = false
+
+[functions.verify-location]
+verify_jwt = false

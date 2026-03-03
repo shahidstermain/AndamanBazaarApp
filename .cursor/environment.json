@@ -1,0 +1,4 @@
+{
+  "snapshot": "snapshot-20260302-0e583406-9f3a-45aa-a11d-4c854c491664",
+  "install": "sudo pg_ctlcluster 16 main start || true\ncd /workspace && npm install\ncd /workspace/backend && npm install\ncd /workspace/frontend && npm install\ncd /workspace/backend && npx prisma generate"
+}

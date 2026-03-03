@@ -8,6 +8,12 @@ export interface Profile {
   city?: string;
   area?: string;
   is_location_verified: boolean;
+  location_verified_at?: string;
+  last_verification_lat?: number;
+  last_verification_lng?: number;
+  verification_ip?: string;
+  verification_attempts?: number;
+  verification_blocked_until?: string;
   total_listings: number;
   successful_sales: number;
   trust_level: 'newbie' | 'verified' | 'legend';

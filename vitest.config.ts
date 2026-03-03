@@ -8,6 +8,10 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     setupFiles: ['./tests/setup.ts'],
+    include: [
+      'tests/**/*.test.{ts,tsx}',
+      'tests/**/*.spec.{ts,tsx}',
+    ],
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
@@ -16,7 +20,6 @@ export default defineConfig({
       'tests/security/**',
       'tests/integration/**',
       'tests/accessibility/**',
-      'e2e/**',
     ],
     coverage: {
       provider: 'v8',

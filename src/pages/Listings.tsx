@@ -121,7 +121,7 @@ export const Listings: React.FC = () => {
 
       const results = data || [];
       if (reset) {
-
+        setListings(results);
       } else {
         setListings(prev => [...prev, ...results]);
       }

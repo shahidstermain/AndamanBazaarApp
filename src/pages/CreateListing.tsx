@@ -120,8 +120,19 @@ export const CreateListing: React.FC = () => {
         setCity('Port Blair');
         setArea('Aberdeen');
       } else {
-        const { data: profile } = await supabase.from('profiles').select('is_location_verified, city, area').eq('id', user.id).single();
-        if (profile?.is_location_verified) setIsVerified(true);
+        const { data: profile } = await supabase.from('profiles').select('is_location_verified, location_verified_at, city, area').eq('id', user.id).single();
+        
+        if (profile?.is_location_verified) {
+          const verifiedAt = profile.location_verified_at ? new Date(profile.location_verified_at).getTime() : 0;
+          const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000;
+          const needsReverification = !verifiedAt || (Date.now() - verifiedAt > ninetyDaysMs);
+          
+          if (needsReverification) {
+            setIsVerified(false);
+          } else {
+            setIsVerified(true);
+          }
+        }
 
         if (profile?.city) setCity(profile.city);
         if (profile?.area) setArea(profile.area || '');
@@ -276,17 +287,45 @@ export const CreateListing: React.FC = () => {
         setIsVerifying(false);
         return;
       }
-      const pos = await new Promise<GeolocationPosition>((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 }));
-      const { latitude: lat, longitude: lng } = pos.coords;
-      const isAndaman = lat >= 6.5 && lat <= 14.0 && lng >= 92.0 && lng <= 94.5;
-      if (isAndaman && userId) {
-        await supabase.from('profiles').update({ is_location_verified: true }).eq('id', userId);
-        setIsVerified(true);
-        showToast('Island residency verified!', 'success');
-      } else {
-        showToast('Location could not be verified as Andaman & Nicobar Islands.', 'error');
+      
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => 
+        navigator.geolocation.getCurrentPosition(resolve, reject, { 
+          timeout: 15000, 
+          enableHighAccuracy: true,
+          maximumAge: 0 
+        })
+      );
+      
+      const { latitude, longitude } = pos.coords;
+      
+      const { data, error } = await supabase.functions.invoke('verify-location', {
+        body: { latitude, longitude }
+      });
+      
+      if (error) {
+        console.error('Verification error:', error);
+        showToast('Verification service unavailable. Please try again later.', 'error');
+        setIsVerifying(false);
+        return;
       }
-    } catch { showToast('Could not access location. Please enable GPS.', 'error'); }
+      
+      if (data?.code === 'RATE_LIMITED') {
+        const retryMinutes = Math.ceil((data.retryAfterSeconds || 3600) / 60);
+        showToast(`Too many attempts. Please try again in ${retryMinutes} minutes.`, 'warning');
+      } else if (data?.verified) {
+        setIsVerified(true);
+        showToast(data.message || 'Island residency verified!', 'success');
+        if (data.warning) {
+          setTimeout(() => showToast(data.warning, 'warning'), 2000);
+        }
+      } else {
+        const errorMsg = data?.error || 'Location could not be verified as Andaman & Nicobar Islands.';
+        showToast(errorMsg, 'error');
+      }
+    } catch (err) {
+      console.error('GPS error:', err);
+      showToast('Could not access location. Please enable GPS and try again.', 'error');
+    }
     setIsVerifying(false);
   };
 

@@ -51,13 +51,7 @@ interface IpGeoResponse {
     isp: string;
 }
 
-/**
- * Determine if a latitude/longitude pair lies inside the geographic bounding box for the Andaman & Nicobar Islands.
- *
- * @param lat - Latitude in decimal degrees
- * @param lng - Longitude in decimal degrees
- * @returns `true` if `lat` and `lng` are within the bounding box (inclusive), `false` otherwise
- */
+<<<<
 function isWithinAndamanBounds(lat: number, lng: number): boolean {
     return (
         lat >= ANDAMAN_BOUNDS.minLat &&
@@ -67,14 +61,7 @@ function isWithinAndamanBounds(lat: number, lng: number): boolean {
     );
 }
 
-/**
- * Extracts the client's IP address from the request headers.
- *
- * Prefers the first entry in the `x-forwarded-for` header, falls back to `x-real-ip`, and returns `"unknown"` if neither header is present.
- *
- * @param req - The incoming Request whose headers will be inspected for client IP information.
- * @returns The client IP address as a string if found, otherwise `"unknown"`.
- */
+<
 function getClientIp(req: Request): string {
     const forwarded = req.headers.get("x-forwarded-for");
     if (forwarded) {
@@ -87,12 +74,7 @@ function getClientIp(req: Request): string {
     return "unknown";
 }
 
-/**
- * Retrieves geolocation information for a public IPv4 address using ip-api.com.
- *
- * @param ip - Client IP address. Private or loopback addresses (e.g., "127.*", "10.*", "192.168.*") are treated as unavailable and will return `null`.
- * @returns An `IpGeoResponse` containing `status`, `country`, `countryCode`, `lat`, `lon`, and `isp` when geolocation is available; `null` if the IP is private/loopback, the remote service reports failure, or a network/error condition prevents retrieval.
- */
+
 async function getIpGeolocation(ip: string): Promise<IpGeoResponse | null> {
     if (ip === "unknown" || ip.startsWith("127.") || ip.startsWith("192.168.") || ip.startsWith("10.")) {
         return null;

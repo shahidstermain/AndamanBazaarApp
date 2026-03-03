@@ -370,12 +370,30 @@ export const Profile: React.FC = () => {
                         </span>
                       </div>
                     )}
-                    {profile?.is_location_verified && (
-                      <div className="flex items-center space-x-2 px-5 py-3 bg-green-500/10 text-green-700 rounded-2xl border-2 border-green-500/20 shadow-sm">
-                        <ShieldCheck size={18} />
-                        <span className="text-sm font-black uppercase tracking-widest">Verified Resident</span>
-                      </div>
-                    )}
+                    {profile?.is_location_verified && (() => {
+                      const verifiedAt = profile.location_verified_at ? new Date(profile.location_verified_at).getTime() : 0;
+                      const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000;
+                      const needsReverification = !verifiedAt || (Date.now() - verifiedAt > ninetyDaysMs);
+                      
+                      return (
+                        <div className="flex flex-col items-center gap-1">
+                          <div className={`flex items-center space-x-2 px-5 py-3 rounded-2xl border-2 shadow-sm ${
+                            needsReverification
+                              ? 'bg-amber-500/10 text-amber-700 border-amber-500/20'
+                              : 'bg-green-500/10 text-green-700 border-green-500/20'
+                          }`}>
+                            <ShieldCheck size={18} />
+                            <span className="text-sm font-black uppercase tracking-widest">Verified Resident</span>
+                          </div>
+                          <span className="text-[10px] font-bold text-warm-400">
+                            {needsReverification
+                              ? 'Re-verification required'
+                              : `Verified ${new Date(profile.location_verified_at!).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                            }
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               )}
