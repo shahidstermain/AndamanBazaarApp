@@ -49,7 +49,12 @@ describe('Listings View', () => {
   });
 
   it('shows no results found for unmatched search', async () => {
-    renderListings();
+    (supabase.from as any).mockReturnValue(createMockChain([]));
+    render(
+      <MemoryRouter initialEntries={['/listings?q=xyznonexistentterm']}>
+        <Listings />
+      </MemoryRouter>
+    );
     await waitFor(() => {
       expect(screen.getByText(/Nothing found yet/i)).toBeInTheDocument();
     });

@@ -60,24 +60,24 @@ export const Admin: React.FC = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // Fetch Stats
-      const { count: totalListings } = await supabase
-        .from('listings')
-        .select('*', { count: 'exact', head: true });
-
-      const { count: activeListings } = await supabase
-        .from('listings')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'active');
-
-      const { count: pendingReports } = await supabase
-        .from('reports')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending');
-
-      const { count: totalUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
+      // Fetch all stats and reports in parallel
+      const [
+        { count: totalListings },
+        { count: activeListings },
+        { count: pendingReports },
+        { count: totalUsers },
+        { data: reportsData, error }
+      ] = await Promise.all([
+        supabase.from('listings').select('*', { count: 'exact', head: true }),
+        supabase.from('listings').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('reports').select(`
+          *,
+          reporter:reporter_id(name, email),
+          listing:listing_id(title, status, user_id)
+        `).order('created_at', { ascending: false })
+      ]);
 
       setStats({
         totalListings: totalListings || 0,
@@ -85,16 +85,6 @@ export const Admin: React.FC = () => {
         pendingReports: pendingReports || 0,
         totalUsers: totalUsers || 0
       });
-
-      // Fetch Reports
-      const { data: reportsData, error } = await supabase
-        .from('reports')
-        .select(`
-          *,
-          reporter:reporter_id(name, email),
-          listing:listing_id(title, status, user_id)
-        `)
-        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setReports(reportsData || []);

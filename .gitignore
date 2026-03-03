@@ -8,6 +8,8 @@ firebase-debug.log
 .gemini/
 .env.test
 .env.*
+!.env.example
+!**/.env.example
 .DS_Store
 .vscode/
 playwright-report/
@@ -21,3 +23,23 @@ supabase/.temp/
 acme.sh-repo
 api-cli
 hapi
+
+
+# Security: SSH keys and deploy keys
+ghdeploykey
+ghdeploykey.pub
+*.pem
+*.key
+id_rsa
+id_ed25519
+id_ecdsa
+
+# Security: Secrets and credentials
+secrets.json
+credentials.json
+service-account*.json
+
+# Reports
+reports/
+coverage/
+lighthouse-*.html

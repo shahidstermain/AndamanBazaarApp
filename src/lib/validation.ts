@@ -2,6 +2,12 @@ import { z } from 'zod';
 import DOMPurify from 'dompurify';
 
 // ===== SANITIZATION UTILITIES =====
+const sanitizeHtmlFallback = (input: string): string =>
+    input
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+        .replace(/<(?!\/?(?:b|i|em|strong|br|p)(?:\s|>|\/))(?:[^>]*)>/gi, '');
 
 /**
  * Sanitize HTML content to prevent XSS attacks
@@ -19,19 +25,16 @@ export const sanitizeHtml = (input: string): string => {
             });
             // DOMPurify may silently return '' in jsdom; fall through to regex if so
             if (result || !input) {
-                return result;
+                if (!/<\/?(?:script|iframe)\b/i.test(result)) {
+                    return result;
+                }
             }
         } catch {
             // Fall through to regex approach if DOMPurify fails
         }
     }
     // Server-side or jsdom fallback: regex-based sanitization
-    return input
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-        .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
-        // Remove all tags that are NOT in the allowed list
-        .replace(/<(?!\/?(?:b|i|em|strong|br|p)(?:\s|>|\/))(?:[^>]*)>/gi, '');
+    return sanitizeHtmlFallback(input);
 };
 
 /**
