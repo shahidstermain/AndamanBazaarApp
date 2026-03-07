@@ -1,0 +1,152 @@
+name: Test And Deploy Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '30 1 * * *'
+
+env:
+  NODE_VERSION: '22'
+  VITE_SUPABASE_URL: https://mock.supabase.co
+  VITE_SUPABASE_ANON_KEY: mock-anon-key-for-testing-only-must-be-long-enough
+  VITE_CASHFREE_ENV: sandbox
+  VITE_E2E_BYPASS_AUTH: 'true'
+
+jobs:
+  unit-and-security-blocking:
+    name: Unit + Security (Blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Run deterministic unit suites with coverage
+        run: |
+          npx vitest run \
+            --coverage \
+            --coverage.provider=v8 \
+            --coverage.reporter=text \
+            --coverage.reporter=json-summary \
+            --coverage.reporter=html \
+            --coverage.thresholds.lines=70 \
+            --coverage.thresholds.functions=70 \
+            --coverage.thresholds.branches=70 \
+            --coverage.thresholds.statements=70 \
+            --exclude tests/e2e/** \
+            --exclude tests/integration/** \
+            --exclude tests/security/** \
+            --exclude tests/performance/** \
+            --exclude tests/accessibility/**
+
+      - name: Run security audit suites (blocking)
+        run: npx vitest run tests/security/webhook-security.test.ts tests/security/security-audit.test.ts
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+
+  e2e-smoke-blocking:
+    name: E2E Smoke (Blocking)
+    runs-on: ubuntu-latest
+    needs: unit-and-security-blocking
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build project
+        run: npm run build
+
+      - name: Run Playwright smoke suite (chromium)
+        run: npx playwright test tests/e2e/user-journeys.smoke.spec.ts --project=chromium --reporter=html
+
+      - name: Upload Playwright smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-smoke-report
+          path: playwright-report/
+          retention-days: 14
+
+  e2e-extended-nonblocking:
+    name: E2E Extended (Non-Blocking)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run extended journeys
+        run: npx playwright test tests/e2e/user-journeys.extended.spec.ts --project=chromium --reporter=html
+
+      - name: Upload Playwright extended report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-extended-report
+          path: playwright-report/
+          retention-days: 7
+
+  security-audit-nonblocking:
+    name: Security Audit (Non-Blocking)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security audit tests
+        run: npm run test:security

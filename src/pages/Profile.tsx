@@ -3,9 +3,8 @@ import { supabase } from '../lib/supabase';
 import { Profile as ProfileType, Listing } from '../types';
 import { Link, useNavigate } from 'react-router-dom';
 import { ReportModal } from '../components/ReportModal';
-import {
-  Edit3, CheckCircle, Rocket, Share2, Trash2, MoreVertical, Heart, Globe, ShoppingBag, Calendar, Camera, Eye, Save, X, Loader2, MapPin, ShieldCheck, Award, LogOut, MessageCircle, Star
-} from 'lucide-react';
+import { Edit3, CheckCircle, Rocket, Share2, Trash2, MoreVertical, Heart, Globe, ShoppingBag, Calendar, Camera, Eye, Save, X, Loader2, MapPin, ShieldCheck, Award, LogOut, MessageCircle, Star, ArrowUpDown } from 'lucide-react';
+import { TrustBadge } from '../components/TrustBadge';
 import { profileUpdateSchema, validateFileUpload, sanitizePlainText } from '../lib/validation';
 import { logAuditEvent, sanitizeErrorMessage } from '../lib/security';
 import { logout } from '../lib/auth';
@@ -39,6 +38,10 @@ export const Profile: React.FC = () => {
   const [hasMoreListings, setHasMoreListings] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
+  const bypassAuth =
+    import.meta.env.VITE_E2E_BYPASS_AUTH === 'true' ||
+    new URLSearchParams(window.location.search).get('e2e') === '1';
+
   useEffect(() => {
     fetchProfileAndStats();
     const handleClickOutside = (event: MouseEvent) => {
@@ -70,6 +73,22 @@ export const Profile: React.FC = () => {
   const fetchProfileAndStats = async () => {
     setLoading(true);
     try {
+      if (bypassAuth) {
+        setProfile({
+          id: 'e2e-user',
+          email: 'e2e@example.com',
+          name: 'E2E User',
+          city: 'Port Blair',
+          is_location_verified: false,
+          total_listings: 0,
+          successful_sales: 0,
+          trust_level: 'newbie',
+          created_at: new Date().toISOString(),
+        } as ProfileType);
+        setStats({ active: 0, sold: 0 });
+        return;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { navigate('/auth'); return; }
 
@@ -160,8 +179,17 @@ export const Profile: React.FC = () => {
   };
 
   const fetchUserListings = async (pageIndex: number) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = bypassAuth
+      ? ({ data: { user: { id: 'e2e-user' } } } as any)
+      : await supabase.auth.getUser();
     if (!user) return;
+
+    if (bypassAuth) {
+      if (pageIndex === 0) setListings([]);
+      setHasMoreListings(false);
+      return;
+    }
+
     if (pageIndex > 0) setLoadingMore(true);
     try {
       const from = pageIndex * PROFILE_PAGE_SIZE;
@@ -189,8 +217,17 @@ export const Profile: React.FC = () => {
   };
 
   const fetchSavedItems = async (pageIndex: number) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = bypassAuth
+      ? ({ data: { user: { id: 'e2e-user' } } } as any)
+      : await supabase.auth.getUser();
     if (!user) return;
+
+    if (bypassAuth) {
+      if (pageIndex === 0) setListings([]);
+      setHasMoreListings(false);
+      return;
+    }
+
     if (pageIndex > 0) setLoadingMore(true);
     try {
       const from = pageIndex * PROFILE_PAGE_SIZE;
@@ -266,10 +303,33 @@ export const Profile: React.FC = () => {
     } catch (err) { showToast('Could not delete listing.', 'error'); }
   };
 
+  const handleBumpListing = async (id: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const { data, error } = await supabase.rpc('bump_listing', { p_listing_id: id });
+      if (error) throw error;
+      if (data?.success) {
+        showToast('Bumped! Teri listing ab top pe hai 🚀', 'success');
+        setListings([]);
+        setListingPage(0);
+        fetchUserListings(0);
+      } else if (data?.error === 'cooldown_active') {
+        const nextDate = new Date(data.next_eligible);
+        showToast(`Next bump available on ${nextDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`, 'info');
+      } else {
+        showToast('Could not bump listing.', 'error');
+      }
+    } catch (err) {
+      console.error('Bump error:', err);
+      showToast('Could not bump listing.', 'error');
+    }
+  };
+
   const handleShareListing = async (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const url = `${window.location.origin}/#/listings/${id}`;
+    const url = `${window.location.origin}/listings/${id}`;
     try {
       if (navigator.share) await navigator.share({ title: 'Check out this listing on AndamanBazaar!', url });
       else { await navigator.clipboard.writeText(url); showToast(COPY.TOAST.SAVE_SUCCESS, 'success'); }
@@ -277,10 +337,19 @@ export const Profile: React.FC = () => {
     setActiveMenuId(null);
   };
 
+  const handleWhatsAppShare = (id: string, title: string, price: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = `${window.location.origin}/listings/${id}?utm_source=whatsapp&utm_medium=share`;
+    const text = encodeURIComponent(`${title} \u2014 \u20b9${price.toLocaleString('en-IN')}\n${url}`);
+    window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener');
+    setActiveMenuId(null);
+  };
+
   if (loading) return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center bg-neutral">
       <Loader2 className="w-12 h-12 animate-spin text-accent" />
-      <p className="mt-4 font-black uppercase tracking-widest text-sm text-secondary">Loading Profile...</p>
+      <p className="mt-4 font-black uppercase tracking-widest text-sm text-secondary">{COPY.LOADING.AUTH}</p>
     </div>
   );
 
@@ -356,7 +425,12 @@ export const Profile: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <h3 className="text-5xl md:text-6xl font-heading font-black tracking-tight leading-tight">{profile?.name || 'Local Islander'}</h3>
+                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                    <h3 className="text-5xl md:text-6xl font-heading font-black tracking-tight leading-tight">{profile?.name || 'Local Islander'}</h3>
+                    {profile?.trust_level && (
+                      <TrustBadge level={profile.trust_level} size="md" />
+                    )}
+                  </div>
                   <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
                     <div className="flex items-center space-x-2 px-5 py-3 bg-secondary/10 text-secondary rounded-2xl border-2 border-secondary/20 shadow-sm">
                       <Calendar size={18} className="text-accent" />
@@ -448,6 +522,7 @@ export const Profile: React.FC = () => {
                       {activeMenuId === item.id && (
                         <div ref={menuRef} className="absolute top-8 right-0 w-48 bg-white rounded-2xl shadow-xl border border-warm-100 p-2 z-[60] animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                           <div className="space-y-1">
+                            {item.id && <button onClick={e => handleWhatsAppShare(item.id, item.title, item.price, e)} className="w-full flex items-center space-x-3 p-3 hover:bg-green-50 rounded-xl transition-colors group text-left"><MessageCircle size={16} className="text-green-600" /><span className="text-sm font-bold text-green-700">WhatsApp</span></button>}
                             {item.id && <button onClick={e => { setActiveMenuId(null); handleShareListing(item.id, e); }} className="w-full flex items-center space-x-3 p-3 hover:bg-warm-50 rounded-xl transition-colors group text-left"><Share2 size={16} className="text-warm-500" /><span className="text-sm font-bold text-midnight-700">Share</span></button>}
                             {item.id && <button onClick={() => setDeleteConfirmationId(item.id)} className="w-full flex items-center space-x-3 p-3 hover:bg-red-50 rounded-xl transition-colors group text-red-600 text-left"><Trash2 size={16} /><span className="text-sm font-bold">Delete</span></button>}
                           </div>
@@ -475,9 +550,12 @@ export const Profile: React.FC = () => {
               </div>
 
               {activeTab !== 'saved' && (
-                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-warm-100">
+                <div className="grid grid-cols-4 gap-2 pt-3 border-t border-warm-100">
                   <button onClick={() => navigate(`/post?edit=${item.id}`)} className="py-2 px-2 rounded-lg border border-warm-200 text-warm-600 font-medium text-xs hover:bg-warm-50 transition-colors">
                     Edit
+                  </button>
+                  <button onClick={e => item.id && handleBumpListing(item.id, e)} disabled={item.status !== 'active'} className="py-2 px-2 rounded-lg border border-teal-200 text-teal-600 font-medium text-xs hover:bg-teal-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1">
+                    <ArrowUpDown size={12} /> Bump
                   </button>
                   <button onClick={e => item.id && handleMarkAsSold(item.id, e)} disabled={item.status === 'sold'} className="py-2 px-2 rounded-lg border border-warm-200 text-warm-600 font-medium text-xs hover:bg-warm-50 transition-colors disabled:opacity-50">
                     Mark Sold

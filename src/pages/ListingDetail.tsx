@@ -1,8 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ReportModal } from '../components/ReportModal';
+import { TrustBadge } from '../components/TrustBadge';
 import { Listing, Profile } from '../types';
 import { MapPin, Shield, Share2, MessageSquare, Heart, ChevronLeft, AlertCircle, Edit3, Loader2, Tag, Clock, ShieldCheck, Package, Phone, MessageCircle, BadgeCheck, Rocket, Star } from 'lucide-react';
 import { useToast } from '../components/Toast';
@@ -20,13 +21,9 @@ export const ListingDetail: React.FC = () => {
   const [activeImage, setActiveImage] = useState(0);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
+  const [similarListings, setSimilarListings] = useState<any[]>([]);
+  const [loadingSimilar, setLoadingSimilar] = useState(false);
   const { showToast } = useToast();
-
-  useEffect(() => {
-    fetchListingDetails();
-    checkFavoriteStatus();
-    incrementViews();
-  }, [id]);
 
   const incrementViews = async () => {
     if (!id) return;
@@ -41,7 +38,11 @@ export const ListingDetail: React.FC = () => {
     try {
       if (!id) return;
 
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: userData, error: userError } = await (supabase.auth as any).getUser();
+      const user = userData?.user;
+      if (userError) {
+        console.warn("Error getting user:", userError);
+      }
       setCurrentUserId(user?.id || null);
 
       // 1. Fetch basic listing data without joins
@@ -90,7 +91,11 @@ export const ListingDetail: React.FC = () => {
 
   const checkFavoriteStatus = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: userData, error: userError } = await (supabase.auth as any).getUser();
+      const user = userData?.user;
+      if (userError) {
+        console.warn("Error getting user:", userError);
+      }
       if (!user || !id) return;
 
       const { data } = await supabase
@@ -108,7 +113,11 @@ export const ListingDetail: React.FC = () => {
 
   const toggleFavorite = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: userData, error: userError } = await (supabase.auth as any).getUser();
+      const user = userData?.user;
+      if (userError) {
+        console.warn("Error getting user:", userError);
+      }
       if (!user) {
         showToast('Sign in to save items to your favorites.', 'info');
         return;
@@ -122,17 +131,71 @@ export const ListingDetail: React.FC = () => {
           .eq('user_id', user.id)
           .eq('listing_id', id);
 
-        if (!error) setIsFavorited(false);
+        if (error) {
+          showToast('Failed to remove from favorites', 'error');
+          return;
+        }
+        setIsFavorited(false);
       } else {
         const { error } = await supabase
           .from('favorites')
           .insert({ user_id: user.id, listing_id: id });
 
-        if (!error) setIsFavorited(true);
+        if (error) {
+          showToast('Failed to add to favorites', 'error');
+          return;
+        }
+        setIsFavorited(true);
       }
     } catch (err) {
       console.error("Error toggling favorite:", err);
     }
+  };
+
+  const fetchSimilarListings = useCallback(async () => {
+    if (!id || !listing?.category_id) return;
+    setLoadingSimilar(true);
+    try {
+      const { data } = await supabase
+        .from('listings')
+        .select('id, title, price, city, created_at, is_featured, views_count, images:listing_images(image_url)')
+        .eq('category_id', listing.category_id)
+        .eq('status', 'active')
+        .neq('id', id)
+        .order('is_featured', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(6);
+      
+      setSimilarListings(data || []);
+    } catch (err) {
+      console.warn('Failed to fetch similar listings:', err);
+    } finally {
+      setLoadingSimilar(false);
+    }
+  }, [id, listing?.category_id]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      await fetchListingDetails();
+      await checkFavoriteStatus();
+      incrementViews();
+    };
+    
+    loadData();
+  }, [id]);
+
+  useEffect(() => {
+    if (listing?.category_id) {
+      fetchSimilarListings();
+    }
+  }, [listing?.category_id, id, fetchSimilarListings]);
+
+  const handleWhatsAppShare = () => {
+    if (!listing) return;
+    const text = encodeURIComponent(
+      `${listing.title} — ₹${listing.price.toLocaleString('en-IN')}\n${window.location.href}${window.location.href.includes('?') ? '&' : '?'}utm_source=whatsapp&utm_medium=share`
+    );
+    window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener');
   };
 
   const handleShare = async () => {
@@ -197,7 +260,10 @@ export const ListingDetail: React.FC = () => {
     : [{ image_url: mainImage, id: 'default' }];
 
   const handleMarkAsSold = async () => {
-    if (!id) return;
+    if (!id || !isOwner) {
+      showToast('You can only mark your own listings as sold.', 'error');
+      return;
+    }
     try {
       const { error } = await supabase
         .from('listings')
@@ -242,6 +308,13 @@ export const ListingDetail: React.FC = () => {
                   }`}
               >
                 <Heart fill={isFavorited ? 'currentColor' : 'none'} size={20} strokeWidth={2.5} />
+              </button>
+              <button
+                onClick={handleWhatsAppShare}
+                aria-label="Share on WhatsApp"
+                className="w-11 h-11 bg-green-500 rounded-2xl flex items-center justify-center shadow-glass border border-green-400/50 text-white z-10 hover:bg-green-600 transition-colors"
+              >
+                <MessageSquare size={20} strokeWidth={2.5} />
               </button>
               <button
                 onClick={handleShare}
@@ -384,6 +457,47 @@ export const ListingDetail: React.FC = () => {
                 </div>
               </div>
             )}
+            {/* Similar Listings */}
+            {similarListings.length > 0 && (
+              <div className="space-y-4 pt-4 border-t border-warm-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-heading font-bold text-midnight-700">You might also like</h3>
+                  <Link to={`/listings?category=${listing.category_id}`} className="text-sm font-bold text-teal-600 hover:text-teal-700">
+                    See all
+                  </Link>
+                </div>
+                <div className="flex gap-4 overflow-x-auto pb-2 hide-scrollbar">
+                  {similarListings.map((item: any) => (
+                    <Link
+                      key={item.id}
+                      to={`/listings/${item.id}`}
+                      className="flex-shrink-0 w-48 bg-white rounded-2xl border border-warm-200 shadow-card overflow-hidden hover:shadow-lg transition-shadow"
+                    >
+                      <div className="aspect-square bg-warm-100 relative">
+                        <img
+                          src={item.images?.[0]?.image_url || `https://picsum.photos/seed/${item.id}/400/400`}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                        {item.is_featured && (
+                          <span className="absolute top-2 right-2 px-2 py-0.5 bg-amber-400 text-white text-[10px] font-bold rounded-full">
+                            Featured
+                          </span>
+                        )}
+                      </div>
+                      <div className="p-3 space-y-1">
+                        <h4 className="font-bold text-midnight-700 text-sm line-clamp-1">{item.title}</h4>
+                        <p className="text-teal-600 font-bold text-sm">₹{item.price?.toLocaleString('en-IN')}</p>
+                        <p className="text-warm-400 text-xs flex items-center gap-1">
+                          <MapPin size={10} /> {item.city}
+                        </p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -400,12 +514,15 @@ export const ListingDetail: React.FC = () => {
                 />
               </div>
               <div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <h4 className="font-heading font-black text-midnight-700 text-base leading-none">
                     {seller?.name || seller?.email?.split('@')[0] || 'Seller'}
                   </h4>
                   {seller?.is_location_verified && (
                     <span className="w-5 h-5 bg-teal-600 text-white rounded-full flex items-center justify-center text-[10px]" title="Island Verified">✓</span>
+                  )}
+                  {seller?.trust_level && seller.trust_level !== 'newbie' && (
+                    <TrustBadge level={seller.trust_level} size="sm" showLabel={false} />
                   )}
                 </div>
                 <p className="text-[10px] font-bold text-warm-400 uppercase tracking-widest mt-1">

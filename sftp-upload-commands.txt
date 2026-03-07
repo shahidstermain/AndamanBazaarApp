@@ -1,0 +1,43 @@
+# ============================================================
+# AndamanBazaar SFTP Upload Commands
+# ============================================================
+
+# Connect to SFTP:
+# sftp shahidster.site@ssh.gb.stackcp.com
+# Password: 17Day11month!
+
+# Once connected, run these commands:
+
+# 1. Navigate to the correct server directory
+cd /home/sites/30b/6/6ef8ba74fd/public_html/AndamanBazaarApp
+
+# 2. Upload all files from dist folder recursively
+put -r dist/*
+
+# Alternative: Upload files individually if recursive doesn't work
+# Upload main files
+put dist/index.html
+put dist/manifest.webmanifest
+put dist/registerSW.js
+put dist/sw.js
+put dist/workbox-66610c77.js
+
+# Create and upload assets directory
+mkdir assets
+cd assets
+put ../dist/assets/index-DYfoXG7L.css
+put ../dist/assets/index-N3AAE-tx.js
+put ../dist/assets/browser-DVq3S-kT.js
+cd ..
+
+# 3. Verify upload
+ls -la
+ls index.html
+ls assets/
+
+# 4. Exit SFTP
+exit
+
+# ============================================================
+# After deployment, visit: https://andamanbazaar.in
+# ============================================================

@@ -1,36 +1,239 @@
-# AndamanBazaar Water Adventures Platform
+# AndamanBazaar - Local Marketplace for Andaman & Nicobar Islands
 
-Full-stack monorepo for listing Andaman water adventures and capturing booking leads.
+A hyper-local marketplace platform connecting islanders across the Andaman & Nicobar Islands. Buy, sell, and trade with verified locals in your community.
 
-## Tech Stack
+## 🏝️ About AndamanBazaar
 
-- **Frontend**: React + Vite + TypeScript + Tailwind CSS
-- **Backend**: Node.js + Express + TypeScript + Zod
-- **Database**: PostgreSQL + Prisma ORM (migrations + seed)
-- **Notifications**: Pluggable providers (Nodemailer local + SendGrid placeholder) + webhook retry/backoff
-- **Tests**:
-  - Backend: Jest + Supertest
-  - Frontend: React Testing Library + Vitest
-- **Infra**: Docker + Docker Compose + GitHub Actions
+AndamanBazaar is a community-driven marketplace designed specifically for the unique needs of island life. From fresh catch to local handicrafts, find everything you need from trusted neighbors.
 
-## Features
+### Key Features
+- 🛍️ **Buy & Sell Locally** - List items from fresh fish to electronics
+- 💬 **In-App Chat** - Direct messaging with sellers
+- 📱 **WhatsApp Integration** - Share listings instantly
+- 🏆 **Trust System** - Verified sellers with GPS verification
+- ⚡ **Listing Boost** - Promote your listings for more visibility
+- 🎯 **Area Filters** - Browse by island/area (Port Blair, Havelock, Neil Island)
+- 💰 **Secure Payments** - Cashfree payment integration
+- 📊 **Seller Dashboard** - Track views, sales, and performance
 
-- Public listing pages:
-  - `/` Featured activities + filter/search
-  - `/activities` Paginated all activities
-  - `/activities/:slug` Activity details with booking CTA
-- Lead capture form with validation and prefill from activity pages
-- Success message after lead submission:
-  - **"Thank you — we usually reach out within 12 hours of submission. Kindly wait."**
-- Admin lead management:
-  - `/admin/leads`
-  - Filter by status (`new`, `contacted`, `confirmed`)
-  - Update lead status
-  - Protected via API key or basic auth
-- Lead notifications:
-  - Email to operator
-  - Optional webhook POST with retry/backoff
-- Rate limiting for lead creation (10 requests/IP/hour)
+## 🛠️ Tech Stack
+
+### Frontend
+- **React 18** + **TypeScript** + **Vite**
+- **Tailwind CSS** for styling
+- **Supabase Auth** for authentication
+- **React Router** for navigation
+- **React Query** for data fetching
+- **Lucide React** for icons
+
+### Backend & Database
+- **Supabase** (PostgreSQL + Auth + Edge Functions)
+- **Row Level Security (RLS)** for data protection
+- **Real-time subscriptions** for chat
+- **File storage** for listing images
+- **Edge Functions** for payment processing
+
+### Infrastructure
+- **Firebase Hosting** for web deployment
+- **GitHub Actions** for CI/CD
+- **cPanel/FTP** for alternative deployment
+- **Docker** support for containerization
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+- Supabase account (for local development)
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/shahidster1711/AndamanBazaarApp.git
+   cd AndamanBazaarApp
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Environment setup**
+   ```bash
+   cp .env.example .env
+   # Fill in your Supabase credentials
+   ```
+
+4. **Start development server**
+   ```bash
+   npm run dev
+   ```
+
+5. **Open your browser**
+   Navigate to `http://localhost:5173`
+
+## 📁 Project Structure
+
+```
+AndamanBazaarApp/
+├── src/                          # Frontend source code
+│   ├── components/               # Reusable React components
+│   │   ├── ui/                  # UI component library
+│   │   ├── TrustBadge.tsx       # Trust level badges
+│   │   └── BoostListingModal.tsx # Payment modal
+│   ├── pages/                   # Page components
+│   │   ├── Home.tsx             # Homepage with listings
+│   │   ├── ListingDetail.tsx    # Individual listing view
+│   │   ├── CreateListing.tsx    # Post new listing
+│   │   ├── Profile.tsx          # User profile
+│   │   └── ChatRoom.tsx         # Messaging interface
+│   ├── lib/                     # Utilities and helpers
+│   │   ├── supabase.ts          # Supabase client
+│   │   ├── localCopy.ts         # Andaman-specific content
+│   │   └── validation.ts        # Form validation
+│   └── hooks/                   # Custom React hooks
+├── supabase/                     # Supabase configuration
+│   ├── functions/               # Edge functions
+│   │   ├── cashfree-webhook/    # Payment processing
+│   │   └── generate-invoice/     # Invoice generation
+│   └── migrations/              # Database schema
+├── tests/                       # Test suites
+│   ├── unit/                   # Unit tests (Vitest)
+│   ├── integration/             # Integration tests
+│   └── e2e/                    # End-to-end tests (Playwright)
+└── docs/                        # Documentation
+```
+
+## 🧪 Testing
+
+### Unit Tests
+```bash
+npm run test:unit          # Run unit tests
+npm run test:coverage      # Run with coverage
+```
+
+### Integration Tests
+```bash
+npm run test:integration   # Run integration tests
+```
+
+### E2E Tests
+```bash
+npm run test:e2e          # Run Playwright tests
+```
+
+### Security Tests
+```bash
+npm run test:security     # Run security audit tests
+```
+
+## 🚀 Deployment
+
+### Firebase Hosting (Recommended)
+```bash
+npm run build
+npm run firebase-deploy
+```
+
+### cPanel/FTP
+```bash
+npm run build
+npm run ftp-deploy
+```
+
+### Docker
+```bash
+docker-compose up --build
+```
+
+## 🔧 Environment Variables
+
+Required for development:
+
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_SUPABASE_PROJECT_ID=your_project_id
+```
+
+Optional for production:
+
+```env
+VITE_CASHFREE_APP_ID=your_cashfree_app_id
+VITE_GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_api_key
+```
+
+## 📱 Features Deep Dive
+
+### Trust & Verification System
+- **GPS Verification**: Sellers verify their location
+- **Trust Levels**: Newbie → Verified → Legend
+- **Profile Badges**: Visual trust indicators
+- **Review System**: Community feedback
+
+### Payment Integration
+- **Cashfree**: UPI, cards, net banking
+- **Secure Processing**: Server-side webhook verification
+- **Listing Boost**: Paid promotion tiers (₹49, ₹99, ₹199)
+- **Invoice Generation**: Automatic receipt creation
+
+### Chat & Communication
+- **Real-time Messaging**: Instant chat between buyers/sellers
+- **Image Sharing**: Send photos in chat
+- **Read Receipts**: Message status tracking
+- **Quick Replies**: Template responses for sellers
+
+### Local Content & Branding
+- **Andamanese Voice**: Local humor and references
+- **Island-Specific**: Barge delays, BSNL connectivity, monsoon themes
+- **Dynamic Content**: Contextual messaging based on location/time
+- **Cultural Connection**: Shared island experiences
+
+## 🔒 Security
+
+- **Row Level Security**: Database-level access control
+- **Input Validation**: Comprehensive form validation
+- **Rate Limiting**: API abuse prevention
+- **Audit Logging**: Security event tracking
+- **Secure Payments**: Webhook signature verification
+
+## 📊 Performance
+
+- **Lazy Loading**: Images and components
+- **Code Splitting**: Optimized bundle sizes
+- **Caching**: Supabase query caching
+- **CDN**: Firebase hosting with global CDN
+- **PWA**: Progressive Web App features
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Development Guidelines
+- Follow TypeScript best practices
+- Use conventional commit messages
+- Add tests for new features
+- Update documentation
+- Ensure security compliance
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🏝️ Connect With Us
+
+- **Website**: [andamanbazaar.in](https://andamanbazaar.in)
+- **Email**: support@andamanbazaar.in
+- **GitHub**: [shahidster1711/AndamanBazaarApp](https://github.com/shahidster1711/AndamanBazaarApp)
+
+---
+
+*Built with ❤️ for the Andaman & Nicobar Islands community*
 
 ---
 

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { User } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 
 import { Home } from './pages/Home';
 import { Listings } from './pages/Listings';
 import { ListingDetail } from './pages/ListingDetail';
+import { SellerProfile } from './pages/SellerProfile';
 import { CreateListing } from './pages/CreateListing';
 import { ChatList } from './pages/ChatList';
 import { ChatRoom } from './pages/ChatRoom';
@@ -27,7 +27,18 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider } from './components/Toast';
 import { retryAsync, isTransientError } from './lib/security';
 
+type LayoutUser = React.ComponentProps<typeof Layout>['user'];
+type User = NonNullable<LayoutUser>;
+type AuthSession = { user: User } | null;
+type AuthClientCompat = typeof supabase.auth & {
+  getSession: () => Promise<{ data: { session: AuthSession }; error: any }>;
+  onAuthStateChange: (
+    callback: (event: string, session: AuthSession) => void
+  ) => { data: { subscription: { unsubscribe: () => void } } };
+};
+
 const App: React.FC = () => {
+  const auth = supabase.auth as AuthClientCompat;
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const bypassAuth =
@@ -86,21 +97,13 @@ const App: React.FC = () => {
     };
 
     const getSession = async () => {
+      if (!isSupabaseConfigured()) return;
+
       try {
-        const sessionResponse = await retryAsync(async () => {
-          const response = await supabase.auth.getSession();
-          if (response.error && isTransientError(response.error)) {
-            throw response.error;
-          }
-          return response;
-        }, { label: 'auth.getSession', maxAttempts: 4, baseDelayMs: 300, maxDelayMs: 5000 });
+        const { data: { session }, error } = await auth.getSession();
+        if (error) throw error;
 
-        if (sessionResponse.error) {
-          console.error('Session fetch failed:', sessionResponse.error);
-          return;
-        }
-
-        const currentUser = sessionResponse.data.session?.user ?? null;
+        const currentUser = session?.user ?? null;
         setUser(currentUser);
         if (currentUser) await ensureProfileExists(currentUser);
       } catch (err) {
@@ -112,11 +115,11 @@ const App: React.FC = () => {
 
     getSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = auth.onAuthStateChange((event, session) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-      if (currentUser && _event === 'SIGNED_IN') {
-        await ensureProfileExists(currentUser);
+      if (currentUser && event === 'SIGNED_IN') {
+        ensureProfileExists(currentUser);
       }
     });
 
@@ -145,6 +148,7 @@ const App: React.FC = () => {
               <Route path="/" element={<Home />} />
               <Route path="/listings" element={<Listings />} />
               <Route path="/listings/:id" element={<ListingDetail />} />
+              <Route path="/seller/:sellerId" element={<SellerProfile />} />
               <Route path="/post" element={<RequireAuth user={user} loading={loading}><CreateListing /></RequireAuth>} />
               <Route path="/chats" element={<RequireAuth user={user} loading={loading}><ChatList /></RequireAuth>} />
               <Route path="/chats/:chatId" element={<RequireAuth user={user} loading={loading}><ChatRoom /></RequireAuth>} />

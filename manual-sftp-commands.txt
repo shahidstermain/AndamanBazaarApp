@@ -1,0 +1,32 @@
+# ============================================================
+# AndamanBazaar Manual SFTP Deployment Commands
+# ============================================================
+
+# You're already connected to SFTP, so run these commands:
+
+# 1. Navigate to the public_html directory
+cd public_html
+
+# 2. Upload all files from the dist folder (run from project root)
+# Put -r to upload recursively
+put -r dist/* .
+
+# 3. Verify files are uploaded
+ls -la
+
+# 4. Check that index.html exists
+ls index.html
+
+# 5. Exit SFTP
+exit
+
+# Alternative: If you want to upload specific files:
+# put dist/index.html
+# put dist/assets/index-DYfoXG7L.css
+# put dist/assets/index-N3AAE-tx.js
+# put dist/manifest.webmanifest
+# put dist/registerSW.js
+# put dist/sw.js
+# put dist/workbox-66610c77.js
+
+# After deployment, visit: https://shahidster.site

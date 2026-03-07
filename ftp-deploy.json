@@ -1,0 +1,13 @@
+{
+  "host": "ssh.gb.stackcp.com",
+  "port": 22,
+  "user": "shahidster.site",
+  "password": "17Day11month!",
+  "localRoot": "./dist",
+  "remoteRoot": "/home/sites/30b/6/6ef8ba74fd/public_html/AndamanBazaarApp",
+  "include": ["*", "**/*"],
+  "exclude": ["node_modules", ".git", ".env", "*.log", "coverage", "reports", "test-results", "playwright-report"],
+  "deleteRemote": false,
+  "forcePassiveMode": true,
+  "sftp": true
+}

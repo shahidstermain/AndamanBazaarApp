@@ -45,6 +45,21 @@ Deno.serve(async (req: Request) => {
         const timestamp = req.headers.get("x-webhook-timestamp") || "";
         const signature = req.headers.get("x-webhook-signature") || "";
 
+        // Enforce timestamp freshness (5-minute replay window)
+        const tsSeconds = Number(timestamp);
+        const nowSeconds = Math.floor(Date.now() / 1000);
+        if (!Number.isFinite(tsSeconds) || Math.abs(nowSeconds - tsSeconds) > 300) {
+            await supabaseAdmin.from("payment_audit_log").insert({
+                event_type: "webhook_timestamp_invalid",
+                raw_payload: { body: rawBody.substring(0, 500), timestamp },
+            });
+
+            return new Response(
+                JSON.stringify({ error: "Invalid or stale timestamp" }),
+                { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+        }
+
         // 1. Verify webhook signature
         try {
             Cashfree.PGVerifyWebhookSignature(signature, rawBody, timestamp);

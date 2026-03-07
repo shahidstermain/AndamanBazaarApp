@@ -259,8 +259,9 @@ export const validateFileUpload = (
         return { valid: false, error: 'Invalid file type. Only images allowed.' };
     }
 
-    // Check file name for suspicious patterns
-    if (/\.(exe|sh|bat|cmd|ps1|php|asp|jsp)$/i.test(file.name)) {
+    // Check file name for suspicious patterns, including double extensions (e.g. shell.php.jpg)
+    const normalizedName = file.name.toLowerCase().trim();
+    if (/\.(?:exe|sh|bat|cmd|ps1|php\d*|phtml|asp|aspx|jsp|js)(?:\.|$)/i.test(normalizedName)) {
         return { valid: false, error: 'Suspicious file name detected' };
     }
 

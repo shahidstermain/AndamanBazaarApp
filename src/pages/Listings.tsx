@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { Listing } from '../types';
+import { TrustBadge } from '../components/TrustBadge';
 import { Search, MapPin, Heart, Sparkles, Filter, X, ChevronDown, ArrowUpDown, Loader2 } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { isDemoListing } from '../lib/demoListings';
@@ -18,6 +19,16 @@ const CATEGORIES = [
   { label: '⚡ Services', slug: 'services' },
   { label: '🛒 General', slug: 'other' },
   { label: '🏖️ Tourism', slug: 'tourism' },
+];
+
+const AREAS = [
+  { label: '🏝️ All Areas', value: '' },
+  { label: '🌆 Port Blair', value: 'Port Blair' },
+  { label: '🏖️ Havelock Island', value: 'Havelock' },
+  { label: '🏝️ Neil Island', value: 'Neil Island' },
+  { label: '🌴 Diglipur', value: 'Diglipur' },
+  { label: '🌊 Car Nicobar', value: 'Car Nicobar' },
+  { label: '🏞️ Mayabunder', value: 'Mayabunder' },
 ];
 const PAGE_SIZE = 20;
 
@@ -36,6 +47,7 @@ export const Listings: React.FC = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [activeCategory, setActiveCategory] = useState<string | null>(searchParams.get('category'));
+  const [activeArea, setActiveArea] = useState<string>(searchParams.get('area') || '');
   const [listings, setListings] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [hasMore, setHasMore] = useState(true);
@@ -57,15 +69,23 @@ export const Listings: React.FC = () => {
   const buildQuery = useCallback((offset: number) => {
     let query = supabase
       .from('listings')
-      .select('id, title, price, city, created_at, is_featured, views_count, images:listing_images(image_url)')
+      .select(`
+        id, title, price, city, created_at, is_featured, views_count, images:listing_images(image_url),
+        seller:profiles(user_id, trust_level, full_name, avatar_url)
+      `)
       .eq('status', 'active');
 
     const q = searchParams.get('q');
     const cat = searchParams.get('category');
+    const area = searchParams.get('area');
     const verified = searchParams.get('verified');
 
     if (cat && cat !== 'all') {
       query = query.eq('category_id', cat);
+    }
+
+    if (area) {
+      query = query.eq('city', area);
     }
 
     if (q) {
@@ -171,7 +191,8 @@ export const Listings: React.FC = () => {
   }, [showSortDropdown]);
 
   const fetchFavorites = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
     if (!user) return;
 
     const { data } = await supabase
@@ -210,6 +231,8 @@ export const Listings: React.FC = () => {
     const newParams = new URLSearchParams(searchParams);
     if (showVerifiedOnly) newParams.set('verified', 'true');
     else newParams.delete('verified');
+    if (activeArea) newParams.set('area', activeArea);
+    else newParams.delete('area');
     setSearchParams(newParams);
     fetchListings(true);
     setShowFilters(false);
@@ -220,8 +243,10 @@ export const Listings: React.FC = () => {
     setMaxPrice('');
     setSortBy('newest');
     setShowVerifiedOnly(false);
+    setActiveArea('');
     const newParams = new URLSearchParams(searchParams);
     newParams.delete('verified');
+    newParams.delete('area');
     setSearchParams(newParams);
     handleCategorySelect('all');
   };
@@ -230,7 +255,8 @@ export const Listings: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData?.user;
     if (!user) {
       showToast('Sign in to save items to your favorites.', 'info');
       return;
@@ -246,7 +272,7 @@ export const Listings: React.FC = () => {
     }
   };
 
-  const hasActiveFilters = minPrice || maxPrice || sortBy !== 'newest' || showVerifiedOnly;
+  const hasActiveFilters = minPrice || maxPrice || sortBy !== 'newest' || showVerifiedOnly || activeArea;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -351,6 +377,22 @@ export const Listings: React.FC = () => {
                   <label className="text-[10px] font-bold text-warm-400 uppercase tracking-widest mb-1.5 block">Max (₹)</label>
                   <input type="number" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Any" className="input-island" />
                 </div>
+              </div>
+              
+              {/* Area Filter */}
+              <div>
+                <label className="text-[10px] font-bold text-warm-400 uppercase tracking-widest mb-1.5 block">Area</label>
+                <select 
+                  value={activeArea} 
+                  onChange={(e) => setActiveArea(e.target.value)}
+                  className="w-full input-island"
+                >
+                  {AREAS.map(area => (
+                    <option key={area.value} value={area.value}>
+                      {area.label}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="flex items-center justify-between rounded-2xl border border-warm-200 px-4 py-3">
                 <div>
@@ -477,6 +519,19 @@ const ListingItem: React.FC<{ listing: any, isFavorited: boolean, onToggleFavori
         {listing.city && (
           <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center gap-1 text-[9px] font-bold text-midnight-700 shadow-sm z-10">
             <MapPin size={8} className="text-teal-500" />{listing.city}
+          </div>
+        )}
+        {/* Trust Badge */}
+        {listing.seller && listing.seller.length > 0 && listing.seller[0].trust_level && listing.seller[0].trust_level !== 'newbie' && (
+          <div className="absolute bottom-8 left-2 flex items-center gap-2 z-10">
+            <TrustBadge level={listing.seller[0].trust_level} size="sm" showLabel={false} />
+            <Link 
+              to={`/seller/${listing.seller[0].user_id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-[10px] text-warm-600 hover:text-teal-600 transition-colors bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full"
+            >
+              {listing.seller[0].full_name}
+            </Link>
           </div>
         )}
         {/* Demo Badge */}

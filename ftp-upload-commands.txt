@@ -1,0 +1,43 @@
+# ============================================================
+# AndamanBazaar FTP Upload Commands
+# ============================================================
+
+# You're connected to FTP. Run these commands:
+
+# 1. Navigate to public_html directory
+cd public_html
+
+# 2. Upload all files from dist folder
+# Use mput for multiple files or put for single files
+mput dist/*.*
+mput dist/assets/*.*
+mput dist/assets/index-*
+
+# 3. Upload directories recursively
+mkdir assets
+cd assets
+put ../dist/assets/index-DYfoXG7L.css
+put ../dist/assets/index-N3AAE-tx.js
+put ../dist/assets/browser-DVq3S-kT.js
+cd ..
+
+# 4. Upload root files
+put dist/index.html
+put dist/manifest.webmanifest
+put dist/registerSW.js
+put dist/sw.js
+put dist/workbox-66610c77.js
+
+# 5. Verify upload
+ls -la
+ls index.html
+
+# 6. Exit FTP
+quit
+
+# Alternative: Use FTP client like FileZilla with these settings:
+# Host: ftp.gb.stackcp.com
+# Username: shahidster.site
+# Password: 17Day11month!
+# Port: 21
+# Upload dist/ folder to /public_html/

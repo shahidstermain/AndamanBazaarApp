@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { isDemoListing } from '../lib/demoListings';
 import { useToast } from '../components/Toast';
 import { COPY } from '../lib/localCopy';
+import { TrustBadge } from '../components/TrustBadge';
 import {
   Search, ArrowRight, Loader2, Heart, MapPin, Flame,
   Fish, Leaf, Shell, Compass,
@@ -46,6 +47,12 @@ interface Listing {
   views_count?: number;
   images?: { image_url: string }[];
   is_demo?: boolean;
+  seller?: {
+    user_id: string;
+    trust_level: 'newbie' | 'verified' | 'legend';
+    full_name: string;
+    avatar_url: string;
+  }[] | null;
 }
 
 // ============================================================
@@ -102,7 +109,10 @@ export const Home: React.FC = () => {
     try {
       const { data } = await supabase
         .from('listings')
-        .select('id, title, price, city, is_featured, views_count, images:listing_images(image_url)')
+        .select(`
+          id, title, price, city, is_featured, views_count, images:listing_images(image_url),
+          seller:profiles(user_id, trust_level, full_name, avatar_url)
+        `)
         .eq('status', 'active')
         .eq('is_featured', true)
         .order('created_at', { ascending: false })
@@ -122,7 +132,10 @@ export const Home: React.FC = () => {
     try {
       const { data } = await supabase
         .from('listings')
-        .select('id, title, price, city, is_featured, views_count, images:listing_images(image_url)')
+        .select(`
+          id, title, price, city, is_featured, views_count, images:listing_images(image_url),
+          seller:profiles(user_id, trust_level, full_name, avatar_url)
+        `)
         .eq('status', 'active')
         .order('views_count', { ascending: false })
         .limit(6);
@@ -144,7 +157,10 @@ export const Home: React.FC = () => {
       const to = from + RECENT_PAGE_SIZE - 1;
       const { data } = await supabase
         .from('listings')
-        .select('id, title, price, city, is_featured, created_at, images:listing_images(image_url)')
+        .select(`
+          id, title, price, city, is_featured, created_at, images:listing_images(image_url),
+          seller:profiles(user_id, trust_level, full_name, avatar_url)
+        `)
         .eq('status', 'active')
         .order('created_at', { ascending: false })
         .range(from, to);
@@ -172,7 +188,8 @@ export const Home: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
     // Bug 6 fix: check auth before saving
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: userData } = await (supabase.auth as any).getUser();
+    const user = userData?.user;
     if (!user) {
       showToast('Sign in to save items to your favorites.', 'info');
       return;
@@ -601,9 +618,22 @@ const ListingCard: React.FC<ListingCardProps> = ({ listing, saved, onSave, timeA
             {listing.city}
           </div>
         )}
+        {/* Trust Badge */}
+        {listing.seller && listing.seller.length > 0 && listing.seller[0].trust_level && listing.seller[0].trust_level !== 'newbie' && (
+          <div className="absolute bottom-2 left-2 flex items-center gap-2">
+            <TrustBadge level={listing.seller[0].trust_level} size="sm" showLabel={false} />
+            <Link 
+              to={`/seller/${listing.seller[0].user_id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-[10px] text-warm-600 hover:text-teal-600 transition-colors bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full"
+            >
+              {listing.seller[0].full_name}
+            </Link>
+          </div>
+        )}
         {/* Featured Badge */}
         {listing.is_featured && (
-          <div className="absolute top-2 left-2 bg-sandy-gradient text-midnight-700 text-[8px] font-black uppercase px-2 py-0.5 rounded-full">
+          <div className={`absolute ${listing.seller && listing.seller.length > 0 && listing.seller[0].trust_level && listing.seller[0].trust_level !== 'newbie' ? 'top-2 right-2' : 'top-2 left-2'} bg-sandy-gradient text-midnight-700 text-[8px] font-black uppercase px-2 py-0.5 rounded-full`}>
             ✦ Featured
           </div>
         )}
@@ -664,15 +694,30 @@ const HorizontalListingCard: React.FC<HorizontalCardProps> = ({ listing, rank, s
           </div>
         )}
 
-        {/* AndamanBazaar badge */}
+        {/* Trust Badge or AndamanBazaar badge */}
         <div className="absolute bottom-2 left-2 right-2 bg-white/90 backdrop-blur-md rounded-xl p-2 flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center flex-shrink-0">
-            <BadgeCheck size={12} className="text-white" />
-          </div>
-          <div>
-            <div className="text-[10px] font-bold">Andaman<span className="text-blue-500">Bazaar</span></div>
-            <div className="text-[7px] text-gray-500 tracking-widest uppercase">Local . Trusted</div>
-          </div>
+          {listing.seller && listing.seller.length > 0 && listing.seller[0].trust_level && listing.seller[0].trust_level !== 'newbie' ? (
+            <div className="flex items-center gap-2 flex-1">
+              <TrustBadge level={listing.seller[0].trust_level} size="sm" />
+              <Link 
+                to={`/seller/${listing.seller[0].user_id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-[10px] text-warm-600 hover:text-teal-600 transition-colors truncate"
+              >
+                {listing.seller[0].full_name}
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div className="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center flex-shrink-0">
+                <BadgeCheck size={12} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="text-[10px] font-bold">Andaman<span className="text-blue-500">Bazaar</span></div>
+                <div className="text-[7px] text-gray-500 tracking-widest uppercase">Local . Trusted</div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Demo Badge */}
