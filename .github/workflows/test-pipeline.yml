@@ -28,7 +28,7 @@ jobs:
       - run: npm ci
 
       - name: Run Vitest with coverage
-        run: npx vitest run --coverage --reporter=json --reporter=text --outputFile=test-results.json
+        run: npx vitest run --coverage --reporter=json --outputFile=test-results.json
 
       - name: Upload coverage report
         if: always()

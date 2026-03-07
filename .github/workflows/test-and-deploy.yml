@@ -45,12 +45,7 @@ jobs:
             --coverage.provider=v8 \
             --coverage.reporter=text \
             --coverage.reporter=json-summary \
-            --coverage.reporter=html \
-            --exclude tests/e2e/** \
-            --exclude tests/integration/** \
-            --exclude tests/security/** \
-            --exclude tests/performance/** \
-            --exclude tests/accessibility/**
+            --coverage.reporter=html
 
       - name: Run security audit suites (blocking)
         run: npx vitest run tests/security/webhook-security.test.ts tests/security/security-audit.test.ts
