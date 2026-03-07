@@ -45,7 +45,8 @@ jobs:
             --coverage.provider=v8 \
             --coverage.reporter=text \
             --coverage.reporter=json-summary \
-            --coverage.reporter=html
+            --coverage.reporter=html \
+            --maxWorkers=1
 
       - name: Run security audit suites (blocking)
         run: npx vitest run tests/security/webhook-security.test.ts tests/security/security-audit.test.ts
