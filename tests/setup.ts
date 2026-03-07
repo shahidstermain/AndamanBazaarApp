@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom'
+import 'fake-indexeddb/auto'
 import { cleanup } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
 
@@ -110,30 +111,6 @@ global.navigator = {
     watchPosition: vi.fn().mockReturnValue(1),
     clearWatch: vi.fn(),
   },
-}
-
-// CI safety: some runners don't expose IndexedDB in happy-dom
-if (!('indexedDB' in globalThis)) {
-  Object.defineProperty(globalThis, 'indexedDB', {
-    writable: true,
-    value: {
-      open: vi.fn(),
-      deleteDatabase: vi.fn(),
-      databases: vi.fn().mockResolvedValue([]),
-    },
-  })
-}
-
-if (!('IDBKeyRange' in globalThis)) {
-  Object.defineProperty(globalThis, 'IDBKeyRange', {
-    writable: true,
-    value: {
-      only: vi.fn(),
-      lowerBound: vi.fn(),
-      upperBound: vi.fn(),
-      bound: vi.fn(),
-    },
-  })
 }
 
 // Add a minimal meta description so DOM queries in tests don't fail
