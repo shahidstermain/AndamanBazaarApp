@@ -4,13 +4,13 @@ Comprehensive deployment guide for AndamanBazaar marketplace across multiple pla
 
 ## 📋 Table of Contents
 
-- [Firebase Hosting (Recommended)](#firebase-hosting)
+- [Firebase Hosting (Recommended)](#firebase-hosting-recommended)
 - [cPanel/FTP Deployment](#cpanel-ftp-deployment)
 - [Docker Deployment](#docker-deployment)
 - [Environment Setup](#environment-setup)
 - [CI/CD Pipeline](#cicd-pipeline)
 - [Domain Configuration](#domain-configuration)
-- [Monitoring & Logging](#monitoring-logging)
+- [Monitoring & Logging](#monitoring--logging)
 
 ---
 
@@ -98,7 +98,8 @@ Set environment variables in Firebase console:
 
 1. Go to Project Settings → Environment variables
 2. Add your Supabase credentials:
-   ```
+
+   ```bash
    VITE_SUPABASE_URL=your_supabase_url
    VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
    VITE_SUPABASE_PROJECT_ID=your_project_id

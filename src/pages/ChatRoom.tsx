@@ -25,7 +25,8 @@ export const ChatRoom: React.FC = () => {
 
   useEffect(() => {
     const initChat = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: userData } = await (supabase.auth as any).getUser();
+      const user = userData?.user;
       if (!user) return;
       setCurrentUser(user);
 
@@ -128,7 +129,7 @@ export const ChatRoom: React.FC = () => {
           table: 'messages',
           filter: `chat_id=eq.${chat.id}`,
         },
-        (payload) => {
+        (payload: any) => {
           if (payload.eventType === 'INSERT') {
             const newMessage = payload.new as Message;
             setMessages((prev) => {

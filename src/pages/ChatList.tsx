@@ -14,7 +14,8 @@ export const ChatList: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   const fetchChats = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: userData } = await (supabase.auth as any).getUser();
+    const user = userData?.user;
     if (!user) return;
     setCurrentUser(user);
 

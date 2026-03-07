@@ -191,7 +191,7 @@ export const Listings: React.FC = () => {
   }, [showSortDropdown]);
 
   const fetchFavorites = async () => {
-    const { data: userData } = await supabase.auth.getUser();
+    const { data: userData } = await (supabase.auth as any).getUser();
     const user = userData?.user;
     if (!user) return;
 
@@ -255,7 +255,7 @@ export const Listings: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
 
-    const { data: userData } = await supabase.auth.getUser();
+    const { data: userData } = await (supabase.auth as any).getUser();
     const user = userData?.user;
     if (!user) {
       showToast('Sign in to save items to your favorites.', 'info');
