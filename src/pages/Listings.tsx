@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { auth, db } from '../lib/firebase';
 import { collection, query, where, orderBy, getDocs, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
-import { Listing } from '../types';
 import { TrustBadge } from '../components/TrustBadge';
 import { Search, MapPin, Heart, Sparkles, Filter, X, ChevronDown, ArrowUpDown, Loader2 } from 'lucide-react';
 import { useToast } from '../components/Toast';
@@ -63,7 +62,6 @@ export const Listings: React.FC = () => {
   const [maxPrice, setMaxPrice] = useState('');
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showVerifiedOnly, setShowVerifiedOnly] = useState(searchParams.get('verified') === 'true');
-  const sortDropdownRef = useRef<HTMLDivElement>(null);
 
   // Infinite scroll observer
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -129,8 +127,8 @@ export const Listings: React.FC = () => {
   }, [searchParams, sortBy, minPrice, maxPrice, page]);
 
   useEffect(() => {
-    fetchListings(true);
-    fetchFavorites();
+    void fetchListings(true);
+    void fetchFavorites();
   }, [activeCategory, searchParams.get('q'), searchParams.get('verified'), sortBy]);
 
   // Infinite scroll observer
@@ -140,7 +138,7 @@ export const Listings: React.FC = () => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !loadingMore) {
-          fetchListings(false);
+          void fetchListings(false);
         }
       },
       { rootMargin: '200px' }
@@ -164,10 +162,14 @@ export const Listings: React.FC = () => {
   const fetchFavorites = async () => {
     const user = auth.currentUser;
     if (!user) return;
-    const snap = await getDocs(
-      query(collection(db, 'favorites'), where('userId', '==', user.uid))
-    );
-    setFavorites(new Set(snap.docs.map(d => d.data().listingId as string)));
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'favorites'), where('userId', '==', user.uid))
+      );
+      setFavorites(new Set(snap.docs.map(d => d.data().listingId as string)));
+    } catch (err) {
+      console.error('Error fetching favorites:', err);
+    }
   };
 
   const handleCategorySelect = (slug: string) => {
@@ -199,7 +201,7 @@ export const Listings: React.FC = () => {
     if (activeArea) newParams.set('area', activeArea);
     else newParams.delete('area');
     setSearchParams(newParams);
-    fetchListings(true);
+    void fetchListings(true);
     setShowFilters(false);
   };
 

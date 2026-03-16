@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/packages/cspell-types/cspell.schema.json",
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "Diglipur",
+    "Mayabunder",
+    "isFavorited",
+    "Favorited",
+    "favorited",
+    "Andaman",
+    "Nicobar",
+    "Havelock",
+    "Swaraj",
+    "Dweep",
+    "Shaheed",
+    "Cashfree"
+  ],
+  "ignorePaths": [
+    "node_modules",
+    "dist",
+    "*.lock",
+    "package-lock.json"
+  ]
+}
