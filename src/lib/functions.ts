@@ -85,13 +85,19 @@ export interface InvoiceResponse {
 export const createPayment = async (request: PaymentRequest): Promise<PaymentResponse> => {
   try {
     const fnUrl = import.meta.env.VITE_FIREBASE_CREATE_PAYMENT_FUNCTION;
-    if (!fnUrl) throw new Error('Firebase payment function URL not configured');
+    if (!fnUrl) {
+      console.error('Firebase payment function URL not configured');
+      return { success: false, error: 'Configuration error' };
+    }
     const response = await fetch(fnUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await getFirebaseAuthToken()}` },
       body: JSON.stringify(request)
     });
-    if (!response.ok) throw new Error(`Payment function error: ${response.statusText}`);
+    if (!response.ok) {
+      console.error(`Payment function error: ${response.statusText}`);
+      return { success: false, error: response.statusText };
+    }
     return await response.json();
   } catch (error) {
     console.error('Error creating payment:', error);
@@ -102,12 +108,18 @@ export const createPayment = async (request: PaymentRequest): Promise<PaymentRes
 export const verifyPayment = async (paymentId: string): Promise<PaymentResponse> => {
   try {
     const fnUrl = import.meta.env.VITE_FIREBASE_VERIFY_PAYMENT_FUNCTION;
-    if (!fnUrl) throw new Error('Firebase verify payment function URL not configured');
+    if (!fnUrl) {
+      console.error('Firebase verify payment function URL not configured');
+      return { success: false, error: 'Configuration error' };
+    }
     const response = await fetch(`${fnUrl}?paymentId=${paymentId}`, {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${await getFirebaseAuthToken()}` }
     });
-    if (!response.ok) throw new Error(`Verify payment error: ${response.statusText}`);
+    if (!response.ok) {
+      console.error(`Verify payment error: ${response.statusText}`);
+      return { success: false, error: response.statusText };
+    }
     return await response.json();
   } catch (error) {
     console.error('Error verifying payment:', error);
@@ -120,13 +132,19 @@ export const verifyPayment = async (paymentId: string): Promise<PaymentResponse>
 export const verifyLocation = async (request: LocationVerificationRequest): Promise<LocationVerificationResponse> => {
   try {
     const fnUrl = import.meta.env.VITE_FIREBASE_VERIFY_LOCATION_FUNCTION;
-    if (!fnUrl) throw new Error('Firebase location verification function URL not configured');
+    if (!fnUrl) {
+      console.error('Firebase location verification function URL not configured');
+      return { success: false, verified: false, error: 'Configuration error' };
+    }
     const response = await fetch(fnUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await getFirebaseAuthToken()}` },
       body: JSON.stringify(request)
     });
-    if (!response.ok) throw new Error(`Location verification error: ${response.statusText}`);
+    if (!response.ok) {
+      console.error(`Location verification error: ${response.statusText}`);
+      return { success: false, verified: false, error: response.statusText };
+    }
     return await response.json();
   } catch (error) {
     console.error('Error verifying location:', error);
@@ -139,13 +157,19 @@ export const verifyLocation = async (request: LocationVerificationRequest): Prom
 export const moderateContent = async (request: AiModerationRequest): Promise<AiModerationResponse> => {
   try {
     const fnUrl = import.meta.env.VITE_FIREBASE_MODERATE_CONTENT_FUNCTION;
-    if (!fnUrl) throw new Error('Firebase content moderation function URL not configured');
+    if (!fnUrl) {
+      console.error('Firebase content moderation function URL not configured');
+      return { approved: false, confidence: 0, flaggedCategories: [], suggestions: [], error: 'Configuration error' };
+    }
     const response = await fetch(fnUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await getFirebaseAuthToken()}` },
       body: JSON.stringify(request)
     });
-    if (!response.ok) throw new Error(`Content moderation error: ${response.statusText}`);
+    if (!response.ok) {
+      console.error(`Content moderation error: ${response.statusText}`);
+      return { approved: false, confidence: 0, flaggedCategories: [], suggestions: [], error: response.statusText };
+    }
     return await response.json();
   } catch (error) {
     console.error('Error moderating content:', error);
@@ -158,13 +182,19 @@ export const moderateContent = async (request: AiModerationRequest): Promise<AiM
 export const createInvoice = async (request: InvoiceRequest): Promise<InvoiceResponse> => {
   try {
     const fnUrl = import.meta.env.VITE_FIREBASE_CREATE_INVOICE_FUNCTION;
-    if (!fnUrl) throw new Error('Firebase invoice creation function URL not configured');
+    if (!fnUrl) {
+      console.error('Firebase invoice creation function URL not configured');
+      return { success: false, error: 'Configuration error' };
+    }
     const response = await fetch(fnUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${await getFirebaseAuthToken()}` },
       body: JSON.stringify(request)
     });
-    if (!response.ok) throw new Error(`Invoice creation error: ${response.statusText}`);
+    if (!response.ok) {
+      console.error(`Invoice creation error: ${response.statusText}`);
+      return { success: false, error: response.statusText };
+    }
     return await response.json();
   } catch (error) {
     console.error('Error creating invoice:', error);
@@ -177,13 +207,19 @@ export const createInvoice = async (request: InvoiceRequest): Promise<InvoiceRes
 export const handleWebhook = async (webhookType: string, payload: any): Promise<{ success: boolean; processed: boolean }> => {
   try {
     const fnUrl = import.meta.env.VITE_FIREBASE_WEBHOOK_FUNCTION;
-    if (!fnUrl) throw new Error('Firebase webhook function URL not configured');
+    if (!fnUrl) {
+      console.error('Firebase webhook function URL not configured');
+      return { success: false, processed: false };
+    }
     const response = await fetch(fnUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Webhook-Type': webhookType },
       body: JSON.stringify(payload)
     });
-    if (!response.ok) throw new Error(`Webhook handling error: ${response.statusText}`);
+    if (!response.ok) {
+      console.error(`Webhook handling error: ${response.statusText}`);
+      return { success: false, processed: false };
+    }
     return await response.json();
   } catch (error) {
     console.error('Error handling webhook:', error);
@@ -193,7 +229,7 @@ export const handleWebhook = async (webhookType: string, payload: any): Promise<
 
 // ===== UTILITY FUNCTIONS =====
 
-const getFirebaseAuthToken = async (): Promise<string> => {
+export async function getFirebaseAuthToken(): Promise<string> {
   const user = firebaseAuth.currentUser;
   if (!user) throw new Error('User not authenticated');
   return await user.getIdToken();
@@ -238,5 +274,5 @@ export default {
   handleWebhook,
   batchModerateContent,
   batchCreateInvoices,
-  checkFunctionHealth,
-};
+  checkFunctionHealth
+}

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAuthProvider, isFirebaseAvailable, isAuthenticated, signIn, signUp, onAuthStateChanged, UserProfile } from '../lib/auth';
+import { getAuthProvider, isFirebaseAvailable, isAuthenticated, signIn, signUp, signInWithGoogle, onAuthStateChanged, UserProfile } from '../lib/auth';
 import { COPY } from '../lib/localCopy';
 import {
   Loader2,
@@ -101,7 +101,24 @@ export const AuthView: React.FC = () => {
 
   const handleOAuthLogin = async (_provider: 'google') => {
     clearState();
-    setError('Google sign-in is not yet configured. Please use email/password.');
+    setLoading(true);
+    try {
+      console.log('Starting Google sign-in...');
+      const result = await signInWithGoogle();
+      console.log('Google sign-in result:', result);
+      if (!result.success) {
+        if (result.error === 'Sign-in was cancelled.') {
+          // User closed the popup — no error needed
+          return;
+        }
+        throw new Error(result.error || 'Google sign-in failed');
+      }
+    } catch (err: any) {
+      console.error('Google sign-in error:', err);
+      setError(err.message || 'Google sign-in failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEmailAuth = async (e: React.FormEvent) => {

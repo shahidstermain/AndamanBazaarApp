@@ -1,4 +1,4 @@
-import { auth as firebaseAuth, signIn as firebaseSignIn, signUp as firebaseSignUp, signOutUser as firebaseSignOut, onAuthStateChange } from './firebase';
+import { auth as firebaseAuth, signIn as firebaseSignIn, signUp as firebaseSignUp, signOutUser as firebaseSignOut, onAuthStateChange, signInWithGoogle as firebaseSignInWithGoogle } from './firebase';
 import { logAuditEvent, sanitizeErrorMessage } from './security';
 
 // ===== AUTHENTICATION UTILITIES =====
@@ -111,6 +111,25 @@ export const signUp = async (email: string, password: string, name?: string): Pr
         const safeError = sanitizeErrorMessage(err);
         await logAuditEvent({ action: 'user_signup', status: 'failed', metadata: { email, error: safeError } });
         return { success: false, error: safeError || 'Failed to sign up. Please try again.' };
+    }
+};
+
+/**
+ * Sign in with Google OAuth
+ */
+export const signInWithGoogle = async (): Promise<AuthResult> => {
+    try {
+        await firebaseSignInWithGoogle();
+        await logAuditEvent({ action: 'user_login', status: 'success', metadata: { provider: 'google' } });
+        return { success: true };
+    } catch (err: any) {
+        const safeError = sanitizeErrorMessage(err);
+        await logAuditEvent({ action: 'user_login', status: 'failed', metadata: { provider: 'google', error: safeError } });
+        // Handle popup closed by user gracefully
+        if (err?.code === 'auth/popup-closed-by-user' || err?.code === 'auth/cancelled-popup-request') {
+            return { success: false, error: 'Sign-in was cancelled.' };
+        }
+        return { success: false, error: safeError || 'Google sign-in failed. Please try again.' };
     }
 };
 

@@ -46,15 +46,18 @@ exports.verifyBoostPayment = paymentsRuntime.https.onRequest(async (req, res) =>
     res.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     if (req.method === 'OPTIONS') {
-        return res.status(204).send('');
+        res.status(204).send('');
+        return;
     }
     if (req.method !== 'GET') {
-        return res.status(405).json({ error: 'Method not allowed' });
+        res.status(405).json({ error: 'Method not allowed' });
+        return;
     }
     // ── Auth ──────────────────────────────────────────────────
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
-        return res.status(401).json({ error: 'Missing or invalid Authorization header' });
+        res.status(401).json({ error: 'Missing or invalid Authorization header' });
+        return;
     }
     let uid;
     try {
@@ -64,12 +67,14 @@ exports.verifyBoostPayment = paymentsRuntime.https.onRequest(async (req, res) =>
     }
     catch (err) {
         v2_1.logger.warn('Invalid auth token on verifyBoostPayment', err);
-        return res.status(401).json({ error: 'Invalid or expired token' });
+        res.status(401).json({ error: 'Invalid or expired token' });
+        return;
     }
     try {
         const orderId = req.query.orderId;
         if (!orderId || typeof orderId !== 'string') {
-            return res.status(400).json({ error: 'orderId query parameter is required' });
+            res.status(400).json({ error: 'orderId query parameter is required' });
+            return;
         }
         // ── Find the boost record ───────────────────────────────
         const boostSnap = await admin_1.admin.firestore()
@@ -85,21 +90,23 @@ exports.verifyBoostPayment = paymentsRuntime.https.onRequest(async (req, res) =>
                 .limit(1)
                 .get();
             if (byCfId.empty) {
-                return res.status(404).json({ error: 'Boost order not found' });
+                res.status(404).json({ error: 'Boost order not found' });
+                return;
             }
             // Use this result
             const boostDoc = byCfId.docs[0];
-            return await processVerification(boostDoc, uid, res);
+            await processVerification(boostDoc, uid, res);
+            return;
         }
         const boostDoc = boostSnap.docs[0];
-        return await processVerification(boostDoc, uid, res);
+        await processVerification(boostDoc, uid, res);
     }
     catch (error) {
         v2_1.logger.error('verifyBoostPayment failed', {
             uid,
             error: error instanceof Error ? error.message : 'Unknown error',
         });
-        return res.status(500).json({
+        res.status(500).json({
             error: error instanceof Error ? error.message : 'Internal server error',
         });
     }
@@ -109,11 +116,12 @@ async function processVerification(boostDoc, uid, res) {
     // ── Authorization: only owner can verify ────────────────
     if (boost.userId !== uid) {
         v2_1.logger.warn('Unauthorized verify attempt', { uid, boostOwner: boost.userId });
-        return res.status(403).json({ error: 'Access denied' });
+        res.status(403).json({ error: 'Access denied' });
+        return;
     }
     // If already in a terminal state, return immediately
     if (['paid', 'failed', 'refunded'].includes(boost.status)) {
-        return res.status(200).json({
+        res.status(200).json({
             success: true,
             status: boost.status,
             order: {
@@ -131,6 +139,7 @@ async function processVerification(boostDoc, uid, res) {
                 updatedAt: boost.updatedAt.toDate().toISOString(),
             },
         });
+        return;
     }
     // ── Fetch latest status from Cashfree ─────────────────
     try {
@@ -195,7 +204,7 @@ async function processVerification(boostDoc, uid, res) {
                 newStatus,
             });
         }
-        return res.status(200).json({
+        res.status(200).json({
             success: true,
             status: newStatus,
             order: {
@@ -218,7 +227,7 @@ async function processVerification(boostDoc, uid, res) {
             error: cfError instanceof Error ? cfError.message : 'Unknown',
         });
         // Return the Firestore status as fallback
-        return res.status(200).json({
+        res.status(200).json({
             success: true,
             status: boost.status,
             order: {

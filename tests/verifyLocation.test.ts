@@ -18,7 +18,6 @@ describe('verifyLocation', () => {
       ipMatchesAndaman: true,
     };
 
-    global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => mockResponse,
     });
@@ -43,7 +42,6 @@ describe('verifyLocation', () => {
       error: 'Location verification failed',
     };
 
-    global.fetch = jest.fn().mockResolvedValue({
       ok: false,
       statusText: 'Bad Request',
     });

@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, Auth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { getAuth, Auth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { getFirestore, Firestore, doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getStorage, FirebaseStorage } from 'firebase/storage';
 
@@ -21,6 +21,11 @@ const app = initializeApp(firebaseConfig);
 export const auth: Auth = getAuth(app);
 export const db: Firestore = getFirestore(app);
 export const storage: FirebaseStorage = getStorage(app);
+
+// Google Auth provider
+const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope('email');
+googleProvider.addScope('profile');
 
 // Auth configuration
 if (import.meta.env.VITE_ENV === 'development') {
@@ -131,6 +136,30 @@ export const signUp = async (email: string, password: string, name?: string) => 
     return result;
   } catch (error) {
     console.error('Sign up error:', error);
+    throw error;
+  }
+};
+
+export const signInWithGoogle = async () => {
+  try {
+    if (!auth) {
+      throw new Error('Firebase Auth not initialized');
+    }
+    console.log('Firebase: Starting Google sign-in popup...');
+    console.log('Firebase: Auth object:', auth);
+    console.log('Firebase: Google provider:', googleProvider);
+    const result = await signInWithPopup(auth, googleProvider);
+    console.log('Firebase: Google sign-in successful, user:', result.user);
+    await createFirestoreUser(result.user, {
+      name: result.user.displayName || result.user.email?.split('@')[0] || 'Island User',
+    });
+    await updateUserLastActive(result.user.uid);
+    return result;
+  } catch (error: any) {
+    console.error('Firebase: Google sign-in error:', error);
+    console.error('Firebase: Error code:', error?.code);
+    console.error('Firebase: Error message:', error?.message);
+    console.error('Firebase: Full error object:', error);
     throw error;
   }
 };

@@ -23,8 +23,9 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cleanupOldData = exports.handleWebhook = exports.healthCheck = exports.verifyBoostPayment = exports.createBoostOrder = exports.getPaymentDetails = exports.getPaymentHistoryNew = exports.checkPaymentStatus = exports.webhookHealthCheck = exports.cashfreeWebhookV2 = exports.cleanupExpiredReservations = exports.createOrder = exports.getModerationStats = exports.getModerationHistory = exports.batchModerateContent = exports.moderateContent = exports.getNearbyListings = exports.getLocationHistory = exports.verifyLocation = exports.getPaymentHistory = exports.refundPayment = exports.cashfreeWebhook = exports.verifyPayment = exports.createPayment = void 0;
+exports.sendAbandonedChatReminders = exports.sendListingExpiryReminders = exports.cleanupOldData = exports.sendWeeklyTrendingEmails = exports.sendEmail = exports.handleWebhook = exports.healthCheck = exports.getPaymentDetails = exports.getPaymentHistoryNew = exports.checkPaymentStatus = exports.webhookHealthCheck = exports.cashfreeWebhookV2 = exports.cleanupExpiredReservations = exports.createOrder = exports.getModerationStats = exports.getModerationHistory = exports.batchModerateContent = exports.moderateContent = exports.getNearbyListings = exports.getLocationHistory = exports.verifyLocation = exports.getPaymentHistory = exports.refundPayment = exports.cashfreeWebhook = exports.verifyPayment = exports.createPayment = void 0;
 const functions = __importStar(require("firebase-functions"));
+const admin = __importStar(require("firebase-admin"));
 // Import all function modules
 const payment_1 = require("./payment");
 Object.defineProperty(exports, "createPayment", { enumerable: true, get: function () { return payment_1.createPayment; } });
@@ -41,6 +42,10 @@ Object.defineProperty(exports, "moderateContent", { enumerable: true, get: funct
 Object.defineProperty(exports, "batchModerateContent", { enumerable: true, get: function () { return moderation_1.batchModerateContent; } });
 Object.defineProperty(exports, "getModerationHistory", { enumerable: true, get: function () { return moderation_1.getModerationHistory; } });
 Object.defineProperty(exports, "getModerationStats", { enumerable: true, get: function () { return moderation_1.getModerationStats; } });
+const email_1 = require("./email");
+Object.defineProperty(exports, "sendEmail", { enumerable: true, get: function () { return email_1.sendEmail; } });
+Object.defineProperty(exports, "sendWeeklyTrendingEmails", { enumerable: true, get: function () { return email_1.sendWeeklyTrendingEmails; } });
+const emailTemplatesNode_1 = require("./emailTemplatesNode");
 // Import new payment functions
 const createOrder_1 = require("./payments/createOrder");
 Object.defineProperty(exports, "createOrder", { enumerable: true, get: function () { return createOrder_1.createOrder; } });
@@ -52,11 +57,6 @@ const checkPaymentStatus_1 = require("./payments/checkPaymentStatus");
 Object.defineProperty(exports, "checkPaymentStatus", { enumerable: true, get: function () { return checkPaymentStatus_1.checkPaymentStatus; } });
 Object.defineProperty(exports, "getPaymentHistoryNew", { enumerable: true, get: function () { return checkPaymentStatus_1.getPaymentHistory; } });
 Object.defineProperty(exports, "getPaymentDetails", { enumerable: true, get: function () { return checkPaymentStatus_1.getPaymentDetails; } });
-// Import boost payment functions
-const createBoostOrder_1 = require("./payments/createBoostOrder");
-Object.defineProperty(exports, "createBoostOrder", { enumerable: true, get: function () { return createBoostOrder_1.createBoostOrder; } });
-const verifyBoostPayment_1 = require("./payments/verifyBoostPayment");
-Object.defineProperty(exports, "verifyBoostPayment", { enumerable: true, get: function () { return verifyBoostPayment_1.verifyBoostPayment; } });
 // Health check function
 exports.healthCheck = functions.https.onRequest(async (req, res) => {
     res.status(200).json({
@@ -86,9 +86,72 @@ exports.handleWebhook = functions.https.onRequest(async (req, res) => {
 // Scheduled tasks
 exports.cleanupOldData = functions.pubsub
     .schedule('every 24 hours')
-    .onRun(async (context) => {
-    // This function will be implemented by individual modules
-    // Each module exports its own cleanup functions
+    .onRun(async () => {
     console.log('Running scheduled cleanup tasks');
+});
+// Scheduled: listing expiry reminders (runs daily)
+exports.sendListingExpiryReminders = functions.pubsub
+    .schedule('every 24 hours')
+    .timeZone('Asia/Kolkata')
+    .onRun(async () => {
+    const db = admin.firestore();
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dayAfter = new Date();
+    dayAfter.setDate(dayAfter.getDate() + 2);
+    const snap = await db.collection('listings')
+        .where('status', '==', 'active')
+        .where('expiresAt', '>=', tomorrow)
+        .where('expiresAt', '<', dayAfter)
+        .get();
+    for (const doc of snap.docs) {
+        const listing = doc.data();
+        if (!listing.sellerId)
+            continue;
+        const userDoc = await db.collection('users').doc(listing.sellerId).get();
+        const user = userDoc.data();
+        if (!user?.email || user?.emailNotifications?.listingExpiring === false)
+            continue;
+        const template = emailTemplatesNode_1.emailTemplates.listingExpiring({
+            LISTING_NAME: listing.title || 'Your listing',
+            RENEW_LISTING: `https://andamanbazaar.in/listings/${doc.id}/edit`,
+        });
+        await (0, email_1.sendEmailInternal)(user.email, template.subject, template.htmlContent);
+    }
+    console.log(`Expiry reminders sent for ${snap.size} listings`);
+});
+// Scheduled: abandoned chat reminders (runs every 6 hours)
+exports.sendAbandonedChatReminders = functions.pubsub
+    .schedule('every 6 hours')
+    .timeZone('Asia/Kolkata')
+    .onRun(async () => {
+    const db = admin.firestore();
+    const cutoff = new Date();
+    cutoff.setHours(cutoff.getHours() - 24);
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    const snap = await db.collection('chats')
+        .where('lastMessageAt', '<=', cutoff)
+        .where('lastMessageAt', '>=', twoDaysAgo)
+        .where('reminderSent', '==', false)
+        .limit(100)
+        .get();
+    for (const doc of snap.docs) {
+        const chat = doc.data();
+        const unansweredUserId = chat.lastMessageBy === chat.sellerId ? chat.buyerId : chat.sellerId;
+        if (!unansweredUserId)
+            continue;
+        const userDoc = await db.collection('users').doc(unansweredUserId).get();
+        const user = userDoc.data();
+        if (!user?.email || user?.emailNotifications?.abandonedChat === false)
+            continue;
+        const template = emailTemplatesNode_1.emailTemplates.abandonedChat({
+            LISTING_NAME: chat.listingTitle || 'a listing',
+            CHAT_LINK: `https://andamanbazaar.in/chat/${doc.id}`,
+        });
+        await (0, email_1.sendEmailInternal)(user.email, template.subject, template.htmlContent);
+        await doc.ref.update({ reminderSent: true });
+    }
+    console.log(`Abandoned chat reminders sent for ${snap.size} chats`);
 });
 //# sourceMappingURL=index.js.map
