@@ -1,10 +1,10 @@
 import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
 import { logger } from 'firebase-functions/v2';
 import { createCashfreeOrder, CreateOrderRequest } from '../utils/cashfreeClient';
+import { admin } from '../utils/admin';
+import { CASHFREE_SECRET_BINDINGS } from '../utils/secrets';
 
-// Initialize Firebase Admin
-admin.initializeApp();
+const paymentsRuntime = functions.runWith({ secrets: CASHFREE_SECRET_BINDINGS });
 
 // Payment order interface for Firestore
 interface PaymentOrder {
@@ -58,7 +58,7 @@ interface CreateOrderResponse {
  * - Prevents duplicate orders with idempotency key
  * - All sensitive operations server-side only
  */
-export const createOrder = functions.https.onCall(async (data: CreateOrderRequestData, context) => {
+export const createOrder = paymentsRuntime.https.onCall(async (data: CreateOrderRequestData, context) => {
   // Validate authentication
   if (!context.auth) {
     logger.warn('Unauthorized attempt to create payment order');
@@ -250,7 +250,7 @@ export const createOrder = functions.https.onCall(async (data: CreateOrderReques
 });
 
 // Helper function to clean up expired reservations (can be called by scheduled function)
-export const cleanupExpiredReservations = functions.https.onRequest(async (req, res) => {
+export const cleanupExpiredReservations = paymentsRuntime.https.onRequest(async (req, res) => {
   try {
     const now = admin.firestore.Timestamp.now();
     

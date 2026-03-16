@@ -1,8 +1,8 @@
 import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
+import { admin } from './utils/admin';
+import { ADMIN_SECRET_BINDINGS } from './utils/secrets';
 
-// Initialize Firebase Admin
-admin.initializeApp();
+const locationRuntime = functions.runWith({ secrets: ADMIN_SECRET_BINDINGS });
 
 // Andaman Islands cities with their coordinates
 const ANDAMAN_CITIES = [
@@ -17,7 +17,7 @@ const ANDAMAN_CITIES = [
 ];
 
 // Verify Location
-export const verifyLocation = functions.https.onCall(async (data, context) => {
+export const verifyLocation = locationRuntime.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
@@ -103,7 +103,7 @@ export const verifyLocation = functions.https.onCall(async (data, context) => {
 });
 
 // Get User Location History
-export const getLocationHistory = functions.https.onCall(async (data, context) => {
+export const getLocationHistory = locationRuntime.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
@@ -134,7 +134,7 @@ export const getLocationHistory = functions.https.onCall(async (data, context) =
 });
 
 // Get Nearby Listings
-export const getNearbyListings = functions.https.onCall(async (data, context) => {
+export const getNearbyListings = locationRuntime.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
@@ -239,7 +239,7 @@ async function getIPLocation(request: any): Promise<any> {
 }
 
 // Location-based Notifications
-export const sendLocationBasedNotifications = functions.firestore
+export const sendLocationBasedNotifications = locationRuntime.firestore
   .document('location_verifications/{verificationId}')
   .onCreate(async (snap, context) => {
     const verification = snap.data();
@@ -270,7 +270,7 @@ export const sendLocationBasedNotifications = functions.firestore
   });
 
 // Cleanup old location verifications
-export const cleanupLocationVerifications = functions.pubsub
+export const cleanupLocationVerifications = locationRuntime.pubsub
   .schedule('every 24 hours')
   .onRun(async (context) => {
     const cutoffDate = new Date();

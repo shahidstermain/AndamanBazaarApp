@@ -1,25 +1,25 @@
 import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
 import { Cashfree } from 'cashfree-pg';
+import { admin } from './utils/admin';
+import { CASHFREE_SECRET_BINDINGS, getRequiredEnv, SECRET_NAMES } from './utils/secrets';
 
-// Initialize Firebase Admin
-admin.initializeApp();
+const paymentRuntime = functions.runWith({ secrets: CASHFREE_SECRET_BINDINGS });
 
-// Initialize Cashfree
-const cashfree = new Cashfree({
+const getCashfreeClient = (): Cashfree => new Cashfree({
   environment: process.env.CASHFREE_ENV === 'production' ? 'production' : 'sandbox',
-  appId: process.env.CASHFREE_APP_ID!,
-  secretKey: process.env.CASHFREE_SECRET_KEY!,
+  appId: getRequiredEnv(SECRET_NAMES.CASHFREE_APP_ID),
+  secretKey: getRequiredEnv(SECRET_NAMES.CASHFREE_SECRET_KEY),
 });
 
 // Create Payment Intent
-export const createPayment = functions.https.onCall(async (data, context) => {
+export const createPayment = paymentRuntime.https.onCall(async (data, context) => {
   // Verify user is authenticated
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
 
   const { orderId, amount, currency, customerEmail, customerPhone, listingId, paymentMethod } = data;
+  const cashfree = getCashfreeClient();
 
   try {
     // Validate input
@@ -78,12 +78,13 @@ export const createPayment = functions.https.onCall(async (data, context) => {
 });
 
 // Verify Payment
-export const verifyPayment = functions.https.onCall(async (data, context) => {
+export const verifyPayment = paymentRuntime.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
 
   const { paymentId } = data;
+  const cashfree = getCashfreeClient();
 
   try {
     // Get payment order from Firestore
@@ -136,7 +137,7 @@ export const verifyPayment = functions.https.onCall(async (data, context) => {
 });
 
 // Cashfree Webhook Handler
-export const cashfreeWebhook = functions.https.onRequest(async (req, res) => {
+export const cashfreeWebhook = paymentRuntime.https.onRequest(async (req, res) => {
   const signature = req.headers['x-cashfree-signature'];
   const payload = JSON.stringify(req.body);
 
@@ -164,7 +165,7 @@ export const cashfreeWebhook = functions.https.onRequest(async (req, res) => {
     // Update payment status
     await admin.firestore().collection('payment_orders').doc(order_id).update({
       status: order_status,
-      transactionId,
+      transactionId: transaction_id,
       cashfreeStatus: order_status,
       webhookProcessedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
@@ -177,7 +178,7 @@ export const cashfreeWebhook = functions.https.onRequest(async (req, res) => {
         paymentId: order_id,
         amount: orderData.amount,
         status: 'completed',
-        transactionId,
+        transactionId: transaction_id,
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
 
@@ -202,7 +203,7 @@ export const cashfreeWebhook = functions.https.onRequest(async (req, res) => {
 // Helper function to verify webhook signature
 async function verifyWebhookSignature(payload: string, signature: string): Promise<boolean> {
   const crypto = require('crypto');
-  const secretKey = process.env.CASHFREE_WEBHOOK_SECRET!;
+  const secretKey = getRequiredEnv(SECRET_NAMES.CASHFREE_WEBHOOK_SECRET);
   
   const expectedSignature = crypto
     .createHmac('sha256', secretKey)
@@ -213,12 +214,13 @@ async function verifyWebhookSignature(payload: string, signature: string): Promi
 }
 
 // Refund Payment
-export const refundPayment = functions.https.onCall(async (data, context) => {
+export const refundPayment = paymentRuntime.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
 
   const { paymentId, reason } = data;
+  const cashfree = getCashfreeClient();
 
   try {
     // Check if user owns this payment
@@ -255,7 +257,7 @@ export const refundPayment = functions.https.onCall(async (data, context) => {
 });
 
 // Get Payment History
-export const getPaymentHistory = functions.https.onCall(async (data, context) => {
+export const getPaymentHistory = paymentRuntime.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }

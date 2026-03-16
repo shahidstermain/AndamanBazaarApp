@@ -52,7 +52,7 @@ export const PrivacyPolicy: React.FC = () => {
               <h2 className="text-3xl font-black uppercase tracking-tight">How We Protect Your Data</h2>
             </div>
             <p className="text-secondary font-medium leading-relaxed text-lg">
-              Your data is stored securely using Supabase, a trusted backend service. All communication is encrypted with SSL/TLS. We never store your password in plain text and take industry-standard measures to prevent unauthorized access to your information.
+              Your data is stored securely on Google Cloud through Firebase services, including Firebase Authentication, Cloud Firestore, and Firebase Storage. All communication is encrypted with SSL/TLS, and access is enforced through authenticated server-side and security-rule checks.
             </p>
           </section>
 

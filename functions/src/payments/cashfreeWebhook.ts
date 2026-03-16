@@ -1,10 +1,10 @@
 import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
 import { logger } from 'firebase-functions/v2';
 import { verifyWebhookSignature, parseWebhookEvent, CashfreeWebhookEvent } from '../utils/cashfreeClient';
+import { admin } from '../utils/admin';
+import { CASHFREE_SECRET_BINDINGS } from '../utils/secrets';
 
-// Initialize Firebase Admin
-admin.initializeApp();
+const paymentsRuntime = functions.runWith({ secrets: CASHFREE_SECRET_BINDINGS });
 
 // Webhook event logging interface
 interface WebhookEventLog {
@@ -49,7 +49,7 @@ interface PaymentUpdate {
  * - Updates payment state atomically
  * - Never trusts webhook data for critical decisions without validation
  */
-export const cashfreeWebhook = functions.https.onRequest(async (req, res) => {
+export const cashfreeWebhook = paymentsRuntime.https.onRequest(async (req, res) => {
   // Only accept POST requests
   if (req.method !== 'POST') {
     logger.warn('Webhook received non-POST request', { method: req.method });
@@ -362,7 +362,7 @@ async function sendSellerNotification(sellerId: string, notificationData: any): 
 /**
  * Health check endpoint for webhook handler
  */
-export const webhookHealthCheck = functions.https.onRequest(async (req, res) => {
+export const webhookHealthCheck = paymentsRuntime.https.onRequest(async (req, res) => {
   try {
     // Check Firestore connectivity
     await admin.firestore().collection('health').doc('webhook').set({

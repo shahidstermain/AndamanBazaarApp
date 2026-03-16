@@ -14,17 +14,17 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico'],
+      includeAssets: ['favicon.png', 'favicon.ico'],
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            // Cache Supabase storage images
-            urlPattern: /^https:\/\/.*supabase.*\/storage\//,
+            // Cache Firebase Storage images
+            urlPattern: /^https:\/\/(firebasestorage\.googleapis\.com|storage\.googleapis\.com)\//,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'listing-images',
+              cacheName: 'firebase-listing-images',
               expiration: {
                 maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 * 7, // Cache for 1 week
@@ -44,9 +44,9 @@ export default defineConfig({
         start_url: './',
         icons: [
           {
-            src: '/favicon.ico',
+            src: '/favicon.png',
             sizes: '64x64',
-            type: 'image/x-icon',
+            type: 'image/png',
           },
           {
             src: '/logo192.png',

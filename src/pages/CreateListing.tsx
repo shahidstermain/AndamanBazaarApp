@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Camera, PlusCircle, Check, MapPin, ChevronRight, AlertCircle, Loader2, X, Sparkles, Smartphone, Car, Sofa, Shirt, Home as HomeIcon, Zap, ShoppingBag, Rocket, Share2, Facebook, Link as LinkIcon } from 'lucide-react';
 import { compressImage } from '../lib/utils';
 import { listingSchema, sanitizePlainText, detectPromptInjection, validateFileUpload } from '../lib/validation';
@@ -239,27 +238,30 @@ export const CreateListing: React.FC = () => {
 
   const getAiSuggestion = async (imageFile: File) => {
     try {
-      const apiKey = import.meta.env.VITE_API_KEY;
-      if (!apiKey) return;
+      const functionUrl = import.meta.env.VITE_FIREBASE_AI_SUGGEST_FUNCTION;
+      const user = auth.currentUser;
+      if (!functionUrl || !user) return;
       setAiLoading(true);
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
       const reader = new FileReader();
       const base64 = await new Promise<string>(res => { reader.onload = () => res((reader.result as string).split(',')[1]); reader.readAsDataURL(imageFile); });
-      const result = await model.generateContent([
-        { inlineData: { mimeType: 'image/webp', data: base64 } },
-        `Analyze this product image for a local marketplace listing in the Andaman Islands, India. 
-        Return ONLY valid JSON with these fields:
-        {
-          "suggested_title": "concise title max 80 chars",
-          "suggested_description": "2-3 compelling sentences",
-          "suggested_category": "one of: mobiles,vehicles,home,fashion,property,services,other",
-          "suggested_condition": "one of: new,like_new,good,fair",
-          "estimated_price_range": {"low": number, "high": number}
-        }`
-      ]);
-      const text = result.response.text();
-      const json = JSON.parse(text.replace(/```json\n?|```/g, '').trim()) as AiSuggestion;
+      const idToken = await user.getIdToken();
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: {
+            mimeType: imageFile.type || 'image/webp',
+            data: base64,
+          },
+        }),
+      });
+      if (!response.ok) {
+        throw new Error('AI suggestion request failed');
+      }
+      const json = await response.json() as AiSuggestion;
       setAiSuggestion(json);
       if (json.suggested_condition) setCondition(json.suggested_condition);
       if (json.suggested_category) {

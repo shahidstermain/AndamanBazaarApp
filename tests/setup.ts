@@ -3,11 +3,14 @@ import 'fake-indexeddb/auto'
 import { cleanup } from '@testing-library/react'
 import { afterEach, vi } from 'vitest'
 
-// Global supabase mock — prevents DNS resolution of mock.supabase.co in CI
-vi.mock('../src/lib/supabase', () => import('../src/lib/__mocks__/supabase'))
-
-// Re-export createMockChain from the __mocks__ file so test files can import it from here
-export { createMockChain } from '../src/lib/__mocks__/supabase'
+// Test-safe Firebase public config to prevent SDK init failures in unit tests.
+vi.stubEnv('VITE_FIREBASE_API_KEY', 'AIzaSyTestKey1234567890')
+vi.stubEnv('VITE_FIREBASE_AUTH_DOMAIN', 'test-project.firebaseapp.com')
+vi.stubEnv('VITE_FIREBASE_PROJECT_ID', 'test-project')
+vi.stubEnv('VITE_FIREBASE_STORAGE_BUCKET', 'test-project.firebasestorage.app')
+vi.stubEnv('VITE_FIREBASE_MESSAGING_SENDER_ID', '1234567890')
+vi.stubEnv('VITE_FIREBASE_APP_ID', '1:1234567890:web:testappid')
+vi.stubEnv('VITE_FIREBASE_MEASUREMENT_ID', 'G-TESTMEASURE')
 
 // Cleanup after each test
 afterEach(() => {
@@ -120,3 +123,25 @@ if (!document.querySelector('meta[name="description"]')) {
   metaDesc.setAttribute('content', 'AndamanBazaar – hyperlocal marketplace')
   document.head.appendChild(metaDesc)
 }
+
+// Mock backend-only modules that are imported by some tests
+vi.mock('cashfree-pg', () => ({
+  Cashfree: vi.fn(),
+}))
+
+vi.mock('firebase-admin', () => ({
+  default: {
+    initializeApp: vi.fn(),
+    firestore: vi.fn(),
+  },
+  initializeApp: vi.fn(),
+  firestore: vi.fn(),
+}))
+
+vi.mock('firebase-functions/v2', () => ({
+  logger: {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+  },
+}))

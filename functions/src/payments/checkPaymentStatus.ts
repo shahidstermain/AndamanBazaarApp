@@ -1,10 +1,10 @@
 import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
 import { logger } from 'firebase-functions/v2';
 import { getCashfreeOrderStatus, CreateOrderResponse } from '../utils/cashfreeClient';
+import { admin } from '../utils/admin';
+import { CASHFREE_SECRET_BINDINGS } from '../utils/secrets';
 
-// Initialize Firebase Admin
-admin.initializeApp();
+const paymentsRuntime = functions.runWith({ secrets: CASHFREE_SECRET_BINDINGS });
 
 // Request data interface
 interface CheckPaymentStatusRequest {
@@ -38,7 +38,7 @@ interface CheckPaymentStatusResponse {
  * - Syncs Firestore with latest Cashfree status
  * - Prevents status tampering by validating with source of truth
  */
-export const checkPaymentStatus = functions.https.onCall(async (data: CheckPaymentStatusRequest, context) => {
+export const checkPaymentStatus = paymentsRuntime.https.onCall(async (data: CheckPaymentStatusRequest, context) => {
   // Validate authentication
   if (!context.auth) {
     logger.warn('Unauthorized attempt to check payment status');
@@ -256,7 +256,7 @@ async function handleStatusChange(currentPayment: any, newStatus: CreateOrderRes
 /**
  * Get payment history for a user
  */
-export const getPaymentHistory = functions.https.onCall(async (data: { limit?: number; startAfter?: string }, context) => {
+export const getPaymentHistory = paymentsRuntime.https.onCall(async (data: { limit?: number; startAfter?: string }, context) => {
   // Validate authentication
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Authentication required');
@@ -318,7 +318,7 @@ export const getPaymentHistory = functions.https.onCall(async (data: { limit?: n
 /**
  * Get payment details for a specific order
  */
-export const getPaymentDetails = functions.https.onCall(async (data: { orderId: string }, context) => {
+export const getPaymentDetails = paymentsRuntime.https.onCall(async (data: { orderId: string }, context) => {
   // Validate authentication
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Authentication required');

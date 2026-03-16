@@ -1,12 +1,10 @@
 import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { admin } from './utils/admin';
+import { getRequiredEnv, MODERATION_SECRET_BINDINGS, SECRET_NAMES } from './utils/secrets';
 
-// Initialize Firebase Admin
-admin.initializeApp();
-
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const moderationRuntime = functions.runWith({ secrets: MODERATION_SECRET_BINDINGS });
+let geminiClient: GoogleGenerativeAI | null = null;
 
 // Content Moderation Categories
 const MODERATION_CATEGORIES = {
@@ -20,72 +18,93 @@ const MODERATION_CATEGORIES = {
   PROHIBITED_ITEMS: 'prohibited_items',
 };
 
+interface ModerateContentData {
+  content: string;
+  contentType: string;
+  userId: string;
+}
+
+const getGeminiClient = (): GoogleGenerativeAI => {
+  if (!geminiClient) {
+    geminiClient = new GoogleGenerativeAI(getRequiredEnv(SECRET_NAMES.GEMINI_API_KEY));
+  }
+
+  return geminiClient;
+};
+
+const moderateContentInternal = async (data: ModerateContentData, callerUid: string): Promise<any> => {
+  const { content, contentType, userId } = data;
+
+  // Validate input
+  if (!content || !contentType || !userId) {
+    throw new functions.https.HttpsError('invalid-argument', 'Missing required fields');
+  }
+
+  // Check if user is authorized to moderate this content
+  if (userId !== callerUid) {
+    throw new functions.https.HttpsError('permission-denied', 'Access denied');
+  }
+
+  // Get moderation prompt based on content type
+  const prompt = getModerationPrompt(contentType);
+
+  // Call Gemini AI for moderation
+  const model = getGeminiClient().getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const result = await model.generateContent(`${prompt}\n\nContent to moderate:\n${content}`);
+  const response = await result.response;
+  const text = response.text();
+
+  // Parse AI response
+  const moderationResult = parseModerationResponse(text);
+
+  // Store moderation result
+  await admin.firestore().collection('content_moderations').add({
+    userId,
+    contentType,
+    content: content.substring(0, 500), // Store first 500 chars
+    approved: moderationResult.approved,
+    confidence: moderationResult.confidence,
+    flaggedCategories: moderationResult.flaggedCategories,
+    suggestions: moderationResult.suggestions,
+    aiResponse: text,
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+
+  // If content is not approved, create a moderation task for review
+  if (!moderationResult.approved) {
+    await admin.firestore().collection('moderation_tasks').add({
+      userId,
+      contentType,
+      content,
+      flaggedCategories: moderationResult.flaggedCategories,
+      confidence: moderationResult.confidence,
+      status: 'pending_review',
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+
+  return moderationResult;
+};
+
 // Moderate Content
-export const moderateContent = functions.https.onCall(async (data, context) => {
+export const moderateContent = moderationRuntime.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
 
-  const { content, contentType, userId } = data;
-
   try {
-    // Validate input
-    if (!content || !contentType || !userId) {
-      throw new functions.https.HttpsError('invalid-argument', 'Missing required fields');
-    }
-
-    // Check if user is authorized to moderate this content
-    if (userId !== context.auth.uid) {
-      throw new functions.https.HttpsError('permission-denied', 'Access denied');
-    }
-
-    // Get moderation prompt based on content type
-    const prompt = getModerationPrompt(contentType);
-    
-    // Call Gemini AI for moderation
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    const result = await model.generateContent(`${prompt}\n\nContent to moderate:\n${content}`);
-    const response = await result.response;
-    const text = response.text();
-
-    // Parse AI response
-    const moderationResult = parseModerationResponse(text);
-
-    // Store moderation result
-    await admin.firestore().collection('content_moderations').add({
-      userId,
-      contentType,
-      content: content.substring(0, 500), // Store first 500 chars
-      approved: moderationResult.approved,
-      confidence: moderationResult.confidence,
-      flaggedCategories: moderationResult.flaggedCategories,
-      suggestions: moderationResult.suggestions,
-      aiResponse: text,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
-
-    // If content is not approved, create a moderation task for review
-    if (!moderationResult.approved) {
-      await admin.firestore().collection('moderation_tasks').add({
-        userId,
-        contentType,
-        content,
-        flaggedCategories: moderationResult.flaggedCategories,
-        confidence: moderationResult.confidence,
-        status: 'pending_review',
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      });
-    }
-
-    return moderationResult;
+    return await moderateContentInternal(data as ModerateContentData, context.auth.uid);
   } catch (error) {
     console.error('Error moderating content:', error);
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
     throw new functions.https.HttpsError('internal', 'Content moderation failed');
   }
 });
 
 // Batch Moderate Content
-export const batchModerateContent = functions.https.onCall(async (data, context) => {
+export const batchModerateContent = moderationRuntime.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
@@ -107,7 +126,7 @@ export const batchModerateContent = functions.https.onCall(async (data, context)
     const results = await Promise.all(
       requests.map(async (request) => {
         try {
-          return await moderateContent(request, context);
+          return await moderateContentInternal(request as ModerateContentData, context.auth!.uid);
         } catch (error) {
           return {
             approved: false,
@@ -126,12 +145,15 @@ export const batchModerateContent = functions.https.onCall(async (data, context)
     };
   } catch (error) {
     console.error('Error in batch moderation:', error);
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
     throw new functions.https.HttpsError('internal', 'Batch moderation failed');
   }
 });
 
 // Get Moderation History
-export const getModerationHistory = functions.https.onCall(async (data, context) => {
+export const getModerationHistory = moderationRuntime.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
@@ -163,12 +185,15 @@ export const getModerationHistory = functions.https.onCall(async (data, context)
     };
   } catch (error) {
     console.error('Error getting moderation history:', error);
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
     throw new functions.https.HttpsError('internal', 'Failed to get moderation history');
   }
 });
 
 // Auto-moderate new listings
-export const autoModerateListing = functions.firestore
+export const autoModerateListing = moderationRuntime.firestore
   .document('listings/{listingId}')
   .onCreate(async (snap, context) => {
     const listing = snap.data();
@@ -188,11 +213,11 @@ export const autoModerateListing = functions.firestore
       `;
 
       // Call moderation function
-      const moderationResult = await moderateContent({
+      const moderationResult = await moderateContentInternal({
         content,
         contentType: 'listing',
         userId: listing.userId,
-      }, { auth: { uid: listing.userId } } as any);
+      }, listing.userId);
 
       // Update listing based on moderation result
       if (moderationResult.approved) {
@@ -324,7 +349,7 @@ function parseModerationResponse(text: string): any {
 }
 
 // Get moderation statistics
-export const getModerationStats = functions.https.onCall(async (data, context) => {
+export const getModerationStats = moderationRuntime.https.onCall(async (data, context) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
@@ -360,6 +385,9 @@ export const getModerationStats = functions.https.onCall(async (data, context) =
     };
   } catch (error) {
     console.error('Error getting moderation stats:', error);
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
+    }
     throw new functions.https.HttpsError('internal', 'Failed to get moderation stats');
   }
 });

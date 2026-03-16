@@ -1,6 +1,6 @@
 import DOMPurify from 'dompurify';
 
-// CSRF Token Management for React/Supabase applications
+// CSRF Token Management for React/Firebase applications
 export const csrfTokens = new Map<string, string>()
 
 export const generateCSRFToken = (sessionId: string): string => {

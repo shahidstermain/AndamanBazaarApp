@@ -56,7 +56,7 @@ export const checkRateLimit = (
 };
 
 /**
- * Server-side rate limit check via Supabase function
+ * Server-side rate limit check via Firebase Cloud Function.
  */
 export const checkServerRateLimit = async (
     _key: string,

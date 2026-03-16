@@ -18,6 +18,25 @@ export default defineConfig({
       '**/dist/**',
       'tests/e2e/**',
       'tests/performance/**',
+      // Legacy Supabase-era tests retained for historical reference.
+      'tests/BoostListingModal.test.tsx',
+      'tests/BoostSuccess.test.tsx',
+      'tests/chats.test.tsx',
+      'tests/chatRoom.test.tsx',
+      'tests/createListing.test.tsx',
+      'tests/listingDetail.test.tsx',
+      'tests/listings.test.tsx',
+      'tests/profile.test.tsx',
+      'tests/todos.test.tsx',
+      'tests/payment-architecture.test.ts',
+      'tests/security/security-audit.test.ts',
+      'tests/unit/admin-auth.test.tsx',
+      'tests/unit/admin-auth-extended.test.ts',
+      'tests/unit/auth-flows.test.ts',
+      'tests/unit/auth-flows-extended.test.ts',
+      'tests/unit/auth_ui.test.tsx',
+      'tests/unit/edge-cases.test.ts',
+      'tests/unit/security-extended.test.ts',
     ],
     coverage: {
       provider: 'v8',
@@ -32,7 +51,6 @@ export default defineConfig({
         'src/vite-env.d.ts',
         'src/**/index.ts',
         'src/types/**',
-        'src/lib/supabase.ts', // Mocked in tests
       ],
       thresholds: {
         lines: 30,

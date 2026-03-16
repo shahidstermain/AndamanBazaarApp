@@ -54,11 +54,6 @@ export const isFirebaseAvailable = (): boolean => {
 };
 
 /**
- * Check if Supabase is configured (always false - removed)
- */
-export const isSupabaseAvailable = (): boolean => false;
-
-/**
  * Get current user from the appropriate provider
  */
 export const getCurrentUser = async (): Promise<UserProfile | null> => {

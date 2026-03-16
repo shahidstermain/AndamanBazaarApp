@@ -1,5 +1,28 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { verifyWebhookSignature, parseWebhookEvent, CashfreeWebhookEvent } from '../functions/src/utils/cashfreeClient';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// Mock the external dependencies that are not available in the root node_modules
+vi.mock('cashfree-pg', () => ({
+  Cashfree: vi.fn(),
+}));
+
+vi.mock('firebase-admin', () => ({
+  default: {
+    initializeApp: vi.fn(),
+    firestore: vi.fn(),
+  },
+  initializeApp: vi.fn(),
+  firestore: vi.fn(),
+}));
+
+vi.mock('firebase-functions/v2', () => ({
+  logger: {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+  },
+}));
+
+import { verifyWebhookSignature, parseWebhookEvent } from '../functions/src/utils/webhookUtils';
 
 describe('Webhook Signature Validation', () => {
   const testSecretKey = 'test_webhook_secret_key_12345';
@@ -95,11 +118,19 @@ describe('Webhook Signature Validation', () => {
         .update(testPayload)
         .digest('base64');
 
-      // Change case of one character
-      const incorrectCaseSignature = correctSignature.substring(0, 1).toLowerCase() + 
-                                  correctSignature.substring(1);
+      // Base64 can contain non-alphabetic characters at the start.
+      // To ensure it's different and test case sensitivity, we'll swap a letter
+      // or just flip the case of the whole string and ensure it's different.
+      const incorrectCaseSignature = correctSignature.toLowerCase() === correctSignature 
+        ? correctSignature.toUpperCase() 
+        : correctSignature.toLowerCase();
+      
+      // If by some miracle they are still the same (e.g. no letters), append one
+      const finalIncorrectSignature = incorrectCaseSignature === correctSignature 
+        ? correctSignature + 'a' 
+        : incorrectCaseSignature;
 
-      const result = verifyWebhookSignature(testPayload, incorrectCaseSignature, testSecretKey);
+      const result = verifyWebhookSignature(testPayload, finalIncorrectSignature, testSecretKey);
       expect(result).toBe(false);
     });
 

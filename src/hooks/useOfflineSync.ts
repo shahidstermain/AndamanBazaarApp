@@ -16,6 +16,7 @@ import {
   clearDraftIndexedDB,
   cleanupNetworkListeners,
 } from '../lib/offlineQueue';
+import { auth } from '../lib/firebase';
 
 export interface UseOfflineSyncReturn {
   // Network status
@@ -170,22 +171,28 @@ export function useOfflineSync(
 
 // ===== LISTING SYNC HANDLER =====
 
-import { supabase } from '../lib/supabase';
+const getSyncFunctionUrl = (): string => {
+  const functionUrl = import.meta.env.VITE_FIREBASE_SECURE_SYNC_FUNCTION;
+  if (!functionUrl) throw new Error('Secure sync function URL not configured');
+  return functionUrl;
+};
+
+const getAuthHeaders = async (): Promise<Record<string, string>> => {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Not authenticated');
+  const token = await user.getIdToken();
+  return {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+};
 
 export function createListingSyncHandler(): SyncHandler {
   return async (item) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        return { success: false, error: 'Not authenticated' };
-      }
-
-      const response = await fetch('/functions/v1/secure-sync', {
+      const response = await fetch(getSyncFunctionUrl(), {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({
           entityType: 'listing',
           operation: 'create',
@@ -215,17 +222,9 @@ export function createListingSyncHandler(): SyncHandler {
 export function createMessageSyncHandler(): SyncHandler {
   return async (item) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        return { success: false, error: 'Not authenticated' };
-      }
-
-      const response = await fetch('/functions/v1/secure-sync', {
+      const response = await fetch(getSyncFunctionUrl(), {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({
           entityType: 'message',
           operation: 'create',
@@ -255,17 +254,9 @@ export function createMessageSyncHandler(): SyncHandler {
 export function createProfileSyncHandler(): SyncHandler {
   return async (item) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        return { success: false, error: 'Not authenticated' };
-      }
-
-      const response = await fetch('/functions/v1/secure-sync', {
+      const response = await fetch(getSyncFunctionUrl(), {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({
           entityType: 'profile_update',
           operation: 'update',

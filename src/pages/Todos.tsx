@@ -178,10 +178,10 @@ export const Todos: React.FC = () => {
                     <Plus size={12} className="mr-2" /> Database Setup Hint
                 </h3>
                 <p className="text-[11px] text-blue-800 leading-relaxed">
-                    Ensure your Supabase database has a <code className="bg-white/50 px-1 rounded">todos</code> table with:
+                    Ensure your Firestore project has a <code className="bg-white/50 px-1 rounded">todos</code> collection protected by rules scoped to <code className="bg-white/50 px-1 rounded">request.auth.uid</code>.
                     <br />
                     <code className="block mt-2 bg-slate-900 text-slate-300 p-3 rounded-xl text-[10px] font-mono whitespace-pre overflow-x-auto">
-                        {"CREATE TABLE todos (\n  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,\n  title TEXT NOT NULL,\n  is_completed BOOLEAN DEFAULT false,\n  created_at TIMESTAMPTZ DEFAULT NOW(),\n  user_id UUID REFERENCES auth.users(id)\n);"}
+                        {"{\n  title: string,\n  isCompleted: boolean,\n  userId: string,\n  createdAt: serverTimestamp()\n}"}
                     </code>
                 </p>
             </div>

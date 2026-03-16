@@ -195,11 +195,11 @@ export const migrateListingImages = async (
   
   for (const image of images) {
     try {
-      // Check if it's a Supabase URL
-      const isSupabaseUrl = image.url.includes('supabase') && image.url.includes('/storage/');
+      // Check if it's a legacy storage URL from pre-Firebase migration
+      const isLegacyStorageUrl = image.url.includes('supabase') && image.url.includes('/storage/');
       
-      if (isSupabaseUrl) {
-        // Download from Supabase
+      if (isLegacyStorageUrl) {
+        // Download from legacy storage and re-upload to Firebase
         const response = await fetch(image.url);
         const blob = await response.blob();
         const file = new File([blob], image.id, { type: blob.type });
@@ -240,11 +240,11 @@ export const migrateUserAvatar = async (
   avatarUrl: string
 ): Promise<string> => {
   try {
-    // Check if it's a Supabase URL
-    const isSupabaseUrl = avatarUrl.includes('supabase') && avatarUrl.includes('/storage/');
+    // Check if it's a legacy storage URL from pre-Firebase migration
+    const isLegacyStorageUrl = avatarUrl.includes('supabase') && avatarUrl.includes('/storage/');
     
-    if (isSupabaseUrl) {
-      // Download from Supabase
+    if (isLegacyStorageUrl) {
+      // Download from legacy storage and re-upload to Firebase
       const response = await fetch(avatarUrl);
       const blob = await response.blob();
       const file = new File([blob], 'avatar', { type: blob.type });

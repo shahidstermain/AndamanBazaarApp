@@ -1,16 +1,17 @@
 import { Cashfree } from 'cashfree-pg';
-import * as admin from 'firebase-admin';
 import { logger } from 'firebase-functions/v2';
+import { CashfreeWebhookEvent, verifyWebhookSignature as verifySig, parseWebhookEvent as parseEvent } from './webhookUtils';
+import { getRequiredEnv, SECRET_NAMES } from './secrets';
+
+// Re-export the webhook functions for backward compatibility
+export { verifySig as verifyWebhookSignature, parseEvent as parseWebhookEvent };
+export type { CashfreeWebhookEvent };
 
 // Initialize Cashfree client with environment-specific configuration
 const getCashfreeClient = (): Cashfree => {
   const environment = process.env.CASHFREE_ENV || 'sandbox';
-  const appId = process.env.CASHFREE_APP_ID;
-  const secretKey = process.env.CASHFREE_SECRET_KEY;
-
-  if (!appId || !secretKey) {
-    throw new Error('Cashfree credentials not configured');
-  }
+  const appId = getRequiredEnv(SECRET_NAMES.CASHFREE_APP_ID);
+  const secretKey = getRequiredEnv(SECRET_NAMES.CASHFREE_SECRET_KEY);
 
   return new Cashfree({
     environment: environment as 'production' | 'sandbox',
@@ -55,23 +56,6 @@ export interface CreateOrderResponse {
     paymentTime: string;
     paymentCompletionTime: string;
   }>;
-}
-
-// Webhook event interface
-export interface CashfreeWebhookEvent {
-  type: string;
-  timestamp: string;
-  orderId: string;
-  orderAmount: number;
-  orderCurrency: string;
-  orderStatus: string;
-  paymentId?: string;
-  paymentAmount?: number;
-  paymentCurrency?: string;
-  paymentStatus?: string;
-  paymentTime?: string;
-  signature?: string;
-  [key: string]: any;
 }
 
 // Create order with Cashfree API
@@ -146,54 +130,6 @@ export const getCashfreeOrderStatus = async (orderId: string): Promise<CreateOrd
   } catch (error) {
     logger.error(`Failed to fetch Cashfree order status: ${orderId}`, error);
     throw new Error(`Cashfree order status fetch failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-};
-
-// Verify webhook signature
-export const verifyWebhookSignature = (payload: string, signature: string, secretKey?: string): boolean => {
-  try {
-    const crypto = require('crypto');
-    const webhookSecret = secretKey || process.env.CASHFREE_WEBHOOK_SECRET;
-    
-    if (!webhookSecret) {
-      logger.error('Webhook secret not configured');
-      return false;
-    }
-
-    const expectedSignature = crypto
-      .createHmac('sha256', webhookSecret)
-      .update(payload)
-      .digest('base64');
-
-    const isValid = signature === expectedSignature;
-    
-    logger.info(`Webhook signature verification: ${isValid ? 'VALID' : 'INVALID'}`, {
-      providedSignature: signature.substring(0, 20) + '...',
-      expectedSignature: expectedSignature.substring(0, 20) + '...',
-    });
-
-    return isValid;
-  } catch (error) {
-    logger.error('Webhook signature verification failed', error);
-    return false;
-  }
-};
-
-// Parse webhook event
-export const parseWebhookEvent = (payload: string): CashfreeWebhookEvent => {
-  try {
-    const event = JSON.parse(payload) as CashfreeWebhookEvent;
-    
-    logger.info(`Parsed webhook event: ${event.type}`, {
-      orderId: event.orderId,
-      orderStatus: event.orderStatus,
-      paymentStatus: event.paymentStatus,
-    });
-
-    return event;
-  } catch (error) {
-    logger.error('Failed to parse webhook event', error);
-    throw new Error(`Webhook event parsing failed: ${error instanceof Error ? error.message : 'Invalid JSON'}`);
   }
 };
 
