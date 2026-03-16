@@ -292,3 +292,79 @@ export const getNetworkInfo = (): {
     saveData: connection?.saveData || false
   }
 }
+
+// Memory usage monitoring
+export const getMemoryUsage = (): {
+  usedJSHeapSize: number
+  totalJSHeapSize: number
+  jsHeapSizeLimit: number
+} | null => {
+  const perf = performance as any
+  if (perf.memory) {
+    return {
+      usedJSHeapSize: perf.memory.usedJSHeapSize / (1024 * 1024),
+      totalJSHeapSize: perf.memory.totalJSHeapSize / (1024 * 1024),
+      jsHeapSizeLimit: perf.memory.jsHeapSizeLimit / (1024 * 1024),
+    }
+  }
+  return null
+}
+
+// Performance budget checking
+export const checkPerformanceBudget = async (): Promise<{
+  passed: boolean
+  violations: string[]
+}> => {
+  const violations: string[] = []
+
+  const metrics = await measurePerformance()
+  if (metrics.lcp > 2500) violations.push(`LCP ${metrics.lcp.toFixed(0)}ms exceeds 2500ms budget`)
+  if (metrics.fid > 100) violations.push(`FID ${metrics.fid.toFixed(0)}ms exceeds 100ms budget`)
+  if (metrics.cls > 0.1) violations.push(`CLS ${metrics.cls.toFixed(3)} exceeds 0.1 budget`)
+
+  const memory = getMemoryUsage()
+  if (memory && memory.usedJSHeapSize > 100) {
+    violations.push(`Heap ${memory.usedJSHeapSize.toFixed(0)}MB exceeds 100MB budget`)
+  }
+
+  return { passed: violations.length === 0, violations }
+}
+
+// Report performance metrics (e.g. to analytics)
+export const reportPerformanceMetrics = async (): Promise<void> => {
+  try {
+    const metrics = await measurePerformance()
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      ;(window as any).gtag('event', 'web_vitals', {
+        lcp: metrics.lcp,
+        fid: metrics.fid,
+        cls: metrics.cls,
+        ttfb: metrics.ttfb,
+        fcp: metrics.fcp,
+      })
+    }
+  } catch {
+    // non-critical
+  }
+}
+
+// Debounce utility
+export const debounce = <T extends (...args: any[]) => any>(
+  fn: T,
+  ms: number,
+): ((...args: Parameters<T>) => void) => {
+  let timer: ReturnType<typeof setTimeout>
+  return (...args: Parameters<T>) => {
+    clearTimeout(timer)
+    timer = setTimeout(() => fn(...args), ms)
+  }
+}
+
+// Preload critical resources on app start
+export const preloadCriticalResources = (): void => {
+  addResourceHints([
+    'https://firebasestorage.googleapis.com',
+    'https://fonts.googleapis.com',
+    'https://fonts.gstatic.com',
+  ])
+}
