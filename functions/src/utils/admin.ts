@@ -15,14 +15,21 @@ const initializeAdmin = (): void => {
   }
 
   try {
-    const parsed = JSON.parse(serviceAccountJson) as admin.ServiceAccount;
+    const parsed = JSON.parse(serviceAccountJson);
 
-    if (!parsed.projectId || !parsed.clientEmail || !parsed.privateKey) {
+    if (!parsed.project_id || !parsed.client_email || !parsed.private_key) {
       throw new Error('Service account JSON is missing required fields');
     }
 
+    // Convert to format expected by Firebase Admin SDK
+    const serviceAccount = {
+      projectId: parsed.project_id,
+      clientEmail: parsed.client_email,
+      privateKey: parsed.private_key,
+    };
+
     admin.initializeApp({
-      credential: admin.credential.cert(parsed),
+      credential: admin.credential.cert(serviceAccount),
     });
   } catch (error) {
     logger.error('Failed to initialize Firebase Admin from service-account secret', error);
