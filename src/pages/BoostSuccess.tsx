@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { getDocs, collection, query, where } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { CheckCircle, XCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { COPY } from '../lib/localCopy';
 
@@ -20,13 +21,9 @@ export const BoostSuccess: React.FC = () => {
         const checkOrderStatus = async () => {
             try {
                 // Fetch the listing_boost record to check its status
-                const { data, error } = await supabase
-                    .from('listing_boosts')
-                    .select('status, listing_id')
-                    .eq('cashfree_order_id', orderId)
-                    .single();
-
-                if (error) throw error;
+                const boostSnap = await getDocs(query(collection(db, 'listing_boosts'), where('cashfree_order_id', '==', orderId)));
+                if (boostSnap.empty) throw new Error('Order not found');
+                const data = boostSnap.docs[0].data() as any;
 
                 if (data.status === 'paid') {
                     setStatus('success');
@@ -37,11 +34,8 @@ export const BoostSuccess: React.FC = () => {
                     // Still pending, wait and poll once more or tell user to wait
                     // For simplicity, we assume the webhook might take a few seconds
                     setTimeout(async () => {
-                        const { data: retryData } = await supabase
-                            .from('listing_boosts')
-                            .select('status, listing_id')
-                            .eq('cashfree_order_id', orderId)
-                            .single();
+                        const retrySnap = await getDocs(query(collection(db, 'listing_boosts'), where('cashfree_order_id', '==', orderId)));
+                        const retryData = retrySnap.empty ? null : retrySnap.docs[0].data() as any;
 
                         if (retryData?.status === 'paid') {
                             setStatus('success');

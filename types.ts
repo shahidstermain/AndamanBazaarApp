@@ -18,6 +18,12 @@ export interface Profile {
   successful_sales: number;
   trust_level: 'newbie' | 'verified' | 'legend';
   created_at: string;
+
+  // Milestone 2: Experiences Marketplace fields
+  is_operator: boolean;
+  operator_verification_status: 'unverified' | 'pending' | 'verified' | 'rejected';
+  operator_id_document_url?: string;
+  operator_business_address?: string;
 }
 
 export interface Category {
@@ -97,11 +103,16 @@ export interface Listing {
   // AI
   ai_metadata?: AiMetadata;
 
+  // Milestone 2: Experiences Marketplace
+  is_experience: boolean;
+  inventory_per_slot: number;
+
   // Relations
   created_at: string;
   updated_at?: string;
   images?: ListingImage[];
   seller?: Profile;
+  pricing_tiers?: PricingTier[];
 }
 
 export interface ListingImage {
@@ -209,4 +220,145 @@ export interface ListingBoost {
   featured_until?: string;
   created_at: string;
   updated_at: string;
+}
+
+// ===== Experience & Booking Types =====
+
+export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
+
+export interface PricingTier {
+  id: string;
+  listing_id: string;
+  name: string;
+  price: number;
+  description?: string;
+  created_at: string;
+}
+
+export interface ExperienceAvailability {
+  id: string;
+  listing_id: string;
+  slot_date: string;
+  slots_available: number;
+}
+
+export interface GuestDetail {
+  tier_id: string;
+  count: number;
+}
+
+export interface Booking {
+  id: string;
+  user_id: string;
+  listing_id: string;
+  booking_date: string;
+  booking_status: 'pending' | 'paid' | 'completed' | 'disputed' | 'cancelled';
+  release_status: 'locked' | 'released';
+  total_amount: number;
+  advance_amount: number;
+  commission_amount: number;
+  cashfree_order_id?: string;
+  guest_details: GuestDetail[];
+  contact_number?: string;
+  special_requests?: string;
+  created_at: string;
+  updated_at: string;
+  listing?: Listing;
+  user?: Profile;
+}
+
+// ===== Trust Engine Types =====
+
+export interface ReviewRatings {
+  safety: number;
+  value: number;
+  fun: number;
+  communication: number;
+  accuracy: number;
+}
+
+export interface Review {
+  id: string;
+  activityId: string;
+  userId: string;
+  bookingId: string;
+  ratings: ReviewRatings;
+  avgRating: number;
+  comment: string;
+  mediaUrls: string[];
+  createdAt: string;
+}
+
+export type OperatorTier = 'basic' | 'verified' | 'premium';
+
+export interface Operator {
+  id: string;
+  userId: string;
+  verificationTier: OperatorTier;
+  documents: {
+    idProof?: string;
+    addressProof?: string;
+    license?: string;
+  };
+  verifiedAt?: string;
+}
+
+export interface TrustScoreResult {
+  trustScore: number;
+  badge: 'Low' | 'Good' | 'Trusted' | 'Premium';
+}
+
+// ===== Smart Activity Filter & Match Score Types =====
+
+export type ActivityDifficulty = 'Easy' | 'Medium' | 'Hard';
+export type Island = 'Port Blair' | 'Havelock' | 'Neil Island' | 'Baratang' | 'Diglipur' | 'Long Island';
+export type ActivityType = 'Scuba Diving' | 'Snorkeling' | 'Trekking' | 'History' | 'Leisure' | 'Water Sports' | 'Beaches';
+
+export interface Activity {
+  id: string;
+  title: string;
+  island: Island;
+  type: ActivityType;
+  price: number;
+  durationMinutes: number;
+  difficulty: ActivityDifficulty;
+  familyFriendly: boolean;
+  requiresSwimming: boolean;
+  season: string[]; // e.g., ["Oct", "Nov", ...]
+  rating: number;
+  reviewCount: number;
+  location: {
+    lat: number;
+    lng: number;
+  };
+  operatorId: string; // Linking to the Trust Engine
+  trustScore?: number;
+  trustBadge?: 'Low' | 'Good' | 'Trusted' | 'Premium';
+}
+
+export type GroupType = 'family' | 'solo' | 'couple';
+export type UserPersona = 'Adventure' | 'Relaxation' | 'Culture' | 'Luxury';
+
+export interface UserPreferences {
+  budget: number;
+  interests: ActivityType[];
+  persona: UserPersona;
+  groupType: GroupType;
+}
+
+export interface MatchScoreResult {
+  activityId: string;
+  score: number;
+  reasons?: string[];
+}
+
+export interface ActivityFilterParams {
+  islands: Island[];
+  types: ActivityType[];
+  budgetRange: [number, number];
+  durationRange: [number, number];
+  difficulty?: ActivityDifficulty;
+  familyFriendly?: boolean;
+  requiresSwimming?: boolean;
+  minRating: number;
 }

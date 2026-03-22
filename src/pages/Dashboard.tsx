@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { doc, getDoc, getDocs, collection, query, where, orderBy, limit } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export const Dashboard: React.FC = () => {
@@ -17,21 +18,16 @@ export const Dashboard: React.FC = () => {
     const fetchStats = async () => {
       setLoading(true);
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = auth.currentUser;
         if (!user) return;
 
         // 1. Fetch Profile Data
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('successful_sales, trust_level')
-          .eq('id', user.id)
-          .single();
+        const profileSnap = await getDoc(doc(db, 'profiles', user.uid));
+        const profile = profileSnap.exists() ? profileSnap.data() : null;
 
         // 2. Fetch User Listings for Counts
-        const { data: listings } = await supabase
-          .from('listings')
-          .select('id, views_count, status, created_at')
-          .eq('user_id', user.id);
+        const listingsSnap = await getDocs(query(collection(db, 'listings'), where('user_id', '==', user.uid)));
+        const listings = listingsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
 
         if (listings) {
           const active = listings.filter(l => l.status === 'active').length;
@@ -40,20 +36,14 @@ export const Dashboard: React.FC = () => {
           // Calculate response time from actual chats
           let responseTimeStr = '—';
           try {
-            const { data: userChats } = await supabase
-              .from('chats')
-              .select('id, seller_id, created_at')
-              .eq('seller_id', user.id)
-              .limit(20);
+            const chatsSnap = await getDocs(query(collection(db, 'chats'), where('seller_id', '==', user.uid), limit(20)));
+            const userChats = chatsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
 
             if (userChats && userChats.length > 0) {
-              const chatIds = userChats.map(c => c.id);
-              const { data: firstReplies } = await supabase
-                .from('messages')
-                .select('chat_id, sender_id, created_at')
-                .in('chat_id', chatIds)
-                .eq('sender_id', user.id)
-                .order('created_at', { ascending: true });
+              const chatIds = userChats.map((c: any) => c.id);
+              // Firestore 'in' max 30
+              const msgSnap = await getDocs(query(collection(db, 'messages'), where('chat_id', 'in', chatIds.slice(0, 30)), where('sender_id', '==', user.uid), orderBy('created_at', 'asc')));
+              const firstReplies = msgSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
 
               if (firstReplies && firstReplies.length > 0) {
                 // Get first seller reply per chat

@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { doc, getDoc, getDocs, addDoc, updateDoc, setDoc, collection, query, where, orderBy, limit, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
 import { Chat, Message, Profile } from '../types';
 import { Send, ChevronLeft, ShieldCheck, Check, CheckCheck } from 'lucide-react';
 import { messageSchema, sanitizePlainText } from '../lib/validation';
@@ -25,86 +26,95 @@ export const ChatRoom: React.FC = () => {
 
   useEffect(() => {
     const initChat = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = auth.currentUser;
       if (!user) return;
       setCurrentUser(user);
 
       try {
-        // P4: Single query with joins instead of N+1 separate queries
-        const CHAT_SELECT = `*, listing:listings!chats_listing_id_fkey(id, title, price, city, user_id), seller:profiles!chats_seller_id_fkey(id, name, profile_photo_url), buyer:profiles!chats_buyer_id_fkey(id, name, profile_photo_url)`;
+        let chatData: any = null;
 
-        let { data: chatData, error: chatError } = await supabase
-          .from('chats')
-          .select(CHAT_SELECT)
-          .eq('id', id)
-          .single();
+        // Try to load chat by ID first
+        if (id) {
+          const chatRef = doc(db, 'chats', id);
+          const chatSnap = await getDoc(chatRef);
+          if (chatSnap.exists()) {
+            chatData = { id: chatSnap.id, ...chatSnap.data() };
+          }
+        }
 
         // If ID is actually a listing ID (from "Chat Now" button), resolve correctly
-        if (chatError || !chatData) {
-          const { data: listing } = await supabase
-            .from('listings')
-            .select('*')
-            .eq('id', id)
-            .single();
+        if (!chatData && id) {
+          const listingRef = doc(db, 'listings', id);
+          const listingSnap = await getDoc(listingRef);
 
-          if (listing) {
+          if (listingSnap.exists()) {
+            const listing = { id: listingSnap.id, ...listingSnap.data() } as any;
+
             // Guard: prevent chatting on own listing
-            if (listing.user_id === user.id) {
+            if (listing.user_id === user.uid) {
               setLoading(false);
               return;
             }
 
-            // Guard: prevent new chats on sold/deleted listings (existing chats still accessible)
-            const { data: existingChat } = await supabase
-              .from('chats')
-              .select(CHAT_SELECT)
-              .eq('listing_id', listing.id)
-              .eq('buyer_id', user.id)
-              .single();
+            // Check for existing chat
+            const existingChatSnap = await getDocs(query(
+              collection(db, 'chats'),
+              where('listing_id', '==', listing.id),
+              where('buyer_id', '==', user.uid)
+            ));
 
-            if (existingChat) {
-              chatData = existingChat;
+            if (!existingChatSnap.empty) {
+              const existingDoc = existingChatSnap.docs[0];
+              chatData = { id: existingDoc.id, ...existingDoc.data() };
             } else if (listing.status === 'sold' || listing.status === 'deleted' || listing.status === 'expired') {
-              // Can't start new chat on sold/deleted/expired listings
               navigate('/listings');
               return;
             } else {
-              const { data: newBaseChat } = await supabase
-                .from('chats')
-                .insert({
-                  listing_id: listing.id,
-                  buyer_id: user.id,
-                  seller_id: listing.user_id
-                })
-                .select(CHAT_SELECT)
-                .single();
-              if (newBaseChat) chatData = newBaseChat;
+              // Create new chat
+              const newChatRef = await addDoc(collection(db, 'chats'), {
+                listing_id: listing.id,
+                buyer_id: user.uid,
+                seller_id: listing.user_id,
+                last_message: null,
+                last_message_at: null,
+                buyer_unread_count: 0,
+                seller_unread_count: 0,
+                created_at: new Date().toISOString()
+              });
+              chatData = { id: newChatRef.id, listing_id: listing.id, buyer_id: user.uid, seller_id: listing.user_id, buyer_unread_count: 0, seller_unread_count: 0 };
             }
           }
         }
 
         if (chatData) {
+          // Enrich with listing and profile data
+          const [listingSnap, sellerSnap, buyerSnap] = await Promise.all([
+            chatData.listing_id ? getDoc(doc(db, 'listings', chatData.listing_id)) : null,
+            chatData.seller_id ? getDoc(doc(db, 'profiles', chatData.seller_id)) : null,
+            chatData.buyer_id ? getDoc(doc(db, 'profiles', chatData.buyer_id)) : null
+          ]);
+
+          chatData.listing = listingSnap?.exists() ? { id: listingSnap.id, ...listingSnap.data() } : null;
+          chatData.seller = sellerSnap?.exists() ? { id: sellerSnap.id, ...sellerSnap.data() } : null;
+          chatData.buyer = buyerSnap?.exists() ? { id: buyerSnap.id, ...buyerSnap.data() } : null;
+
           setChat(chatData);
 
-          // Initial Message Fetch (paginated — last 50)
-          const { data: messageData, count } = await supabase
-            .from('messages')
-            .select('*', { count: 'exact' })
-            .eq('chat_id', chatData.id)
-            .order('created_at', { ascending: false })
-            .limit(MESSAGES_PER_PAGE);
+          // Fetch initial messages
+          const msgsSnap = await getDocs(query(
+            collection(db, 'messages'),
+            where('chat_id', '==', chatData.id),
+            orderBy('created_at', 'desc'),
+            limit(MESSAGES_PER_PAGE)
+          ));
+          const msgs = msgsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)).reverse();
+          setMessages(msgs);
+          setHasMore(msgsSnap.docs.length === MESSAGES_PER_PAGE);
 
-          if (messageData) {
-            setMessages(messageData.reverse());
-            setHasMore((count || 0) > MESSAGES_PER_PAGE);
-          }
-
-          // Reset unread count for current user
-          const isBuyer = user.id === chatData.buyer_id;
-          await supabase
-            .from('chats')
-            .update({ [isBuyer ? 'buyer_unread_count' : 'seller_unread_count']: 0 })
-            .eq('id', chatData.id);
+          // Reset unread count
+          const isBuyer = user.uid === chatData.buyer_id;
+          const chatRef = doc(db, 'chats', chatData.id);
+          await updateDoc(chatRef, { [isBuyer ? 'buyer_unread_count' : 'seller_unread_count']: 0 });
         }
       } catch (err) {
         console.error('Chat init error:', err);
@@ -116,39 +126,23 @@ export const ChatRoom: React.FC = () => {
     initChat();
   }, [id]);
 
+  // Real-time message listener
   useEffect(() => {
     if (!chat) return;
-    const channel = supabase
-      .channel(`chat_messages:${chat.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `chat_id=eq.${chat.id}`,
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const newMessage = payload.new as Message;
-            setMessages((prev) => {
-              if (prev.find(m => m.id === newMessage.id)) return prev;
-              return [...prev, newMessage];
-            });
-          } else if (payload.eventType === 'UPDATE') {
-            const updatedMessage = payload.new as Message;
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === updatedMessage.id ? updatedMessage : msg
-              )
-            );
-          }
-        }
-      )
-      .subscribe();
+    const unsubscribe = onSnapshot(
+      query(
+        collection(db, 'messages'),
+        where('chat_id', '==', chat.id),
+        orderBy('created_at', 'asc')
+      ),
+      (snapshot) => {
+        const msgs = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
+        setMessages(msgs);
+      }
+    );
 
-    return () => { supabase.removeChannel(channel); };
-  }, [chat]);
+    return () => unsubscribe();
+  }, [chat?.id]);
 
   useEffect(() => {
     if (scrollRef.current && typeof scrollRef.current.scrollIntoView === 'function') {
@@ -156,33 +150,22 @@ export const ChatRoom: React.FC = () => {
     }
   }, [messages]);
 
-  const markMessagesAsRead = async (chatId: string, userId: string) => {
-    try {
-      await supabase
-        .from('messages')
-        .update({ is_read: true })
-        .eq('chat_id', chatId)
-        .neq('sender_id', userId);
-    } catch (error) {
-      console.error('Error marking messages as read:', error);
-    }
-  };
-
   const loadMoreMessages = async () => {
     if (!chat || !hasMore || messages.length === 0) return;
     const oldestMessage = messages[0];
     try {
-      const { data: olderMessages } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('chat_id', chat.id)
-        .lt('created_at', oldestMessage.created_at)
-        .order('created_at', { ascending: false })
-        .limit(MESSAGES_PER_PAGE);
+      const olderSnap = await getDocs(query(
+        collection(db, 'messages'),
+        where('chat_id', '==', chat.id),
+        where('created_at', '<', oldestMessage.created_at),
+        orderBy('created_at', 'desc'),
+        limit(MESSAGES_PER_PAGE)
+      ));
 
-      if (olderMessages && olderMessages.length > 0) {
-        setMessages(prev => [...olderMessages.reverse(), ...prev]);
-        if (olderMessages.length < MESSAGES_PER_PAGE) setHasMore(false);
+      if (olderSnap.docs.length > 0) {
+        const olderMsgs = olderSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)).reverse();
+        setMessages(prev => [...olderMsgs, ...prev]);
+        if (olderSnap.docs.length < MESSAGES_PER_PAGE) setHasMore(false);
       } else {
         setHasMore(false);
       }
@@ -194,7 +177,7 @@ export const ChatRoom: React.FC = () => {
   const handleSend = async () => {
     if (!inputText.trim() || !chat || !currentUser) return;
 
-    const rateLimitCheck = checkRateLimit(`${currentUser.id}:send_message`, {
+    const rateLimitCheck = checkRateLimit(`${currentUser.uid}:send_message`, {
       maxRequests: 10,
       windowSeconds: 60
     });
@@ -230,17 +213,24 @@ export const ChatRoom: React.FC = () => {
     setInputText('');
 
     try {
-      const { error: msgError } = await supabase
-        .from('messages')
-        .insert({
-          chat_id: chat.id,
-          sender_id: currentUser.id,
-          message_text: sanitizedMessage,
-        });
+      // Add message to Firestore
+      await addDoc(collection(db, 'messages'), {
+        chat_id: chat.id,
+        sender_id: currentUser.uid,
+        message_text: sanitizedMessage,
+        is_read: false,
+        created_at: new Date().toISOString()
+      });
 
-      if (msgError) throw msgError;
-
-      await markMessagesAsRead(chat.id, currentUser.id);
+      // Update chat's last_message and increment unread for recipient
+      const isBuyer = currentUser.uid === chat.buyer_id;
+      const chatRef = doc(db, 'chats', chat.id);
+      const { increment } = await import('firebase/firestore');
+      await updateDoc(chatRef, {
+        last_message: sanitizedMessage,
+        last_message_at: new Date().toISOString(),
+        [isBuyer ? 'seller_unread_count' : 'buyer_unread_count']: increment(1)
+      });
 
       await logAuditEvent({
         action: 'message_sent',
@@ -274,7 +264,7 @@ export const ChatRoom: React.FC = () => {
     </div>
   );
 
-  const otherParty = currentUser?.id === chat.buyer_id ? chat.seller : chat.buyer;
+  const otherParty = currentUser?.uid === chat.buyer_id ? chat.seller : chat.buyer;
 
   return (
     <div className="h-screen flex flex-col bg-slate-50">
@@ -321,7 +311,7 @@ export const ChatRoom: React.FC = () => {
         </div>
 
         {messages.map((msg) => {
-          const isMe = msg.sender_id === currentUser?.id;
+          const isMe = msg.sender_id === currentUser?.uid;
           return (
             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom-2 duration-300`}>
               <div className={`max-w-[75%] px-4 py-3 rounded-2xl shadow-sm ${isMe ? 'bg-ocean-700 text-white rounded-tr-none' : 'bg-white text-slate-800 rounded-tl-none border border-slate-200'

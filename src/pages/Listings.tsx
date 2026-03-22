@@ -1,12 +1,14 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { collection, query, where, orderBy, limit, getDocs, doc, deleteDoc, setDoc } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
 import { Listing } from '../types';
 import { Search, MapPin, Heart, Sparkles, Filter, X, ChevronDown, ArrowUpDown, Loader2 } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { isDemoListing } from '../lib/demoListings';
 import { COPY } from '../lib/localCopy';
+import { FilterSidebar, ActivityFilters, DEFAULT_FILTERS, PRICE_MAX } from '../components/FilterSidebar';
 
 const CATEGORIES = [
   { label: '🌊 All', slug: 'all' },
@@ -51,60 +53,78 @@ export const Listings: React.FC = () => {
   const [showVerifiedOnly, setShowVerifiedOnly] = useState(searchParams.get('verified') === 'true');
   const sortDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Activity sidebar filters
+  const [activityFilters, setActivityFilters] = useState<ActivityFilters>(DEFAULT_FILTERS);
+  const [showSidebar, setShowSidebar] = useState(false);
+
   // Infinite scroll observer
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const buildQuery = useCallback((offset: number) => {
-    let query = supabase
-      .from('listings')
-      .select('id, title, price, city, created_at, is_featured, views_count, images:listing_images(image_url)')
-      .eq('status', 'active');
+    const constraints: any[] = [where('status', '==', 'active')];
 
-    const q = searchParams.get('q');
     const cat = searchParams.get('category');
-    const verified = searchParams.get('verified');
-
     if (cat && cat !== 'all') {
-      query = query.eq('category_id', cat);
+      constraints.push(where('category_id', '==', cat));
     }
 
-    if (q) {
-      query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%`);
-    }
-
+    const verified = searchParams.get('verified');
     if (verified === 'true') {
-      query = query.eq('is_location_verified', true);
+      constraints.push(where('is_location_verified', '==', true));
     }
 
-    // Price filters
-    if (minPrice && !isNaN(Number(minPrice))) {
-      query = query.gte('price', Number(minPrice));
+    if (activityFilters.location) {
+      constraints.push(where('city', '==', activityFilters.location));
     }
-    if (maxPrice && !isNaN(Number(maxPrice))) {
-      query = query.lte('price', Number(maxPrice));
+    if (activityFilters.category) {
+      constraints.push(where('category_id', '==', activityFilters.category));
     }
 
     // Sorting
     switch (sortBy) {
       case 'price_low':
-        query = query.order('price', { ascending: true });
+        constraints.push(orderBy('price', 'asc'));
         break;
       case 'price_high':
-        query = query.order('price', { ascending: false });
+        constraints.push(orderBy('price', 'desc'));
         break;
       case 'most_viewed':
-        query = query.order('views_count', { ascending: false, nullsFirst: false });
+        constraints.push(orderBy('views_count', 'desc'));
         break;
       case 'newest':
       default:
-        query = query.order('created_at', { ascending: false });
+        constraints.push(orderBy('created_at', 'desc'));
         break;
     }
 
-    query = query.range(offset, offset + PAGE_SIZE - 1);
-    return query;
-  }, [searchParams, sortBy, minPrice, maxPrice]);
+    constraints.push(limit(PAGE_SIZE));
 
+    return query(collection(db, 'listings'), ...constraints);
+  }, [searchParams, sortBy, activityFilters]);
+
+  const applyClientSideFilters = useCallback((results: any[]) => {
+    let filtered = results;
+
+    // Price — client-side (avoids composite index requirement)
+    filtered = filtered.filter(
+      (l) =>
+        l.price >= activityFilters.priceMin &&
+        (activityFilters.priceMax >= PRICE_MAX || l.price <= activityFilters.priceMax)
+    );
+
+    // Duration — client-side
+    if (activityFilters.durations.length > 0) {
+      filtered = filtered.filter(
+        (l) => l.duration && activityFilters.durations.includes(l.duration)
+      );
+    }
+
+    return filtered;
+  }, [activityFilters]);
+
+  /** 
+   * Fetches listings from Supabase with native filters and applies client-side filters.
+   */
   const fetchListings = useCallback(async (reset = true) => {
     if (reset) {
       setLoading(true);
@@ -114,33 +134,51 @@ export const Listings: React.FC = () => {
     }
 
     try {
-      const offset = reset ? 0 : (page + 1) * PAGE_SIZE;
-      const { data, error } = await buildQuery(offset);
+      const q = buildQuery(reset ? 0 : (page + 1) * PAGE_SIZE);
+      const snapshot = await getDocs(q);
+      const results = snapshot.docs.map(d => {
+        const data = d.data();
+        return { id: d.id, ...data, images: data.images || [] };
+      });
 
-      if (error) throw error;
+      // Apply client-side filters (search query, price range)
+      const searchQ = searchParams.get('q')?.toLowerCase();
+      let filtered = results;
+      if (searchQ) {
+        filtered = filtered.filter((l: any) =>
+          l.title?.toLowerCase().includes(searchQ) ||
+          l.description?.toLowerCase().includes(searchQ)
+        );
+      }
+      if (minPrice && !isNaN(Number(minPrice))) {
+        filtered = filtered.filter((l: any) => l.price >= Number(minPrice));
+      }
+      if (maxPrice && !isNaN(Number(maxPrice))) {
+        filtered = filtered.filter((l: any) => l.price <= Number(maxPrice));
+      }
+      filtered = applyClientSideFilters(filtered);
 
-      const results = data || [];
       if (reset) {
-        setListings(results);
+        setListings(filtered);
       } else {
-        setListings(prev => [...prev, ...results]);
+        setListings(prev => [...prev, ...filtered]);
       }
 
       setHasMore(results.length === PAGE_SIZE);
       if (!reset) setPage(prev => prev + 1);
     } catch (err) {
-      console.error("Error fetching listings:", err);
+      console.error('Error fetching listings:', err);
       setListings([]);
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [buildQuery, page]);
+  }, [buildQuery, applyClientSideFilters, page, searchParams, minPrice, maxPrice]);
 
   useEffect(() => {
     fetchListings(true);
     fetchFavorites();
-  }, [activeCategory, searchParams.get('q'), searchParams.get('verified'), sortBy]);
+  }, [activeCategory, searchParams.get('q'), searchParams.get('verified'), sortBy, activityFilters]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -171,17 +209,14 @@ export const Listings: React.FC = () => {
   }, [showSortDropdown]);
 
   const fetchFavorites = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = auth.currentUser;
     if (!user) return;
 
-    const { data } = await supabase
-      .from('favorites')
-      .select('listing_id')
-      .eq('user_id', user.id);
-
-    if (data) {
-      setFavorites(new Set(data.map(f => f.listing_id)));
-    }
+    const favsSnapshot = await getDocs(
+      query(collection(db, 'favorites'), where('user_id', '==', user.uid))
+    );
+    const favIds = new Set(favsSnapshot.docs.map(d => d.data().listing_id as string));
+    setFavorites(favIds);
   };
 
   const handleCategorySelect = (slug: string) => {
@@ -220,6 +255,7 @@ export const Listings: React.FC = () => {
     setMaxPrice('');
     setSortBy('newest');
     setShowVerifiedOnly(false);
+    setActivityFilters(DEFAULT_FILTERS);
     const newParams = new URLSearchParams(searchParams);
     newParams.delete('verified');
     setSearchParams(newParams);
@@ -230,27 +266,52 @@ export const Listings: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = auth.currentUser;
     if (!user) {
       showToast('Sign in to save items to your favorites.', 'info');
       return;
     }
 
+    const favDocId = `${user.uid}_${listingId}`;
+    const favRef = doc(db, 'favorites', favDocId);
     const isFav = favorites.has(listingId);
     if (isFav) {
-      await supabase.from('favorites').delete().eq('user_id', user.id).eq('listing_id', listingId);
+      await deleteDoc(favRef);
       setFavorites(prev => { const n = new Set(prev); n.delete(listingId); return n; });
     } else {
-      await supabase.from('favorites').insert({ user_id: user.id, listing_id: listingId });
+      await setDoc(favRef, { user_id: user.uid, listing_id: listingId, created_at: new Date().toISOString() });
       setFavorites(prev => { const n = new Set(prev); n.add(listingId); return n; });
     }
   };
 
-  const hasActiveFilters = minPrice || maxPrice || sortBy !== 'newest' || showVerifiedOnly;
+  const hasActiveFilters =
+    minPrice ||
+    maxPrice ||
+    sortBy !== 'newest' ||
+    showVerifiedOnly ||
+    activityFilters.location !== '' ||
+    activityFilters.category !== '' ||
+    activityFilters.durations.length > 0 ||
+    activityFilters.priceMin !== DEFAULT_FILTERS.priceMin ||
+    activityFilters.priceMax !== DEFAULT_FILTERS.priceMax;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
-      <div className="mb-12 space-y-8">
+      {/* Mobile Filter FAB */}
+      <button
+        onClick={() => setShowSidebar(true)}
+        className={`lg:hidden fixed bottom-6 right-6 z-40 flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm shadow-card-hover transition-all active:scale-95 ${
+          hasActiveFilters
+            ? 'bg-teal-600 text-white'
+            : 'bg-white border border-warm-200 text-midnight-700'
+        }`}
+        aria-label="Open activity filters"
+      >
+        <Filter size={15} className={hasActiveFilters ? 'text-white' : 'text-teal-500'} />
+        Filters
+        {hasActiveFilters && <span className="w-2 h-2 bg-white rounded-full" />}
+      </button>
+      <div className="mb-8 space-y-8">
         {/* Search Bar */}
         <form onSubmit={handleSearchSubmit} className="max-w-3xl mx-auto relative group">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-warm-300 group-focus-within:text-teal-500 transition-colors pointer-events-none">
@@ -360,7 +421,7 @@ export const Listings: React.FC = () => {
                 <button
                   type="button"
                   role="switch"
-                  aria-checked={showVerifiedOnly}
+                  aria-checked={showVerifiedOnly === true}
                   onClick={() => setShowVerifiedOnly(prev => !prev)}
                   aria-label="Toggle verified sellers only"
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${showVerifiedOnly ? 'bg-teal-600' : 'bg-warm-200'}`}
@@ -377,51 +438,65 @@ export const Listings: React.FC = () => {
         </div>
       </div>
 
-      {/* Results Count */}
-      {!loading && listings.length > 0 && (
-        <div className="flex items-center justify-between mb-6">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            {listings.length} {listings.length === 1 ? 'item' : 'items'}{hasMore ? '+' : ''} found
-          </p>
-        </div>
-      )}
+      {/* Main layout: Sidebar + Grid */}
+      <div className="flex gap-8 items-start">
+        {/* Filter Sidebar — desktop always visible, mobile overlay */}
+        <FilterSidebar
+          filters={activityFilters}
+          onChange={(f) => setActivityFilters(f)}
+          isOpen={showSidebar}
+          onClose={() => setShowSidebar(false)}
+        />
 
-      {/* Listings Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
-        {loading ? (
-          [1, 2, 3, 4, 5, 6, 7, 8].map(n => <ListingSkeleton key={n} />)
-        ) : listings.length === 0 ? (
-          <div className="col-span-full py-24 text-center space-y-5 bg-warm-50 rounded-3xl border-2 border-dashed border-warm-200 animate-fade-in">
-            <div className="text-5xl animate-float">🏝️</div>
-            <div className="space-y-1.5">
-              <h3 className="text-xl font-heading font-bold text-midnight-700">{COPY.EMPTY_STATE.NO_SEARCH_RESULTS}</h3>
-              <p className="text-warm-400 text-sm max-w-xs mx-auto">{COPY.EMPTY_STATE.NO_LISTINGS}</p>
+        {/* Right column: results count + grid + sentinel */}
+        <div className="flex-1 min-w-0">
+          {/* Results Count */}
+          {!loading && listings.length > 0 && (
+            <div className="flex items-center justify-between mb-6">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                {listings.length} {listings.length === 1 ? 'item' : 'items'}{hasMore ? '+' : ''} found
+              </p>
             </div>
-            <button onClick={handleClearFilters} className="btn-primary text-sm py-2.5">Clear Filters</button>
-          </div>
-        ) : (
-          listings.map((listing) => (
-            <ListingItem
-              key={listing.id}
-              listing={listing}
-              isFavorited={favorites.has(listing.id)}
-              onToggleFavorite={(e) => toggleFavorite(listing.id, e)}
-            />
-          ))
-        )}
-      </div>
+          )}
 
-      {/* Infinite Scroll Sentinel */}
-      {hasMore && !loading && listings.length > 0 && (
-        <div ref={sentinelRef} className="flex items-center justify-center py-12">
-          {loadingMore && (
-            <div className="flex items-center gap-3">
-              <Loader2 size={20} className="animate-spin text-ocean-600" />
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading more...</span>
+          {/* Listings Grid */}
+          <div className="grid grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+            {loading ? (
+              [1, 2, 3, 4, 5, 6].map(n => <ListingSkeleton key={n} />)
+            ) : listings.length === 0 ? (
+              <div className="col-span-full py-24 text-center space-y-5 bg-warm-50 rounded-3xl border-2 border-dashed border-warm-200 animate-fade-in">
+                <div className="text-5xl animate-float">🏝️</div>
+                <div className="space-y-1.5">
+                  <h3 className="text-xl font-heading font-bold text-midnight-700">{COPY.EMPTY_STATE.NO_SEARCH_RESULTS}</h3>
+                  <p className="text-warm-400 text-sm max-w-xs mx-auto">{COPY.EMPTY_STATE.NO_LISTINGS}</p>
+                </div>
+                <button onClick={handleClearFilters} className="btn-primary text-sm py-2.5">Clear Filters</button>
+              </div>
+            ) : (
+              listings.map((listing) => (
+                <ListingItem
+                  key={listing.id}
+                  listing={listing}
+                  isFavorited={favorites.has(listing.id)}
+                  onToggleFavorite={(e) => toggleFavorite(listing.id, e)}
+                />
+              ))
+            )}
+          </div>
+
+          {/* Infinite Scroll Sentinel */}
+          {hasMore && !loading && listings.length > 0 && (
+            <div ref={sentinelRef} className="flex items-center justify-center py-12">
+              {loadingMore && (
+                <div className="flex items-center gap-3">
+                  <Loader2 size={20} className="animate-spin text-ocean-600" />
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading more...</span>
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 };

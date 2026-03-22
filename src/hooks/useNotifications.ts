@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { collection, query, where, orderBy, onSnapshot, getDocs, doc, getDoc } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
 
 export const useNotifications = () => {
   const location = useLocation();
@@ -18,67 +19,62 @@ export const useNotifications = () => {
     if (!('Notification' in window)) return;
 
     let isActive = true;
-    let messagesChannel: ReturnType<typeof supabase.channel> | null = null;
-    let chatsChannel: ReturnType<typeof supabase.channel> | null = null;
+    const unsubscribers: (() => void)[] = [];
 
     const primeChatIds = async (userId: string) => {
-      const { data: chats } = await supabase
-        .from('chats')
-        .select('id, buyer_id, seller_id')
-        .or(`buyer_id.eq.${userId},seller_id.eq.${userId}`);
-
+      const buyerSnap = await getDocs(query(collection(db, 'chats'), where('buyer_id', '==', userId)));
+      const sellerSnap = await getDocs(query(collection(db, 'chats'), where('seller_id', '==', userId)));
       if (!isActive) return;
 
-      chatIdsRef.current = new Set((chats || []).map((c: any) => c.id));
+      const ids = new Set<string>();
+      buyerSnap.docs.forEach(d => ids.add(d.id));
+      sellerSnap.docs.forEach(d => ids.add(d.id));
+      chatIdsRef.current = ids;
     };
 
     const getSenderName = async (senderId: string) => {
       const cached = senderNameCacheRef.current.get(senderId);
       if (cached) return cached;
 
-      const { data } = await supabase
-        .from('profiles')
-        .select('name')
-        .eq('id', senderId)
-        .single();
-
-      const name = data?.name || 'Someone';
+      const profileSnap = await getDoc(doc(db, 'profiles', senderId));
+      const name = profileSnap.exists() ? (profileSnap.data().name || 'Someone') : 'Someone';
       senderNameCacheRef.current.set(senderId, name);
       return name;
     };
 
     const setup = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = auth.currentUser;
       if (!user || !isActive) return;
 
-      await primeChatIds(user.id);
+      await primeChatIds(user.uid);
       if (!isActive) return;
 
-      chatsChannel = supabase
-        .channel(`notifications_chats:${user.id}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'chats', filter: `buyer_id=eq.${user.id}` },
-          () => primeChatIds(user.id)
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'chats', filter: `seller_id=eq.${user.id}` },
-          () => primeChatIds(user.id)
-        )
-        .subscribe();
+      // Listen for new messages in user's chats using Firestore onSnapshot
+      // We listen to all chats the user is involved in
+      const buyerChatsUnsub = onSnapshot(
+        query(collection(db, 'chats'), where('buyer_id', '==', user.uid)),
+        () => primeChatIds(user.uid)
+      );
+      unsubscribers.push(buyerChatsUnsub);
 
-      messagesChannel = supabase
-        .channel(`notifications_messages:${user.id}`)
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'messages' },
-          async (payload) => {
-            const msg: any = payload.new;
+      const sellerChatsUnsub = onSnapshot(
+        query(collection(db, 'chats'), where('seller_id', '==', user.uid)),
+        () => primeChatIds(user.uid)
+      );
+      unsubscribers.push(sellerChatsUnsub);
 
-            if (!isActive) return;
+      // Listen for new messages across all chats
+      // Note: Firestore doesn't support filtering by a dynamic set of chat_ids easily.
+      // We'll listen to messages collection and filter client-side.
+      const messagesUnsub = onSnapshot(
+        query(collection(db, 'messages'), orderBy('created_at', 'desc')),
+        (snapshot) => {
+          if (!isActive) return;
+          snapshot.docChanges().forEach(async (change) => {
+            if (change.type !== 'added') return;
+            const msg = change.doc.data() as any;
             if (!msg?.chat_id || !msg?.sender_id) return;
-            if (msg.sender_id === user.id) return;
+            if (msg.sender_id === user.uid) return;
             if (!chatIdsRef.current.has(msg.chat_id)) return;
 
             const isChatOpen = location.pathname === `/chats/${msg.chat_id}`;
@@ -98,18 +94,17 @@ export const useNotifications = () => {
             } catch {
               // ignore
             }
-          }
-        )
-        .subscribe();
+          });
+        }
+      );
+      unsubscribers.push(messagesUnsub);
     };
 
     setup();
 
     return () => {
       isActive = false;
-      if (messagesChannel) supabase.removeChannel(messagesChannel);
-      if (chatsChannel) supabase.removeChannel(chatsChannel);
+      unsubscribers.forEach(unsub => unsub());
     };
   }, [location.pathname]);
 };
-

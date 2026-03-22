@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { db, auth, storage } from '../lib/firebase';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Camera, PlusCircle, Check, MapPin, ChevronRight, AlertCircle, Loader2, X, Sparkles, Smartphone, Car, Sofa, Shirt, Home as HomeIcon, Zap, ShoppingBag, Rocket, Share2, Facebook, Link as LinkIcon } from 'lucide-react';
@@ -109,18 +112,19 @@ export const CreateListing: React.FC = () => {
 
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = bypassAuth
-        ? ({ data: { user: { id: 'e2e-user', email: 'e2e@example.com' } } } as any)
-        : await supabase.auth.getUser();
+      const user = bypassAuth
+        ? ({ uid: 'e2e-user', email: 'e2e@example.com' } as any)
+        : auth.currentUser;
       if (!user) { navigate('/auth'); return; }
-      setUserId(user.id);
+      setUserId(user.uid);
 
       if (bypassAuth) {
         setIsVerified(true);
         setCity('Port Blair');
         setArea('Aberdeen');
       } else {
-        const { data: profile } = await supabase.from('profiles').select('is_location_verified, location_verified_at, city, area').eq('id', user.id).single();
+        const profileSnap = await getDoc(doc(db, 'profiles', user.uid));
+        const profile = profileSnap.exists() ? profileSnap.data() : null;
         
         if (profile?.is_location_verified) {
           const verifiedAt = profile.location_verified_at ? new Date(profile.location_verified_at).getTime() : 0;
@@ -142,8 +146,12 @@ export const CreateListing: React.FC = () => {
 
       if (editId) {
         try {
-          const { data: listing } = await supabase.from('listings').select('*, images:listing_images(id, image_url, display_order)').eq('id', editId).single();
+          const listingSnap = await getDoc(doc(db, 'listings', editId));
+          const listing = listingSnap.exists() ? { id: listingSnap.id, ...listingSnap.data() } as any : null;
           if (listing) {
+            // Fetch listing images from subcollection
+            const imagesSnap = await getDocs(query(collection(db, 'listing_images'), where('listing_id', '==', editId)));
+            listing.images = imagesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             setTitle(listing.title);
             setPrice(listing.price.toString());
             setDescription(listing.description || '');
@@ -167,7 +175,7 @@ export const CreateListing: React.FC = () => {
         } catch (err) { console.error('Fetch listing error:', err); }
         setFetching(false);
       } else {
-        if (hasDraft(user.id)) {
+        if (hasDraft(user.uid)) {
           setShowDraftSheet(true);
         }
         if (preCategory) {
@@ -298,12 +306,14 @@ export const CreateListing: React.FC = () => {
       
       const { latitude, longitude } = pos.coords;
       
-      const { data, error } = await supabase.functions.invoke('verify-location', {
-        body: { latitude, longitude }
-      });
-      
-      if (error) {
-        console.error('Verification error:', error);
+      const functions = getFunctions();
+      const verifyLocation = httpsCallable(functions, 'verifyLocation');
+      let data: any;
+      try {
+        const result = await verifyLocation({ latitude, longitude });
+        data = result.data;
+      } catch (fnErr: any) {
+        console.error('Verification error:', fnErr);
         showToast('Verification service unavailable. Please try again later.', 'error');
         setIsVerifying(false);
         return;
@@ -332,7 +342,7 @@ export const CreateListing: React.FC = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = auth.currentUser;
       if (!user) throw new Error('Please login first.');
 
       const sanitizedTitle = sanitizePlainText(title);
@@ -369,7 +379,7 @@ export const CreateListing: React.FC = () => {
       }
 
       const payload: Record<string, any> = {
-        user_id: user.id,
+        user_id: user.uid,
         title: sanitizedTitle,
         price: parseFloat(price),
         description: sanitizedDescription,
@@ -389,15 +399,18 @@ export const CreateListing: React.FC = () => {
 
       let newListingId = editId;
       if (editId) {
-        const { error: updateError } = await supabase.from('listings').update(payload).eq('id', editId);
-        if (updateError) throw updateError;
-        if (deletedPhotoIds.length > 0) await supabase.from('listing_images').delete().in('id', deletedPhotoIds);
+        const listingRef = doc(db, 'listings', editId);
+        await updateDoc(listingRef, payload);
+        if (deletedPhotoIds.length > 0) {
+          for (const pid of deletedPhotoIds) {
+            await deleteDoc(doc(db, 'listing_images', pid));
+          }
+        }
         await logAuditEvent({ action: 'listing_updated', resource_type: 'listing', resource_id: editId, status: 'success' });
       } else {
-        const { data, error: insertError } = await supabase.from('listings').insert(payload).select('id').single();
-        if (insertError || !data) throw insertError || new Error('Failed to create listing.');
-        newListingId = data.id;
-        await logAuditEvent({ action: 'listing_created', resource_type: 'listing', resource_id: data.id, status: 'success', metadata: { category: catId, city } });
+        const newDocRef = await addDoc(collection(db, 'listings'), { ...payload, created_at: new Date().toISOString() });
+        newListingId = newDocRef.id;
+        await logAuditEvent({ action: 'listing_created', resource_type: 'listing', resource_id: newDocRef.id, status: 'success', metadata: { category: catId, city } });
       }
       setCreatedListingId(newListingId);
 
@@ -406,18 +419,17 @@ export const CreateListing: React.FC = () => {
 
       for (const item of newPhotosWithIndex) {
         const { file, desiredIndex } = item;
-        const fileName = `${user.id}/${safeRandomUUID()}.webp`;
-        const { error: uploadError } = await supabase.storage.from('listings').upload(fileName, file!, { contentType: 'image/webp' });
-        if (uploadError) {
-          console.warn('Image upload failed, skipping:', uploadError.message);
+        const fileName = `listings/${user.uid}/${safeRandomUUID()}.webp`;
+        const storageRef = ref(storage, fileName);
+        try {
+          await uploadBytes(storageRef, file!, { contentType: 'image/webp' });
+          const publicUrl = await getDownloadURL(storageRef);
+          if (newListingId && publicUrl) {
+            await addDoc(collection(db, 'listing_images'), { listing_id: newListingId, image_url: publicUrl, display_order: desiredIndex });
+          }
+        } catch (uploadErr) {
+          console.warn('Image upload failed, skipping:', uploadErr);
           continue;
-        }
-
-        const { data: urlData } = supabase.storage.from('listings').getPublicUrl(fileName);
-        if (newListingId && urlData.publicUrl) {
-          await supabase.from('listing_images').insert({ listing_id: newListingId, image_url: urlData.publicUrl, display_order: desiredIndex });
-        } else {
-          console.warn('Could not get public URL for uploaded image.');
         }
       }
 
@@ -425,7 +437,7 @@ export const CreateListing: React.FC = () => {
         const photo = photos[i];
         if (photo.id) {
           // Update existing photo's order to match current UI state
-          await supabase.from('listing_images').update({ display_order: i }).eq('id', photo.id);
+          await updateDoc(doc(db, 'listing_images', photo.id), { display_order: i });
         }
       }
 

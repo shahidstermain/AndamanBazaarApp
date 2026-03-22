@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { collection, query, orderBy, getDocs } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { FileText, Download, Mail, CheckCircle, Clock, AlertCircle, Loader2 } from 'lucide-react';
 
 // ============================================================
@@ -33,13 +34,10 @@ export const InvoiceHistory: React.FC = () => {
     const fetchInvoices = async () => {
         try {
             setLoading(true);
-            const { data, error: fetchError } = await supabase
-                .from('invoices')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (fetchError) throw fetchError;
-            setInvoices(data || []);
+            const q = query(collection(db, 'invoices'), orderBy('created_at', 'desc'));
+            const snapshot = await getDocs(q);
+            const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Invoice));
+            setInvoices(data);
         } catch (err: any) {
             setError(err.message || 'Failed to load invoices');
         } finally {

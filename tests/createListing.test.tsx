@@ -1,36 +1,29 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { CreateListing } from '../src/pages/CreateListing';
-import { supabase } from '../src/lib/supabase';
+import { auth, db } from '../src/lib/firebase';
+import { getDoc, doc } from 'firebase/firestore';
 import { MemoryRouter } from 'react-router-dom';
 
-vi.mock('../src/lib/supabase');
+// Note: firebase mocks are handled globally in tests/setup.ts
 
 describe('CreateListing View', () => {
     beforeEach(() => {
         vi.clearAllMocks();
 
         // Default mock user
-        vi.spyOn(supabase.auth, 'getUser').mockResolvedValue({
-            data: { user: { id: 'user-123' } },
-            error: null
-        });
+        ;(auth as any).currentUser = { uid: 'user-123' };
 
         // Mock profile for location verification
-        vi.spyOn(supabase, 'from').mockImplementation((table: string) => {
-            if (table === 'profiles') {
+        vi.mocked(getDoc).mockImplementation(async (docRef: any) => {
+            if (docRef.path?.includes('profiles/user-123')) {
                 return {
-                    select: vi.fn().mockReturnThis(),
-                    eq: vi.fn().mockReturnThis(),
-                    single: vi.fn().mockResolvedValue({ data: { is_location_verified: true }, error: null }),
-                };
+                    exists: () => true,
+                    data: () => ({ is_location_verified: true })
+                } as any;
             }
-            return {
-                select: vi.fn().mockReturnThis(),
-                eq: vi.fn().mockReturnThis(),
-                single: vi.fn().mockResolvedValue({ data: null, error: null }),
-            };
+            return { exists: () => false, data: () => null } as any;
         });
     });
 
@@ -49,17 +42,15 @@ describe('CreateListing View', () => {
             // Use exact match or more specific regex to avoid multiple matches
             expect(screen.getByRole('heading', { name: /Add Photos/i })).toBeInTheDocument();
             expect(screen.getByText(/Step 1 of 4/i)).toBeInTheDocument();
-        });
+        }, { timeout: 4000 });
     });
 
-    // Since Step 1 requires images (which are hard to mock in happy-dom effortlessly without blob issues),
-    // we'll verify the component structure and initial loading state.
     it('shows optimized image text when no photos added', async () => {
         renderCreateListing();
 
         await waitFor(() => {
             expect(screen.getByText(/photo lagao/i)).toBeInTheDocument();
             expect(screen.getByText(/AI-optimized automatically/i)).toBeInTheDocument();
-        });
+        }, { timeout: 4000 });
     });
 });

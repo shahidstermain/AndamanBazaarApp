@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { User } from '@supabase/supabase-js';
+import { User } from 'firebase/auth';
+import { collection, query, where, onSnapshot, or } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { Logo } from './Logo';
 import { OfflineBanner } from './OfflineBanner';
-import { supabase } from '../lib/supabase';
-import { useNotifications } from '../hooks/useNotifications';
+
 import {
   Home, Search, PlusCircle, MessageCircle, User as UserIcon,
   BadgeCheck, Bell
@@ -17,7 +18,6 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
-  useNotifications();
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -31,30 +31,26 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
   useEffect(() => {
     if (!user) return;
 
-    const fetchUnread = async () => {
-      const { data: chats } = await supabase
-        .from('chats')
-        .select('id, buyer_id, seller_id, buyer_unread_count, seller_unread_count')
-        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`);
+    const chatsRef = collection(db, 'chats');
+    const q = query(
+      chatsRef,
+      or(
+        where('buyer_id', '==', user.uid),
+        where('seller_id', '==', user.uid)
+      )
+    );
 
-      if (chats) {
-        let count = 0;
-        chats.forEach(chat => {
-          if (chat.buyer_id === user.id) count += chat.buyer_unread_count || 0;
-          if (chat.seller_id === user.id) count += chat.seller_unread_count || 0;
-        });
-        setUnreadCount(count);
-      }
-    };
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let count = 0;
+      snapshot.docs.forEach(doc => {
+        const chat = doc.data();
+        if (chat.buyer_id === user.uid) count += chat.buyer_unread_count || 0;
+        if (chat.seller_id === user.uid) count += chat.seller_unread_count || 0;
+      });
+      setUnreadCount(count);
+    });
 
-    fetchUnread();
-
-    const channel = supabase
-      .channel('layout_unread_count')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chats' }, fetchUnread)
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
+    return () => unsubscribe();
   }, [user]);
 
   const isActive = (path: string) =>
@@ -115,7 +111,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
                   className="w-9 h-9 rounded-full overflow-hidden border-2 border-warm-200 hover:border-teal-400 hover:shadow-teal-glow transition-all"
                 >
                   <img
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`}
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`}
                     alt="Profile"
                     className="w-full h-full"
                   />

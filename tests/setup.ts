@@ -1,9 +1,17 @@
 import '@testing-library/jest-dom'
 import { cleanup } from '@testing-library/react'
-import { afterEach, vi } from 'vitest'
+import { afterEach, vi, expect } from 'vitest'
+import * as matchers from '@testing-library/jest-dom/matchers'
 
-// Re-export createMockChain from the __mocks__ file so test files can import it from here
-export { createMockChain } from '../src/lib/__mocks__/supabase'
+expect.extend(matchers)
+
+
+// Mock Firebase library and its sub-modules using the centralized mock
+vi.mock('../src/lib/firebase', () => import('../src/lib/__mocks__/firebase').then(m => m.mockFirebase));
+vi.mock('firebase/auth', () => import('../src/lib/__mocks__/firebase').then(m => m.authMock));
+vi.mock('firebase/firestore', () => import('../src/lib/__mocks__/firebase').then(m => m.firestoreMock));
+vi.mock('firebase/storage', () => import('../src/lib/__mocks__/firebase').then(m => m.storageMock));
+vi.mock('firebase/functions', () => import('../src/lib/__mocks__/firebase').then(m => m.functionsMock));
 
 // Cleanup after each test
 afterEach(() => {

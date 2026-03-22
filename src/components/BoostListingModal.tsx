@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { auth } from '../lib/firebase';
 import { Zap, Rocket, Crown, X, Loader2, CheckCircle, ArrowRight, Shield, Star, Clock } from 'lucide-react';
 import { useToast } from './Toast';
 import { BOOST_TIERS as SHARED_TIERS } from '../lib/pricing';
@@ -66,21 +66,23 @@ export const BoostListingModal: React.FC<BoostListingModalProps> = ({
         setIsProcessing(true);
 
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
+            const user = auth.currentUser;
+            if (!user) {
                 showToast('Please sign in to boost your listing.', 'error');
                 setIsProcessing(false);
                 return;
             }
 
-            // Call the edge function
+            const idToken = await user.getIdToken();
+
+            const functionsUrl = import.meta.env.VITE_FIREBASE_FUNCTIONS_URL || '';
             const response = await fetch(
-                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-boost-order`,
+                `${functionsUrl}/createBoostOrder`,
                 {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        Authorization: `Bearer ${session.access_token}`,
+                        Authorization: `Bearer ${idToken}`,
                     },
                     body: JSON.stringify({
                         listing_id: listingId,

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { doc, getDoc, getDocs, updateDoc, collection, query, where, orderBy } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
 import { Report, AppRole } from '../types';
 import {
   ShieldAlert, Users, FileText, CheckCircle, XCircle,
@@ -30,18 +31,14 @@ export const Admin: React.FC = () => {
 
   const checkAdminAccess = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = auth.currentUser;
       if (!user) {
         navigate('/auth');
         return;
       }
 
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .eq('role', 'admin')
-        .single();
+      const rolesSnap = await getDocs(query(collection(db, 'user_roles'), where('user_id', '==', user.uid), where('role', '==', 'admin')));
+      const roles = rolesSnap.empty ? null : rolesSnap.docs[0].data();
 
       if (!roles) {
         showToast('Access denied. Admin privileges required.', 'error');
@@ -61,23 +58,31 @@ export const Admin: React.FC = () => {
     setLoading(true);
     try {
       // Fetch all stats and reports in parallel
-      const [
-        { count: totalListings },
-        { count: activeListings },
-        { count: pendingReports },
-        { count: totalUsers },
-        { data: reportsData, error }
-      ] = await Promise.all([
-        supabase.from('listings').select('*', { count: 'exact', head: true }),
-        supabase.from('listings').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-        supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
-        supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('reports').select(`
-          *,
-          reporter:reporter_id(name, email),
-          listing:listing_id(title, status, user_id)
-        `).order('created_at', { ascending: false })
+      const [listingsSnap, activeSnap, pendingSnap, usersSnap, reportsSnap] = await Promise.all([
+        getDocs(collection(db, 'listings')),
+        getDocs(query(collection(db, 'listings'), where('status', '==', 'active'))),
+        getDocs(query(collection(db, 'reports'), where('status', '==', 'pending'))),
+        getDocs(collection(db, 'profiles')),
+        getDocs(query(collection(db, 'reports'), orderBy('created_at', 'desc')))
       ]);
+
+      const totalListings = listingsSnap.size;
+      const activeListings = activeSnap.size;
+      const pendingReports = pendingSnap.size;
+      const totalUsers = usersSnap.size;
+
+      // Enrich reports with reporter and listing data
+      const reportsRaw = reportsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+      const reportsData = await Promise.all(reportsRaw.map(async (r: any) => {
+        let reporter = null;
+        let listing = null;
+        try {
+          if (r.reporter_id) { const s = await getDoc(doc(db, 'profiles', r.reporter_id)); if (s.exists()) reporter = s.data(); }
+          if (r.listing_id) { const s = await getDoc(doc(db, 'listings', r.listing_id)); if (s.exists()) listing = { id: s.id, ...s.data() }; }
+        } catch {}
+        return { ...r, reporter, listing };
+      }));
+      const error = null;
 
       setStats({
         totalListings: totalListings || 0,
@@ -99,10 +104,9 @@ export const Admin: React.FC = () => {
 
   const updateReportStatus = async (reportId: string, newStatus: string) => {
     try {
-      const { error } = await supabase
-        .from('reports')
-        .update({ status: newStatus })
-        .eq('id', reportId);
+      const reportRef = doc(db, 'reports', reportId);
+      await updateDoc(reportRef, { status: newStatus });
+      const error = null;
 
       if (error) throw error;
 
@@ -250,7 +254,7 @@ export const Admin: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-warm-100 text-midnight-700 text-xs font-bold capitalize">
                           <AlertTriangle size={12} className="text-coral-500" />
-                          {report.reason.replace('_', ' ')}
+                          {report.reason?.replace('_', ' ') || 'Unknown Reason'}
                         </div>
                         {report.description && (
                           <p className="text-xs text-warm-500 mt-1 max-w-xs truncate" title={report.description}>

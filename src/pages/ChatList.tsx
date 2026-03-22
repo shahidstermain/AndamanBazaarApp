@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { collection, query, where, orderBy, getDocs, onSnapshot, or } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
 import { Chat, Message } from '../types';
 
 interface ChatWithLastMessage extends Chat {
@@ -14,47 +15,64 @@ export const ChatList: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   const fetchChats = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = auth.currentUser;
     if (!user) return;
     setCurrentUser(user);
 
     try {
-      // 1. Fetch base chats (use explicit columns to avoid any relationship resonance)
-      const { data: chatData, error: chatError } = await supabase
-        .from('chats')
-        .select('id, listing_id, buyer_id, seller_id, last_message, last_message_at, buyer_unread_count, seller_unread_count, created_at')
-        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
-        .order('last_message_at', { ascending: false });
+      // Fetch chats where user is buyer or seller
+      const buyerQuery = query(
+        collection(db, 'chats'),
+        where('buyer_id', '==', user.uid),
+        orderBy('last_message_at', 'desc')
+      );
+      const sellerQuery = query(
+        collection(db, 'chats'),
+        where('seller_id', '==', user.uid),
+        orderBy('last_message_at', 'desc')
+      );
 
-      if (chatError) throw chatError;
-      if (!chatData || chatData.length === 0) {
+      const [buyerSnap, sellerSnap] = await Promise.all([
+        getDocs(buyerQuery),
+        getDocs(sellerQuery)
+      ]);
+
+      const chatMap = new Map<string, any>();
+      buyerSnap.docs.forEach(d => chatMap.set(d.id, { id: d.id, ...d.data() }));
+      sellerSnap.docs.forEach(d => chatMap.set(d.id, { id: d.id, ...d.data() }));
+      const chatData = Array.from(chatMap.values()).sort((a, b) =>
+        (b.last_message_at || '').localeCompare(a.last_message_at || '')
+      );
+
+      if (chatData.length === 0) {
         setChats([]);
         return;
       }
 
-      // 2. Extract IDs for batch fetching
+      // Extract IDs for batch fetching
       const listingIds = [...new Set(chatData.map(c => c.listing_id).filter(Boolean))];
       const profileIds = [...new Set([
         ...chatData.map(c => c.buyer_id),
         ...chatData.map(c => c.seller_id)
       ].filter(Boolean))];
 
-      // 3. Batch fetch related data (NO full messages fetch — use last_message from chat row)
-      const [listingsRes, profilesRes] = await Promise.all([
-        supabase.from('listings').select('id, title').in('id', listingIds),
-        supabase.from('profiles').select('id, name, profile_photo_url').in('id', profileIds)
+      // Batch fetch (Firestore 'in' max 30)
+      const [listingsSnap, profilesSnap] = await Promise.all([
+        listingIds.length > 0 ? getDocs(query(collection(db, 'listings'), where('__name__', 'in', listingIds.slice(0, 30)))) : Promise.resolve({ docs: [] } as any),
+        profileIds.length > 0 ? getDocs(query(collection(db, 'profiles'), where('__name__', 'in', profileIds.slice(0, 30)))) : Promise.resolve({ docs: [] } as any)
       ]);
 
-      // 4. Map data back to chats
-      const listingsMap = Object.fromEntries((listingsRes.data || []).map(l => [l.id, l]));
-      const profilesMap = Object.fromEntries((profilesRes.data || []).map(p => [p.id, p]));
+      const listingsMap: Record<string, any> = {};
+      listingsSnap.docs.forEach((d: any) => { listingsMap[d.id] = { id: d.id, ...d.data() }; });
+      const profilesMap: Record<string, any> = {};
+      profilesSnap.docs.forEach((d: any) => { profilesMap[d.id] = { id: d.id, ...d.data() }; });
 
       const enrichedChats = chatData.map(chat => ({
         ...chat,
         listing: listingsMap[chat.listing_id],
         seller: profilesMap[chat.seller_id],
         buyer: profilesMap[chat.buyer_id],
-        messages: [] // Messages loaded on demand in ChatRoom
+        messages: []
       }));
 
       setChats(enrichedChats as ChatWithLastMessage[]);
@@ -69,27 +87,24 @@ export const ChatList: React.FC = () => {
     fetchChats();
   }, []);
 
+  // Real-time listener for chat updates
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.uid) return;
 
-    const chatsChannel = supabase
-      .channel(`chat_list_updates:${currentUser.id}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'chats', filter: `buyer_id=eq.${currentUser.id}` },
-        () => fetchChats()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'chats', filter: `seller_id=eq.${currentUser.id}` },
-        () => fetchChats()
-      )
-      .subscribe();
+    const buyerUnsub = onSnapshot(
+      query(collection(db, 'chats'), where('buyer_id', '==', currentUser.uid)),
+      () => fetchChats()
+    );
+    const sellerUnsub = onSnapshot(
+      query(collection(db, 'chats'), where('seller_id', '==', currentUser.uid)),
+      () => fetchChats()
+    );
 
     return () => {
-      supabase.removeChannel(chatsChannel);
+      buyerUnsub();
+      sellerUnsub();
     };
-  }, [currentUser?.id]);
+  }, [currentUser?.uid]);
 
   if (loading) {
     return (
@@ -129,7 +144,7 @@ export const ChatList: React.FC = () => {
             </div>
           ) : (
             chats.map((chat) => {
-              const isBuyer = currentUser?.id === chat.buyer_id;
+              const isBuyer = currentUser?.uid === chat.buyer_id;
               const otherParty = isBuyer ? chat.seller : chat.buyer;
               const unreadCount = isBuyer ? chat.buyer_unread_count : chat.seller_unread_count;
               const previewText = chat.last_message || 'No messages yet...';

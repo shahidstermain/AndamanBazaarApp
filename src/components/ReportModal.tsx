@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { addDoc, collection } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
 import { useToast } from './Toast';
 
 interface ReportModalProps {
@@ -33,18 +34,16 @@ export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, listi
     setIsSubmitting(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = auth.currentUser;
 
-      const { error } = await supabase
-        .from('reports')
-        .insert({
-          reporter_id: user?.id,
-          listing_id: listingId,
-          reason: selectedReason,
-          details: details
-        });
-
-      if (error) throw error;
+      await addDoc(collection(db, 'reports'), {
+        reporter_id: user?.uid,
+        listing_id: listingId,
+        reason: selectedReason,
+        details: details,
+        status: 'pending',
+        created_at: new Date().toISOString()
+      });
       setIsSuccess(true);
       setTimeout(() => {
         onClose();

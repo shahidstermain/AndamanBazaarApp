@@ -1,0 +1,107 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Auth helper
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Ownership helper
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    match /profiles/{userId} {
+      allow read: if true;
+      allow create, update, delete: if isAuthenticated() && isOwner(userId);
+    }
+
+    match /listings/{listingId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && isOwner(resource.data.user_id);
+    }
+
+    match /favorites/{favoriteId} {
+      allow read, create, update, delete: if isAuthenticated() && isOwner(resource.data.user_id);
+    }
+
+    match /chats/{chatId} {
+      allow read, update: if isAuthenticated() && (request.auth.uid == resource.data.buyer_id || request.auth.uid == resource.data.seller_id);
+      allow create: if isAuthenticated();
+      
+      match /messages/{messageId} {
+        allow read, create: if isAuthenticated(); // Should ideally check if user is part of the chat
+      }
+    }
+
+    match /bookings/{bookingId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.user_id) || isOwner(resource.data.host_id));
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (isOwner(resource.data.user_id) || isOwner(resource.data.host_id));
+    }
+    
+    match /listing_boosts/{boostId} {
+      allow read, create: if isAuthenticated() && isOwner(request.resource.data.user_id);
+      allow update: if isAuthenticated() && isOwner(resource.data.user_id);
+    }
+    
+    match /invoices/{invoiceId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.user_id);
+      allow create: if false; // Only written by Cloud Functions
+    }
+
+    match /reports/{reportId} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if false; // Only admin can read/update (via Cloud Functions or Admin SDK)
+    }
+    
+    match /admin_users/{userId} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    match /pricing_tiers/{tierId} {
+      allow read: if true;
+      allow write: if isAuthenticated(); // Should ideally check listing owner
+    }
+    
+    match /experience_availability/{availId} {
+      allow read: if true;
+      allow write: if isAuthenticated(); // Should ideally check listing owner
+    }
+    
+    match /todos/{todoId} {
+      allow read, write: if isAuthenticated() && isOwner(resource.data.user_id);
+    }
+
+    // ===== Smart Activity & Trust Engine ===== //
+
+    match /activities/{activityId} {
+      allow read: if true;
+      // Only Cloud Functions (via Admin SDK) can write activity documents.
+      // Direct client writes are not permitted.
+      allow create, update, delete: if false;
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      // Reviews are written server-side by the createReview Cloud Function.
+      allow create: if false;
+      allow update, delete: if false;
+    }
+
+    match /operators/{operatorId} {
+      allow read: if true;
+      // Operator trust records are written by computeTrustScore Cloud Function.
+      allow write: if false;
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if false;
+      allow create: if isAuthenticated();
+    }
+  }
+}

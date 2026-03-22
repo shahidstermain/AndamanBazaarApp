@@ -1,51 +1,70 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { Profile } from '../src/pages/Profile';
-import { supabase } from '../src/lib/supabase';
+import { auth, db } from '../src/lib/firebase';
+import { getDoc, getDocs, doc, collection, query, where } from 'firebase/firestore';
 import { MemoryRouter } from 'react-router-dom';
-import { createMockChain } from './setup';
 
-vi.mock('../src/lib/supabase');
+// Note: firebase mocks are handled globally in tests/setup.ts
 
 describe('Profile View', () => {
     beforeEach(() => {
         vi.clearAllMocks();
 
         // Default mock user
-        vi.spyOn(supabase.auth, 'getUser').mockResolvedValue({
-            data: { user: { id: 'user-123', email: 'test@example.com' } },
-            error: null
+        ;(auth as any).currentUser = { uid: 'user-123', email: 'test@example.com' };
+        
+        // Mock getDoc for profile
+        vi.mocked(getDoc).mockImplementation(async (docRef: any) => {
+            if (docRef.path?.includes('profiles/user-123')) {
+                return {
+                    exists: () => true,
+                    id: 'user-123',
+                    data: () => ({
+                        id: 'user-123',
+                        name: 'Test User',
+                        city: 'Port Blair',
+                        area: 'Garacharma',
+                        created_at: { toMillis: () => new Date('2024-01-01').getTime() },
+                        is_location_verified: true,
+                        role: 'user'
+                    })
+                } as any;
+            }
+            return { exists: () => false, data: () => null } as any;
         });
 
-        // Mock profile and listings using global helper
-        vi.spyOn(supabase, 'from').mockImplementation((table: string) => {
-            if (table === 'profiles') {
-                return createMockChain({
-                    id: 'user-123',
-                    name: 'Test User',
-                    city: 'Port Blair',
-                    area: 'Garacharma',
-                    created_at: new Date('2024-01-01').toISOString(),
-                    is_location_verified: true
-                });
+        // Mock getDocs for listings
+        vi.mocked(getDocs).mockImplementation(async (q: any) => {
+            const path = q?.path || q?.collection?.path || '';
+            if (path.includes('listings')) {
+                return {
+                    size: 1,
+                    empty: false,
+                    docs: [{
+                        id: 'listing-1',
+                        data: () => ({
+                            id: 'listing-1',
+                            title: 'My Awesome Item',
+                            price: 500,
+                            status: 'active',
+                            city: 'Port Blair',
+                            views_count: 5,
+                            user_id: 'user-123',
+                            created_at: { toMillis: () => Date.now() }
+                        }),
+                        exists: () => true
+                    }],
+                    forEach(cb: any) { this.docs.forEach(cb); }
+                } as any;
             }
-            if (table === 'listings') {
-                return createMockChain([{
-                    id: 'listing-1',
-                    title: 'My Awesome Item',
-                    price: 500,
-                    status: 'active',
-                    city: 'Port Blair',
-                    views_count: 5
-                }]);
-            }
-            return createMockChain();
+            return { size: 0, empty: true, docs: [], forEach: () => {} } as any;
         });
     });
 
     const renderProfile = () => {
-        render(
+        return render(
             <MemoryRouter>
                 <Profile />
             </MemoryRouter>
@@ -54,16 +73,25 @@ describe('Profile View', () => {
 
     it('renders user profile details', async () => {
         renderProfile();
-        expect(await screen.findByText('Test User')).toBeInTheDocument();
-        expect(await screen.findByText(/Joined in/i)).toBeInTheDocument();
-        // Stats should be visible
-        expect(await screen.findByText(/Active Ads/i)).toBeInTheDocument();
+        
+        // Wait for profile data to load
+        await waitFor(() => {
+            expect(screen.getByText('Test User')).toBeInTheDocument();
+        }, { timeout: 4000 });
+        
+        expect(screen.getByText(/Joined in/i)).toBeInTheDocument();
+        // Stats should be visible (Active Ads label + count)
+        expect(screen.getByText(/Active Ads/i)).toBeInTheDocument();
     });
 
     it('renders user listings', async () => {
         renderProfile();
+        
         // Wait for the listing to appear
-        expect(await screen.findByText('My Awesome Item')).toBeInTheDocument();
-        expect(await screen.findByText(/₹\s*500/)).toBeInTheDocument();
+        await waitFor(() => {
+            expect(screen.getByText('My Awesome Item')).toBeInTheDocument();
+        }, { timeout: 4000 });
+        
+        expect(screen.getByText(/₹\s*500/)).toBeInTheDocument();
     });
 });

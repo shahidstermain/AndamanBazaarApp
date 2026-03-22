@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
+import { doc, getDoc, getDocs, updateDoc, collection, query, where, orderBy, limit, startAfter } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, auth, storage } from '../lib/firebase';
 import { Profile as ProfileType, Listing } from '../types';
 import { Link, useNavigate } from 'react-router-dom';
 import { ReportModal } from '../components/ReportModal';
 import {
-  Edit3, CheckCircle, Rocket, Share2, Trash2, MoreVertical, Heart, Globe, ShoppingBag, Calendar, Camera, Eye, Save, X, Loader2, MapPin, ShieldCheck, Award, LogOut, MessageCircle, Star
+  Edit3, CheckCircle, Rocket, Share2, Trash2, MoreVertical, Heart, Globe, ShoppingBag, Calendar, Camera, Eye, Save, X, Loader2, MapPin, ShieldCheck, Award, LogOut, MessageCircle, Star,
+  Building2, Clock, CheckCircle2
 } from 'lucide-react';
 import { profileUpdateSchema, validateFileUpload, sanitizePlainText } from '../lib/validation';
 import { logAuditEvent, sanitizeErrorMessage } from '../lib/security';
@@ -70,20 +73,20 @@ export const Profile: React.FC = () => {
   const fetchProfileAndStats = async () => {
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = auth.currentUser;
       if (!user) { navigate('/auth'); return; }
 
-      const { data: profileData, error: profileError } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-      if (profileError) throw profileError;
-      setProfile(profileData);
+      const profileRef = doc(db, 'profiles', user.uid);
+      const profileSnap = await getDoc(profileRef);
+      if (!profileSnap.exists()) throw new Error('Profile not found');
+      setProfile({ id: profileSnap.id, ...profileSnap.data() } as any);
 
-      const { data: statsData, error: statsError } = await supabase.from('listings').select('status').eq('user_id', user.id);
-      if (statsError) throw statsError;
-
+      const listingsSnap = await getDocs(query(collection(db, 'listings'), where('user_id', '==', user.uid)));
       const newStats = { active: 0, sold: 0 };
-      statsData.forEach((l: any) => {
-        if (l.status === 'active') newStats.active++;
-        else if (l.status === 'sold') newStats.sold++;
+      listingsSnap.docs.forEach(d => {
+        const s = d.data().status;
+        if (s === 'active') newStats.active++;
+        else if (s === 'sold') newStats.sold++;
       });
       setStats(newStats);
     } catch (err) {
@@ -97,7 +100,7 @@ export const Profile: React.FC = () => {
   const handleSaveProfile = async () => {
     setIsSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = auth.currentUser;
       if (!user) throw new Error('User not authenticated');
 
       const sanitizedName = sanitizePlainText(editName);
@@ -118,17 +121,14 @@ export const Profile: React.FC = () => {
           return;
         }
         const fileExt = avatarFile.name.split('.').pop();
-        const fileName = `${user.id}/avatar_${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, avatarFile, { upsert: true });
-        if (uploadError) throw uploadError;
-        const { data } = supabase.storage.from('avatars').getPublicUrl(fileName);
-        if (data.publicUrl) {
-          avatarUrl = data.publicUrl;
-        }
+        const fileName = `avatars/${user.uid}/avatar_${Date.now()}.${fileExt}`;
+        const storageRef = ref(storage, fileName);
+        await uploadBytes(storageRef, avatarFile);
+        avatarUrl = await getDownloadURL(storageRef);
       }
 
-      const { error: updateError } = await supabase.from('profiles').update({ name: sanitizedName, city: validationResult.data.city, phone_number: validationResult.data.phone_number, profile_photo_url: avatarUrl }).eq('id', user.id);
-      if (updateError) throw updateError;
+      const profileRef = doc(db, 'profiles', user.uid);
+      await updateDoc(profileRef, { name: sanitizedName, city: validationResult.data.city, phone_number: validationResult.data.phone_number, profile_photo_url: avatarUrl });
 
       await fetchProfileAndStats();
       showToast(COPY.SUCCESS.SETTINGS_SAVED, 'success');
@@ -160,26 +160,25 @@ export const Profile: React.FC = () => {
   };
 
   const fetchUserListings = async (pageIndex: number) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = auth.currentUser;
     if (!user) return;
     if (pageIndex > 0) setLoadingMore(true);
     try {
-      const from = pageIndex * PROFILE_PAGE_SIZE;
-      const to = from + PROFILE_PAGE_SIZE - 1;
-      const { data, error } = await supabase
-        .from('listings')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', activeTab)
-        .order('created_at', { ascending: false })
-        .range(from, to);
-      if (error) throw error;
+      const q = query(
+        collection(db, 'listings'),
+        where('user_id', '==', user.uid),
+        where('status', '==', activeTab),
+        orderBy('created_at', 'desc'),
+        limit(PROFILE_PAGE_SIZE)
+      );
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as any));
       if (pageIndex === 0) {
-        setListings(data || []);
+        setListings(data);
       } else {
-        setListings(prev => [...prev, ...(data || [])]);
+        setListings(prev => [...prev, ...data]);
       }
-      setHasMoreListings((data || []).length === PROFILE_PAGE_SIZE);
+      setHasMoreListings(data.length === PROFILE_PAGE_SIZE);
       setListingPage(pageIndex);
     } catch (err) {
       console.error('Error fetching user listings:', err);
@@ -189,41 +188,28 @@ export const Profile: React.FC = () => {
   };
 
   const fetchSavedItems = async (pageIndex: number) => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = auth.currentUser;
     if (!user) return;
     if (pageIndex > 0) setLoadingMore(true);
     try {
-      const from = pageIndex * PROFILE_PAGE_SIZE;
-      const to = from + PROFILE_PAGE_SIZE - 1;
-
-      // 1. Fetch favorites (paginated)
-      const { data: favoritedData, error: favError } = await supabase
-        .from('favorites')
-        .select('listing_id, id')
-        .eq('user_id', user.id)
-        .range(from, to);
-
-      if (favError) throw favError;
-      if (!favoritedData || favoritedData.length === 0) {
+      const favsSnap = await getDocs(query(collection(db, 'favorites'), where('user_id', '==', user.uid)));
+      if (favsSnap.empty) {
         if (pageIndex === 0) setListings([]);
         setHasMoreListings(false);
         return;
       }
 
-      // 2. Fetch corresponding listings
-      const listingIds = favoritedData.map(f => f.listing_id);
-      const { data: listingData, error: listError } = await supabase
-        .from('listings')
-        .select('*')
-        .in('id', listingIds);
-
-      if (listError) throw listError;
+      const listingIds = favsSnap.docs.map(d => d.data().listing_id);
+      // Firestore 'in' max 30
+      const batch = listingIds.slice(0, 30);
+      const listingsSnap = await getDocs(query(collection(db, 'listings'), where('__name__', 'in', batch)));
+      const data = listingsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
       if (pageIndex === 0) {
-        setListings(listingData || []);
+        setListings(data);
       } else {
-        setListings(prev => [...prev, ...(listingData || [])]);
+        setListings(prev => [...prev, ...data]);
       }
-      setHasMoreListings(favoritedData.length === PROFILE_PAGE_SIZE);
+      setHasMoreListings(false);
       setListingPage(pageIndex);
     } catch (err) {
       console.error('Error fetching saved items:', err);
@@ -235,18 +221,20 @@ export const Profile: React.FC = () => {
   const handleUnfavorite = async (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = auth.currentUser;
     if (!user) return;
-    const { error } = await supabase.from('favorites').delete().eq('user_id', user.id).eq('listing_id', id);
-    if (!error) setListings(prev => prev.filter(l => l.id !== id));
+    const { deleteDoc: delDoc } = await import('firebase/firestore');
+    const favRef = doc(db, 'favorites', `${user.uid}_${id}`);
+    await delDoc(favRef);
+    setListings(prev => prev.filter(l => l.id !== id));
   };
 
   const handleMarkAsSold = async (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     try {
-      const { error } = await supabase.from('listings').update({ status: 'sold' }).eq('id', id);
-      if (error) throw error;
+      const listingRef = doc(db, 'listings', id);
+      await updateDoc(listingRef, { status: 'sold' });
       setListings(prev => prev.filter(l => l.id !== id));
       fetchProfileAndStats();
       setActiveMenuId(null);
@@ -256,8 +244,8 @@ export const Profile: React.FC = () => {
   const handleDeleteListing = async () => {
     if (!deleteConfirmationId) return;
     try {
-      const { error } = await supabase.from('listings').update({ status: 'deleted', deleted_at: new Date().toISOString() }).eq('id', deleteConfirmationId);
-      if (error) throw error;
+      const listingRef = doc(db, 'listings', deleteConfirmationId);
+      await updateDoc(listingRef, { status: 'deleted', deleted_at: new Date().toISOString() });
       setListings(prev => prev.filter(l => l.id !== deleteConfirmationId));
       fetchProfileAndStats();
       setDeleteConfirmationId(null);
@@ -406,6 +394,59 @@ export const Profile: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Marketplace Onboarding: Become an Operator */}
+      <div className="max-w-3xl mx-auto px-4 mb-12 animate-slide-up [animation-delay:200ms]">
+        {profile?.operator_verification_status === 'unverified' && (
+          <div className="bg-white rounded-[32px] p-8 shadow-glass border border-warm-100 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-teal-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-teal-500/20">
+                <Building2 size={28} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-midnight-900">Become an Operator</h3>
+                <p className="text-warm-500 font-bold uppercase tracking-widest text-[10px]">Verify your account to sell experiences</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => navigate('/become-operator')}
+              className="bg-midnight-900 text-white px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-black transition-all shadow-xl shadow-midnight-900/10"
+            >
+              Get Verified
+            </button>
+          </div>
+        )}
+        
+        {profile?.operator_verification_status === 'pending' && (
+          <div className="bg-amber-50 border border-amber-200 rounded-[32px] p-8 flex flex-col items-center text-center space-y-4">
+            <div className="w-16 h-16 bg-amber-500 text-white rounded-full flex items-center justify-center shadow-lg shadow-amber-500/20 animate-pulse">
+              <Clock size={32} strokeWidth={2.5} />
+            </div>
+            <div>
+              <h1 className="text-xl font-black text-amber-900">Verification Pending</h1>
+              <p className="text-amber-700 font-medium max-w-xs">Our team is reviewing your documents. This usually takes 24-48 hours.</p>
+            </div>
+          </div>
+        )}
+
+        {profile?.operator_verification_status === 'verified' && (
+          <div className="bg-green-50 border border-green-200 rounded-[32px] p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-green-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-green-500/20">
+                <ShieldCheck size={28} strokeWidth={2.5} />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-green-900">Verified Operator</h3>
+                <p className="text-green-700 font-bold uppercase tracking-widest text-[10px]">You are cleared to list experiences</p>
+              </div>
+            </div>
+            <div className="text-green-600 font-black flex items-center gap-2">
+               <CheckCircle2 size={24} />
+               <span>ACTIVE</span>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="flex items-center justify-center mb-10">
         <div className="inline-flex bg-secondary/10 p-2 rounded-[24px] border border-secondary/20">

@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { collection, query, orderBy, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import {
     CheckCircle2,
     Circle,
@@ -27,23 +28,10 @@ export const Todos: React.FC = () => {
 
     const fetchTodos = async () => {
         try {
-            const { data, error } = await supabase
-                .from('todos')
-                .select('*')
-                .order('created_at', { ascending: false });
-
-            if (error) {
-                // If the table doesn't exist yet, we'll show a helpful message
-                console.error('Error fetching todos:', error.message);
-                if (error.code === '42P01') {
-                    showToast('The "todos" table does not exist in your database yet.', 'error');
-                } else {
-                    showToast('Failed to fetch todos: ' + error.message, 'error');
-                }
-                return;
-            }
-
-            setTodos(data || []);
+            const q = query(collection(db, 'todos'), orderBy('created_at', 'desc'));
+            const snapshot = await getDocs(q);
+            const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Todo));
+            setTodos(data);
         } catch (err: any) {
             console.error('Error fetching todos:', err.message);
         } finally {
@@ -61,18 +49,11 @@ export const Todos: React.FC = () => {
 
         setAdding(true);
         try {
-            const { data, error } = await supabase
-                .from('todos')
-                .insert([{ title: newTodo.trim(), is_completed: false }])
-                .select();
-
-            if (error) throw error;
-
-            if (data) {
-                setTodos([data[0], ...todos]);
-                setNewTodo('');
-                showToast('Task added successfully', 'success');
-            }
+            const docRef = await addDoc(collection(db, 'todos'), { title: newTodo.trim(), is_completed: false, created_at: new Date().toISOString() });
+            const newItem = { id: docRef.id, title: newTodo.trim(), is_completed: false, created_at: new Date().toISOString() } as Todo;
+            setTodos([newItem, ...todos]);
+            setNewTodo('');
+            showToast('Task added successfully', 'success');
         } catch (err: any) {
             showToast('Failed to add task: ' + err.message, 'error');
         } finally {
@@ -82,12 +63,7 @@ export const Todos: React.FC = () => {
 
     const toggleTodo = async (id: string, isCompleted: boolean) => {
         try {
-            const { error } = await supabase
-                .from('todos')
-                .update({ is_completed: !isCompleted })
-                .eq('id', id);
-
-            if (error) throw error;
+            await updateDoc(doc(db, 'todos', id), { is_completed: !isCompleted });
 
             setTodos(todos.map(t => t.id === id ? { ...t, is_completed: !isCompleted } : t));
         } catch (err: any) {
@@ -97,12 +73,7 @@ export const Todos: React.FC = () => {
 
     const deleteTodo = async (id: string) => {
         try {
-            const { error } = await supabase
-                .from('todos')
-                .delete()
-                .eq('id', id);
-
-            if (error) throw error;
+            await deleteDoc(doc(db, 'todos', id));
 
             setTodos(todos.filter(t => t.id !== id));
             showToast('Task deleted', 'success');
@@ -179,6 +150,8 @@ export const Todos: React.FC = () => {
 
                                     <button
                                         onClick={() => deleteTodo(todo.id)}
+                                        title="Delete Todo"
+                                        aria-label="Delete Todo"
                                         className="opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-coral-500 hover:bg-coral-50 rounded-xl transition-all"
                                     >
                                         <Trash2 size={18} />
@@ -195,7 +168,7 @@ export const Todos: React.FC = () => {
                     <Plus size={12} className="mr-2" /> Database Setup Hint
                 </h3>
                 <p className="text-[11px] text-blue-800 leading-relaxed">
-                    Ensure your Supabase database has a <code className="bg-white/50 px-1 rounded">todos</code> table with:
+                    Ensure your Firestore database has a <code className="bg-white/50 px-1 rounded">todos</code> collection.
                     <br />
                     <code className="block mt-2 bg-slate-900 text-slate-300 p-3 rounded-xl text-[10px] font-mono whitespace-pre overflow-x-auto">
                         {"CREATE TABLE todos (\n  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,\n  title TEXT NOT NULL,\n  is_completed BOOLEAN DEFAULT false,\n  created_at TIMESTAMPTZ DEFAULT NOW(),\n  user_id UUID REFERENCES auth.users(id)\n);"}

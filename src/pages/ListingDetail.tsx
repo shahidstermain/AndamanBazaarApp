@@ -1,10 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { doc, getDoc, updateDoc, deleteDoc, setDoc, collection, query, where, getDocs, increment } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
 import { ReportModal } from '../components/ReportModal';
 import { Listing, Profile } from '../types';
 import { MapPin, Shield, Share2, MessageSquare, Heart, ChevronLeft, AlertCircle, Edit3, Loader2, Tag, Clock, ShieldCheck, Package, Phone, MessageCircle, BadgeCheck, Rocket, Star } from 'lucide-react';
+import { WhatsAppShare, WhatsAppShareIcon } from '../components/WhatsAppShare';
 import { useToast } from '../components/Toast';
 import { BoostListingModal } from '../components/BoostListingModal';
 import { COPY } from '../lib/localCopy';
@@ -31,9 +33,10 @@ export const ListingDetail: React.FC = () => {
   const incrementViews = async () => {
     if (!id) return;
     try {
-      await supabase.rpc('increment_listing_views', { listing_id: id });
+      const listingRef = doc(db, 'listings', id);
+      await updateDoc(listingRef, { views_count: increment(1) });
     } catch (err) {
-      console.warn("Failed to increment views:", err);
+      console.warn('Failed to increment views:', err);
     }
   };
 
@@ -41,48 +44,39 @@ export const ListingDetail: React.FC = () => {
     try {
       if (!id) return;
 
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUserId(user?.id || null);
+      const user = auth.currentUser;
+      setCurrentUserId(user?.uid || null);
 
-      // 1. Fetch basic listing data without joins
-      const { data: listingData, error: listingError } = await supabase
-        .from('listings')
-        .select('*')
-        .eq('id', id)
-        .maybeSingle();
+      // 1. Fetch listing document
+      const listingRef = doc(db, 'listings', id);
+      const listingSnap = await getDoc(listingRef);
 
-      if (listingError) throw listingError;
-      if (!listingData) {
+      if (!listingSnap.exists()) {
         setListing(null);
         return;
       }
 
-      // 2. Fetch images separately
-      const { data: imagesData } = await supabase
-        .from('listing_images')
-        .select('*')
-        .eq('listing_id', id)
-        .order('display_order', { ascending: true });
+      const listingData = { id: listingSnap.id, ...listingSnap.data() } as any;
 
+      // 2. Images are stored as array field in Firestore listing doc
       const fullListing = {
         ...listingData,
-        images: imagesData || []
+        images: listingData.images || []
       };
 
       setListing(fullListing);
 
-      // 3. Fetch seller separately
+      // 3. Fetch seller profile
       if (listingData.user_id) {
-        const { data: sellerData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', listingData.user_id)
-          .single();
-        if (sellerData) setSeller(sellerData);
+        const sellerRef = doc(db, 'profiles', listingData.user_id);
+        const sellerSnap = await getDoc(sellerRef);
+        if (sellerSnap.exists()) {
+          setSeller({ id: sellerSnap.id, ...sellerSnap.data() } as any);
+        }
       }
 
     } catch (err) {
-      console.error("Error fetching listing:", err);
+      console.error('Error fetching listing:', err);
     } finally {
       setLoading(false);
     }
@@ -90,48 +84,36 @@ export const ListingDetail: React.FC = () => {
 
   const checkFavoriteStatus = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = auth.currentUser;
       if (!user || !id) return;
 
-      const { data } = await supabase
-        .from('favorites')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('listing_id', id)
-        .single();
-
-      setIsFavorited(!!data);
+      const favRef = doc(db, 'favorites', `${user.uid}_${id}`);
+      const favSnap = await getDoc(favRef);
+      setIsFavorited(favSnap.exists());
     } catch (err) {
-      console.error("Error checking favorite:", err);
+      console.error('Error checking favorite:', err);
     }
   };
 
   const toggleFavorite = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = auth.currentUser;
       if (!user) {
         showToast('Sign in to save items to your favorites.', 'info');
         return;
       }
       if (!id) return;
 
+      const favRef = doc(db, 'favorites', `${user.uid}_${id}`);
       if (isFavorited) {
-        const { error } = await supabase
-          .from('favorites')
-          .delete()
-          .eq('user_id', user.id)
-          .eq('listing_id', id);
-
-        if (!error) setIsFavorited(false);
+        await deleteDoc(favRef);
+        setIsFavorited(false);
       } else {
-        const { error } = await supabase
-          .from('favorites')
-          .insert({ user_id: user.id, listing_id: id });
-
-        if (!error) setIsFavorited(true);
+        await setDoc(favRef, { user_id: user.uid, listing_id: id, created_at: new Date().toISOString() });
+        setIsFavorited(true);
       }
     } catch (err) {
-      console.error("Error toggling favorite:", err);
+      console.error('Error toggling favorite:', err);
     }
   };
 
@@ -199,16 +181,12 @@ export const ListingDetail: React.FC = () => {
   const handleMarkAsSold = async () => {
     if (!id) return;
     try {
-      const { error } = await supabase
-        .from('listings')
-        .update({ status: 'sold' })
-        .eq('id', id);
-
-      if (error) throw error;
+      const listingRef = doc(db, 'listings', id);
+      await updateDoc(listingRef, { status: 'sold' });
       setListing(prev => prev ? { ...prev, status: 'sold' } : null);
       showToast('Listing marked as sold!', 'success');
     } catch (err) {
-      console.error("Error marking as sold:", err);
+      console.error('Error marking as sold:', err);
       showToast('Failed to update listing status', 'error');
     }
   };
@@ -250,6 +228,10 @@ export const ListingDetail: React.FC = () => {
               >
                 <Share2 size={20} strokeWidth={2.5} />
               </button>
+              <WhatsAppShareIcon
+                url={window.location.href}
+                title={listing?.title || 'AndamanBazaar Listing'}
+              />
             </div>
 
             {images.length > 1 && (
@@ -317,6 +299,18 @@ export const ListingDetail: React.FC = () => {
               <p className="text-midnight-700/80 text-base leading-relaxed max-w-2xl whitespace-pre-wrap">
                 {listing.description}
               </p>
+            </div>
+
+            {/* WhatsApp Share — share with travel groups */}
+            <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-100 rounded-2xl">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-green-800">Share with your travel group</p>
+                <p className="text-xs text-green-600 mt-0.5">Send this experience directly on WhatsApp</p>
+              </div>
+              <WhatsAppShare
+                url={window.location.href}
+                title={listing.title}
+              />
             </div>
 
             {/* Item Details Grid */}

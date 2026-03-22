@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { User } from '@supabase/supabase-js';
-import { supabase, isSupabaseConfigured } from './lib/supabase';
+import { User, onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { auth, db, isFirebaseConfigured } from './lib/firebase';
 
 import { Home } from './pages/Home';
 import { Listings } from './pages/Listings';
@@ -20,12 +21,14 @@ import { TermsOfService } from './pages/TermsOfService';
 import { About } from './pages/About';
 import { Pricing } from './pages/Pricing';
 import { ContactUs } from './pages/ContactUs';
+import { BecomeOperator } from './pages/BecomeOperator';
+import { ActivitiesPage } from './pages/ActivitiesPage';
+import ActivityDetail from './pages/ActivityDetail';
 import { NotFound } from './pages/NotFound';
 
 import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider } from './components/Toast';
-import { retryAsync, isTransientError } from './lib/security';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -36,93 +39,51 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (bypassAuth) {
-      setUser(({ id: 'e2e-user', email: 'e2e@example.com' } as unknown) as User);
+      setUser(({ uid: 'e2e-user', email: 'e2e@example.com' } as unknown) as User);
       setLoading(false);
       return;
     }
-    if (!isSupabaseConfigured()) {
+    if (!isFirebaseConfigured()) {
       setLoading(false);
       return;
     }
 
-    const ensureProfileExists = async (user: User) => {
+    const ensureProfileExists = async (firebaseUser: User) => {
       try {
-        const profileResponse = await retryAsync(async () => {
-          const response = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', user.id)
-            .single();
-          if (response.error && isTransientError(response.error)) {
-            throw response.error;
-          }
-          return response;
-        }, { label: 'profiles.select', maxAttempts: 3 });
+        const profileRef = doc(db, 'profiles', firebaseUser.uid);
+        const profileSnap = await getDoc(profileRef);
 
-        if (profileResponse.error && profileResponse.error.code === 'PGRST116') {
-          const insertResponse = await retryAsync(async () => {
-            const response = await supabase.from('profiles').insert({
-              id: user.id,
-              email: user.email,
-              name: user.user_metadata?.name || 'Island User',
-              profile_photo_url: user.user_metadata?.avatar_url || '',
-              phone_number: user.phone || null,
-            });
-            if (response.error && isTransientError(response.error)) {
-              throw response.error;
-            }
-            return response;
-          }, { label: 'profiles.insert', maxAttempts: 3 });
-
-          if (insertResponse.error) {
-            console.error('Profile insert failed:', insertResponse.error);
-          }
-        } else if (profileResponse.error) {
-          console.error('Profile lookup failed:', profileResponse.error);
+        if (!profileSnap.exists()) {
+          await setDoc(profileRef, {
+            id: firebaseUser.uid,
+            email: firebaseUser.email,
+            name: firebaseUser.displayName || 'Island User',
+            profile_photo_url: firebaseUser.photoURL || '',
+            phone_number: firebaseUser.phoneNumber || null,
+            city: 'Port Blair',
+            area: null,
+            is_location_verified: false,
+            trust_level: 'newbie',
+            total_listings: 0,
+            successful_sales: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
         }
       } catch (err) {
-        console.error('Profile fallback error:', err);
+        console.error('Profile creation error:', err);
       }
     };
 
-    const getSession = async () => {
-      try {
-        const sessionResponse = await retryAsync(async () => {
-          const response = await supabase.auth.getSession();
-          if (response.error && isTransientError(response.error)) {
-            throw response.error;
-          }
-          return response;
-        }, { label: 'auth.getSession', maxAttempts: 4, baseDelayMs: 300, maxDelayMs: 5000 });
-
-        if (sessionResponse.error) {
-          console.error('Session fetch failed:', sessionResponse.error);
-          return;
-        }
-
-        const currentUser = sessionResponse.data.session?.user ?? null;
-        setUser(currentUser);
-        if (currentUser) await ensureProfileExists(currentUser);
-      } catch (err) {
-        console.error('Session retry failed:', err);
-      } finally {
-        setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser);
+      if (firebaseUser) {
+        await ensureProfileExists(firebaseUser);
       }
-    };
-
-    getSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser && _event === 'SIGNED_IN') {
-        await ensureProfileExists(currentUser);
-      }
+      setLoading(false);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => unsubscribe();
   }, [bypassAuth]);
 
   const RequireAuth = ({ children, user, loading }: { children: React.ReactNode, user: User | null, loading: boolean }) => {
@@ -159,6 +120,9 @@ const App: React.FC = () => {
               <Route path="/about" element={<About />} />
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/contact" element={<ContactUs />} />
+              <Route path="/become-operator" element={<RequireAuth user={user} loading={loading}><BecomeOperator /></RequireAuth>} />
+              <Route path="/activities" element={<ActivitiesPage />} />
+              <Route path="/activities/:id" element={<ActivityDetail />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Layout>

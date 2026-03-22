@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { collection, query, where, orderBy, limit, getDocs, startAfter, DocumentSnapshot } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
 import { isDemoListing } from '../lib/demoListings';
 import { useToast } from '../components/Toast';
 import { COPY } from '../lib/localCopy';
@@ -100,15 +101,19 @@ export const Home: React.FC = () => {
   const fetchFeatured = async () => {
     setLoadingFeatured(true);
     try {
-      const { data } = await supabase
-        .from('listings')
-        .select('id, title, price, city, is_featured, views_count, images:listing_images(image_url)')
-        .eq('status', 'active')
-        .eq('is_featured', true)
-        .order('created_at', { ascending: false })
-        .limit(10);
-      const real = data || [];
-      setFeaturedListings(real);
+      const q = query(
+        collection(db, 'listings'),
+        where('status', '==', 'active'),
+        where('is_featured', '==', true),
+        orderBy('created_at', 'desc'),
+        limit(10)
+      );
+      const snapshot = await getDocs(q);
+      const results = snapshot.docs.map(doc => {
+        const d = doc.data();
+        return { id: doc.id, ...d, images: d.images || [] } as any;
+      });
+      setFeaturedListings(results);
     } catch (err) {
       console.error('Featured fetch error:', err);
       setFeaturedListings([]);
@@ -120,14 +125,18 @@ export const Home: React.FC = () => {
   const fetchTrending = async () => {
     setLoadingTrending(true);
     try {
-      const { data } = await supabase
-        .from('listings')
-        .select('id, title, price, city, is_featured, views_count, images:listing_images(image_url)')
-        .eq('status', 'active')
-        .order('views_count', { ascending: false })
-        .limit(6);
-      const real = data || [];
-      setTrendingListings(real);
+      const q = query(
+        collection(db, 'listings'),
+        where('status', '==', 'active'),
+        orderBy('views_count', 'desc'),
+        limit(6)
+      );
+      const snapshot = await getDocs(q);
+      const results = snapshot.docs.map(doc => {
+        const d = doc.data();
+        return { id: doc.id, ...d, images: d.images || [] } as any;
+      });
+      setTrendingListings(results);
     } catch (err) {
       console.error('Trending fetch error:', err);
       setTrendingListings([]);
@@ -140,19 +149,23 @@ export const Home: React.FC = () => {
     if (pageIndex === 0) setLoadingRecent(true);
     else setLoadingMore(true);
     try {
-      const from = pageIndex * RECENT_PAGE_SIZE;
-      const to = from + RECENT_PAGE_SIZE - 1;
-      const { data } = await supabase
-        .from('listings')
-        .select('id, title, price, city, is_featured, created_at, images:listing_images(image_url)')
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .range(from, to);
-      const real = data || [];
-      if (data) {
-        setRecentListings(prev => pageIndex === 0 ? data : [...prev, ...data]);
+      const q = query(
+        collection(db, 'listings'),
+        where('status', '==', 'active'),
+        orderBy('created_at', 'desc'),
+        limit(RECENT_PAGE_SIZE)
+      );
+      const snapshot = await getDocs(q);
+      const results = snapshot.docs.map(doc => {
+        const d = doc.data();
+        return { id: doc.id, ...d, images: d.images || [] } as any;
+      });
+      if (pageIndex === 0) {
+        setRecentListings(results);
+      } else {
+        setRecentListings(prev => [...prev, ...results]);
       }
-      setHasMore(real.length === RECENT_PAGE_SIZE);
+      setHasMore(results.length === RECENT_PAGE_SIZE);
       setPage(pageIndex);
     } catch (err) {
       console.error('Recent fetch error:', err);
@@ -171,8 +184,7 @@ export const Home: React.FC = () => {
   const toggleSave = useCallback(async (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Bug 6 fix: check auth before saving
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = auth.currentUser;
     if (!user) {
       showToast('Sign in to save items to your favorites.', 'info');
       return;

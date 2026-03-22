@@ -1,6 +1,6 @@
 {
   "projects": {
-    "prod": "gen-lang-client-0408960446"
+    "default": "andamanbazaarfirebase"
   },
   "targets": {},
   "etags": {}

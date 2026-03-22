@@ -1,4 +1,6 @@
-import { supabase } from './supabase';
+import { auth, db, functions } from './firebase';
+import { collection, addDoc } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import DOMPurify from 'dompurify';
 import { safeRandomUUID } from './random';
 
@@ -64,18 +66,14 @@ export const checkServerRateLimit = async (
     const { maxRequests, windowSeconds } = { ...defaultConfig, ...config };
 
     try {
-        const { data, error } = await supabase.rpc('check_rate_limit', {
-            p_key: key,
-            p_max_requests: maxRequests,
-            p_window_seconds: windowSeconds,
+        const checkRateLimit = httpsCallable(functions, 'checkRateLimit');
+        const result = await checkRateLimit({
+            key,
+            maxRequests,
+            windowSeconds,
         });
 
-        if (error) {
-            console.error('Rate limit check failed:', error);
-            return { allowed: true }; // Fail open to avoid blocking users
-        }
-
-        return { allowed: !!data };
+        return { allowed: !!(result.data as any)?.allowed };
     } catch (err) {
         console.error('Rate limit error:', err);
         return { allowed: true }; // Fail open
@@ -97,20 +95,17 @@ interface AuditLogEntry {
  */
 export const logAuditEvent = async (entry: AuditLogEntry): Promise<void> => {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const user = auth.currentUser;
 
         if (!user) return; // Skip if not authenticated
 
-        const { error } = await supabase.from('audit_logs').insert({
-            user_id: user.id,
+        await addDoc(collection(db, 'audit_logs'), {
+            user_id: user.uid,
             ...entry,
             ip_address: null, // Can't get IP on client-side
             user_agent: navigator.userAgent,
+            created_at: new Date().toISOString(),
         });
-
-        if (error) {
-            console.error('Audit log failed:', error);
-        }
     } catch (err) {
         // Silent fail - don't block user actions
         console.debug('Audit log error:', err);

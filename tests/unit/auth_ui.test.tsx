@@ -1,29 +1,20 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthView } from '../../src/pages/AuthView';
-import { supabase, isSupabaseConfigured } from '../../src/lib/supabase';
+import { auth, isFirebaseConfigured } from '../../src/lib/firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { ToastProvider } from '../../src/components/Toast';
 
-// Mock Supabase
-vi.mock('../../src/lib/supabase', () => ({
-    supabase: {
-        auth: {
-            getSession: vi.fn().mockResolvedValue({ data: { session: null }, error: null }),
-            signInWithPassword: vi.fn(),
-            signUp: vi.fn(),
-            signInWithOtp: vi.fn(),
-            verifyOtp: vi.fn(),
-            signInWithOAuth: vi.fn(),
-        },
-    },
-    isSupabaseConfigured: vi.fn().mockReturnValue(true),
-}));
+// Note: firebase modular functions are mocked in tests/setup.ts via src/lib/__mocks__/firebase.ts
 
-describe('Auth UI Logic (Vitest)', () => {
+describe('Auth UI Logic (Firebase)', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        (auth as any).currentUser = null;
+        vi.mocked(isFirebaseConfigured).mockReturnValue(true);
     });
 
     const renderAuth = () => {
@@ -73,23 +64,45 @@ describe('Auth UI Logic (Vitest)', () => {
     });
 
     it('handles email login submission', async () => {
-        const signInSpy = vi.spyOn(supabase.auth, 'signInWithPassword').mockResolvedValue({ data: { session: {} } as any, error: null });
+        const user = userEvent.setup();
+        const mockUser = { uid: 'test-user', email: 'test@example.com', emailVerified: true };
+        vi.mocked(signInWithEmailAndPassword).mockResolvedValue({ user: mockUser } as any);
+        
         renderAuth();
 
-        fireEvent.change(screen.getByLabelText(/Email Address/i), { target: { value: 'test@example.com' } });
-        fireEvent.change(screen.getByLabelText(/Secret Password/i), { target: { value: 'Password123!' } });
-        fireEvent.click(screen.getByRole('button', { name: /Sign In Securely/i }));
+        await user.type(screen.getByLabelText(/Email Address/i), 'test@example.com');
+        await user.type(screen.getByLabelText(/Secret Password/i), 'Password123!');
+        await user.click(screen.getByRole('button', { name: /Sign In Securely/i }));
 
         await waitFor(() => {
-            expect(signInSpy).toHaveBeenCalledWith({
-                email: 'test@example.com',
-                password: 'Password123!',
-            });
-        });
+            expect(signInWithEmailAndPassword).toHaveBeenCalledWith(auth, 'test@example.com', 'Password123!');
+        }, { timeout: 5000 });
     });
 
-    it('shows error message if supabase is not configured', () => {
-        vi.mocked(isSupabaseConfigured).mockReturnValue(false);
+    it('handles signup submission', async () => {
+        const user = userEvent.setup();
+        const mockUser = { uid: 'new-user', email: 'new@example.com', emailVerified: false };
+        vi.mocked(createUserWithEmailAndPassword).mockResolvedValue({ user: mockUser } as any);
+        
+        renderAuth();
+        await user.click(screen.getByRole('button', { name: /signup/i }));
+
+        await user.type(screen.getByLabelText(/Display Name/i), 'New User');
+        await user.type(screen.getByLabelText(/Email Address/i), 'new@example.com');
+        await user.type(screen.getByLabelText(/Secret Password/i), 'StrongPass1!');
+        
+        const submitBtn = screen.getByRole('button', { name: /Create Island Account/i });
+        await user.click(submitBtn);
+
+        await waitFor(() => {
+            expect(createUserWithEmailAndPassword).toHaveBeenCalled();
+        }, { timeout: 5000 });
+        
+        expect(createUserWithEmailAndPassword).toHaveBeenCalledWith(auth, 'new@example.com', 'StrongPass1!');
+    });
+
+    it('shows error message if firebase is not configured', () => {
+        vi.mocked(isFirebaseConfigured).mockReturnValue(false);
 
         renderAuth();
         expect(screen.getByText(/Auth is not configured/i)).toBeTruthy();

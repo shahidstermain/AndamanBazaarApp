@@ -1,7 +1,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  signInWithPhoneNumber,
+  RecaptchaVerifier,
+  sendEmailVerification,
+  updateProfile,
+  onAuthStateChanged,
+  ConfirmationResult,
+} from 'firebase/auth';
+import { auth, googleProvider, isFirebaseConfigured } from '../lib/firebase';
 import { COPY } from '../lib/localCopy';
 import {
   Loader2,
@@ -24,28 +35,24 @@ export const AuthView: React.FC = () => {
   const [resending, setResending] = useState(false);
   const [error, setError] = useState<React.ReactNode | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
 
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
 
   useEffect(() => {
-    if (!isSupabaseConfigured()) {
-      setError('Auth is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+    if (!isFirebaseConfigured()) {
+      setError('Auth is not configured. Please set Firebase environment variables.');
       return;
     }
 
-    const checkSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        setError(error.message || 'Failed to load session.');
-        return;
-      }
-      if (data.session?.access_token) {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
         navigate('/');
       }
-    };
+    });
 
-    checkSession();
+    return () => unsubscribe();
   }, [navigate]);
 
   // S7: Password strength validation
@@ -74,29 +81,15 @@ export const AuthView: React.FC = () => {
 
 
   const handleResendEmail = async () => {
-    if (!email) {
-      setError("Please enter your email address first.");
-      return;
-    }
-    // Bug 5 fix: Only allow resend if user hit "Email not confirmed" error
-    if (!emailNotConfirmed) {
-      setError("Resend is only available after a failed login due to unverified email.");
+    if (!auth.currentUser) {
+      setError("Please sign up first to receive a verification email.");
       return;
     }
     setResending(true);
     setError(null);
     try {
-      // Explicitly use the current origin for redirection
-      const currentOrigin = window.location.origin;
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: email,
-        options: {
-          emailRedirectTo: currentOrigin
-        }
-      });
-      if (error) throw error;
-      setSuccessMsg(`Verification link resent to ${email}! Please check your inbox.`);
+      await sendEmailVerification(auth.currentUser);
+      setSuccessMsg(`Verification link resent to ${auth.currentUser.email}! Please check your inbox.`);
     } catch (err: any) {
       setError(err.message || "Failed to resend email.");
     } finally {
@@ -111,19 +104,22 @@ export const AuthView: React.FC = () => {
 
     try {
       if (mode === 'phone') {
-        const { error } = await supabase.auth.signInWithOtp({
-          phone: phoneNumber,
+        // Set up reCAPTCHA verifier
+        const recaptchaContainer = document.getElementById('recaptcha-container');
+        if (!recaptchaContainer) {
+          throw new Error('reCAPTCHA container not found');
+        }
+        const recaptchaVerifier = new RecaptchaVerifier(auth, recaptchaContainer, {
+          size: 'invisible',
         });
-        if (error) throw error;
+
+        const result = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+        setConfirmationResult(result);
         setSuccessMsg(`OTP sent to ${phoneNumber}!`);
         setMode('verify');
-      } else if (mode === 'verify') {
-        const { error } = await supabase.auth.verifyOtp({
-          phone: phoneNumber,
-          token: otpToken,
-          type: 'sms',
-        });
-        if (error) throw error;
+      } else if (mode === 'verify' && confirmationResult) {
+        await confirmationResult.confirm(otpToken);
+        // onAuthStateChanged will handle navigation
       }
     } catch (err: any) {
       setError(err.message || 'Phone auth failed.');
@@ -134,29 +130,20 @@ export const AuthView: React.FC = () => {
 
   const handleOAuthLogin = async (provider: 'google') => {
     clearState();
-    if (!isSupabaseConfigured()) {
-      setError('Auth is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+    if (!isFirebaseConfigured()) {
+      setError('Auth is not configured. Please set Firebase environment variables.');
       return;
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/auth`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        },
-      });
-      if (error) throw error;
+      await signInWithPopup(auth, googleProvider);
+      // onAuthStateChanged will handle navigation
     } catch (err: any) {
       console.error("OAuth Error:", err);
       setError(
         <div className="space-y-2">
           <p className="font-bold">Authentication Failed</p>
-          <p className="text-xs opacity-90">{err.message || 'Check your Supabase/Google configuration.'}</p>
+          <p className="text-xs opacity-90">{err.message || 'Check your Firebase/Google configuration.'}</p>
         </div>
       );
       setLoading(false);
@@ -169,35 +156,30 @@ export const AuthView: React.FC = () => {
     setLoading(true);
 
     try {
-      const currentOrigin = window.location.origin;
-
       if (mode === 'login') {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-          if (error.message.includes("Email not confirmed")) {
-            setEmailNotConfirmed(true);
-            setError(
-              <div className="space-y-3">
-                <p className="font-bold">Email Not Verified</p>
-                <p className="text-xs opacity-90">Check your inbox for a verification link. Links default to localhost unless configured in your dashboard.</p>
-                <button
-                  onClick={handleResendEmail}
-                  className="flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest text-white bg-slate-800 px-4 py-2 rounded-xl hover:bg-black transition-colors"
-                >
-                  <RefreshCcw size={12} className={resending ? 'animate-spin' : ''} />
-                  <span>{resending ? 'Sending...' : 'Resend to Current Origin'}</span>
-                </button>
-              </div>
-            );
-          } else if (error.message?.includes('Invalid login credentials')) {
-            setError(COPY.AUTH.WRONG_PASSWORD);
-          } else {
-            throw error;
-          }
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        
+        // Check if email is verified
+        if (!userCredential.user.emailVerified) {
+          setEmailNotConfirmed(true);
+          setError(
+            <div className="space-y-3">
+              <p className="font-bold">Email Not Verified</p>
+              <p className="text-xs opacity-90">Check your inbox for a verification link.</p>
+              <button
+                onClick={handleResendEmail}
+                className="flex items-center space-x-2 text-[10px] font-black uppercase tracking-widest text-white bg-slate-800 px-4 py-2 rounded-xl hover:bg-black transition-colors"
+              >
+                <RefreshCcw size={12} className={resending ? 'animate-spin' : ''} />
+                <span>{resending ? 'Sending...' : 'Resend Verification Email'}</span>
+              </button>
+            </div>
+          );
+          setLoading(false);
+          return;
         }
-        if (data.session) {
-          navigate('/');
-        }
+
+        navigate('/');
       } else {
         // S7: Validate password strength before signup
         const pwdErrors = validatePassword(password);
@@ -214,23 +196,30 @@ export const AuthView: React.FC = () => {
           return;
         }
 
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              name: fullName,
-              avatar_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`
-            },
-            emailRedirectTo: currentOrigin
-          }
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+        // Update display name
+        await updateProfile(userCredential.user, {
+          displayName: fullName,
+          photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`
         });
-        if (error) throw error;
+
+        // Send email verification
+        await sendEmailVerification(userCredential.user);
+
         setSuccessMsg(COPY.AUTH.EMAIL_VERIFICATION_SENT);
         setMode('login');
       }
     } catch (err: any) {
-      setError(err.message || 'Auth action failed.');
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
+        setError(COPY.AUTH.WRONG_PASSWORD);
+      } else if (err.code === 'auth/user-not-found') {
+        setError('No account found with this email. Please sign up.');
+      } else if (err.code === 'auth/email-already-in-use') {
+        setError('An account with this email already exists. Please sign in.');
+      } else {
+        setError(err.message || 'Auth action failed.');
+      }
     } finally {
       setLoading(false);
     }
@@ -333,7 +322,7 @@ export const AuthView: React.FC = () => {
             <div className="mt-4 text-center">
               <button
                 onClick={handleResendEmail}
-                disabled={resending || !email || !emailNotConfirmed}
+                disabled={resending || !emailNotConfirmed}
                 className="text-[10px] font-black text-ocean-700 uppercase tracking-widest hover:underline disabled:opacity-30"
               >
                 {resending ? 'Resending link...' : "Didn't receive verification email?"}
@@ -362,7 +351,8 @@ export const AuthView: React.FC = () => {
             </button>
           </div>
 
-
+          {/* reCAPTCHA container for phone auth */}
+          <div id="recaptcha-container"></div>
 
         </div>
       </div>
