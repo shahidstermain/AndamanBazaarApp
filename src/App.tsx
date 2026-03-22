@@ -32,6 +32,7 @@ const TermsOfService = React.lazy(() => import('./pages/TermsOfService').then((m
 const About = React.lazy(() => import('./pages/About').then((m) => ({ default: m.About })));
 const Pricing = React.lazy(() => import('./pages/Pricing').then((m) => ({ default: m.Pricing })));
 const ContactUs = React.lazy(() => import('./pages/ContactUs').then((m) => ({ default: m.ContactUs })));
+const TripPlanner = React.lazy(() => import('./pages/TripPlanner').then((m) => ({ default: m.TripPlanner })));
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -116,6 +117,7 @@ const App: React.FC = () => {
                 <Route path="/about" element={<About />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/contact" element={<ContactUs />} />
+                <Route path="/planner" element={<RequireAuth user={user} loading={loading}><TripPlanner /></RequireAuth>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>

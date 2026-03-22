@@ -32,6 +32,7 @@ import { useToast } from '../components/Toast';
 import { COPY } from '../lib/localCopy';
 import { BoostListingModal } from '../components/BoostListingModal';
 import { Seo } from '../components/Seo';
+import { WhatsAppShare } from '../components/WhatsAppShare';
 
 export const ListingDetail: React.FC = () => {
   const { id } = useParams();
@@ -49,7 +50,6 @@ export const ListingDetail: React.FC = () => {
   const { showToast } = useToast();
 
   const shareLink = window.location.href;
-  const whatsappText = listing ? COPY.SHARING.WHATSAPP_TEMPLATE(listing.title, listing.price, listing.city, shareLink) : '';
   const fbText = listing ? COPY.SHARING.FB_GROUP_TEMPLATE(listing.title, listing.price, listing.city, shareLink) : '';
 
   const copyToClipboard = (text: string, label: string) => {
@@ -342,17 +342,10 @@ export const ListingDetail: React.FC = () => {
                         <Copy size={18} />
                       </button>
                     </div>
-                    <p className="text-[11px] text-emerald-800/70 font-medium line-clamp-3 italic">
-                      "{whatsappText.substring(0, 100)}..."
+                    <p className="text-[11px] text-emerald-800/70 font-medium leading-relaxed italic">
+                      Send to your friends or travel group instantly via WhatsApp.
                     </p>
-                    <a 
-                      href={`https://wa.me/?text=${encodeURIComponent(whatsappText)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full py-3 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20"
-                    >
-                      Share to WhatsApp
-                    </a>
+                    <WhatsAppShare url={shareLink} title={listing.title} />
                   </div>
 
                   {/* Facebook Share */}

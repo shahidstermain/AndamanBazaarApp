@@ -12,8 +12,18 @@ import { BoostBadge } from '../components/BoostBadge';
 import { UrgentBadge } from '../components/UrgentBadge';
 import { FeaturedSection } from '../components/FeaturedSection';
 import {
-  Search, ArrowRight, Loader2, Heart, MapPin, Flame,
-  Fish, Leaf, Shell, Compass,
+  Search,
+  Sparkles,
+  Compass,
+  ArrowRight,
+  Flame,
+  LayoutGrid,
+  MapPin,
+  Heart,
+  Loader2,
+  Fish,
+  Leaf,
+  Shell,
   BadgeCheck
 } from 'lucide-react';
 
@@ -649,6 +659,68 @@ export const Home: React.FC = () => {
               );
             })}
           </div>
+      </section>
+
+      {/* ── AI TRIP PLANNER PROMO ── */}
+      <section className="px-4 mb-10">
+        <div className="app-container">
+          <Link 
+            to="/planner" 
+            className="group relative block rounded-[32px] overflow-hidden bg-midnight-900 shadow-elevated transition-transform active:scale-[0.98]"
+          >
+            {/* Mesh Background */}
+            <div className="absolute inset-0 bg-mesh opacity-30 group-hover:opacity-40 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-br from-ocean-600/40 to-transparent pointer-events-none" />
+            
+            <div className="relative z-10 p-8 md:p-12 flex flex-col md:flex-row md:items-center justify-between gap-8">
+              <div className="max-w-xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="bg-teal-500/20 backdrop-blur-md px-3 py-1 rounded-full border border-teal-500/30 flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-teal-400" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-teal-300">Beta Early Access</span>
+                  </div>
+                </div>
+                <h2 className="text-3xl md:text-5xl font-display font-black text-white leading-tight mb-4">
+                  Plan your perfect <br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-emerald-300">Island Escape</span> with AI
+                </h2>
+                <p className="text-white/60 text-base md:text-lg font-medium leading-relaxed mb-6">
+                  Personalized itineraries, ferry schedules, and island-hopping logic — generated in seconds for your unique travel style.
+                </p>
+                <div className="flex items-center gap-4">
+                  <span className="bg-white text-midnight-900 px-6 py-3 rounded-2xl font-heading font-black text-sm transition-all group-hover:shadow-ocean-glow">
+                    Start Planning
+                  </span>
+                  <div className="flex -space-x-3">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="w-10 h-10 rounded-full border-2 border-midnight-900 bg-warm-200 overflow-hidden shadow-lg">
+                        <img src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="User" className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                    <div className="w-10 h-10 rounded-full border-2 border-midnight-900 bg-teal-500 flex items-center justify-center text-[10px] font-black text-white shadow-lg">
+                      500+
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative md:w-1/3 flex justify-center">
+                <div className="w-64 h-64 md:w-80 md:h-80 relative">
+                  <div className="absolute inset-0 bg-teal-500/20 rounded-full blur-3xl animate-pulse" />
+                  <div className="relative z-10 w-full h-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-[40px] p-6 shadow-2xl rotate-3 group-hover:rotate-6 transition-transform duration-700">
+                    <div className="space-y-4">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="h-12 bg-white/5 rounded-xl border border-white/5 animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />
+                      ))}
+                      <div className="h-20 bg-teal-500/20 rounded-xl border border-teal-500/20 flex items-center justify-center">
+                        <Compass className="text-teal-400 animate-spin-slow" size={32} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Link>
         </div>
       </section>
 

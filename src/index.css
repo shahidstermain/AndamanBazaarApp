@@ -696,6 +696,15 @@
   animation: glowPulse 2.5s ease-in-out infinite;
 }
 
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
 @keyframes slideInUp {
   from {
     opacity: 0;
