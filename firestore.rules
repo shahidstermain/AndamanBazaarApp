@@ -25,7 +25,8 @@ service cloud.firestore {
     }
 
     match /favorites/{favoriteId} {
-      allow read, create, update, delete: if isAuthenticated() && isOwner(resource.data.user_id);
+      allow read, update, delete: if isAuthenticated() && isOwner(resource.data.user_id);
+      allow create: if isAuthenticated() && isOwner(request.resource.data.user_id);
     }
 
     match /chats/{chatId} {
