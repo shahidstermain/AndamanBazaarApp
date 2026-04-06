@@ -98,7 +98,7 @@
     "eslint-plugin-react-hooks": "4.6.2",
     "eslint-plugin-react-refresh": "0.4.26",
     "fake-indexeddb": "^4.0.2",
-    "happy-dom": "20.0.0",
+    "happy-dom": "^20.8.9",
     "husky": "^8.0.3",
     "lighthouse": "11.7.0",
     "lint-staged": "^15.2.0",

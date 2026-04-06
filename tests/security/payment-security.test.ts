@@ -45,7 +45,8 @@ describe('Payment Security Tests', () => {
       expect(encrypted.iv).toBeDefined()
       expect(encrypted.authTag).toBeDefined()
       expect(encrypted.encrypted).not.toContain('4111111111111111')
-      expect(encrypted.encrypted).not.toContain('123')
+      // CVV '123' in UTF-8 hex is '313233'; verify it is not embedded as plaintext
+      expect(encrypted.encrypted).not.toContain('313233')
     })
 
     it('should validate payment card numbers using Luhn algorithm', () => {
