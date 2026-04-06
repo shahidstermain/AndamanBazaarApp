@@ -6,6 +6,17 @@ const TIERS: Record<string, { label: string; emoji: string }> = {
   power: { label: "Power", emoji: "💎" },
 };
 
+/**
+ * Generate a complete HTML invoice document using the provided invoice data.
+ *
+ * Formats the payment timestamp into India Standard Time (IST) and embeds customer, order, payment, and amount details into a styled HTML invoice suitable for saving or serving.
+ *
+ * @param invoice - Object containing invoice fields:
+ *   - invoice_number, customer_name, customer_email, customer_phone,
+ *   - item_description, amount_total, payment_method, cashfree_order_id,
+ *   - paid_at, tier, duration_days, listing_title
+ * @returns The rendered invoice HTML as a string
+ */
 export async function generateInvoiceHtml(invoice: {
   invoice_number: string;
   customer_name: string;
@@ -173,6 +184,13 @@ export async function generateInvoiceHtml(invoice: {
 </html>`;
 }
 
+/**
+ * Generate an invoice for the given listing boost, store the invoice record and HTML in Firebase, and write an audit log.
+ *
+ * @param boost_id - The Firestore document ID of the listing boost to invoice
+ * @returns An object containing `success: true`, the created or existing `invoice_id`, `invoice_number`, the public `invoice_url`, and `already_existed` when an invoice was previously present for the boost
+ * @throws Error when the boost record for `boost_id` does not exist
+ */
 export async function processInvoiceGeneration(boost_id: string) {
   const db = admin.firestore();
 

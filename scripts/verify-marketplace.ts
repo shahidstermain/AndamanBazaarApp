@@ -1,4 +1,3 @@
-
 /**
  * AndamanBazaar Marketplace Integration Test
  * 
@@ -27,6 +26,11 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+/**
+ * Runs end-to-end integration checks against a real Supabase project: verifies the KYC storage bucket, uploads a test file, inserts a test operator verification record, invokes the `create-booking-order` Edge Function, and then attempts to remove the test data.
+ *
+ * Performs observable side effects (storage upload, database insert, Edge Function invocation) and logs success or failure for each step. Exits early if the `kyc_documents` bucket is missing and catches and logs any thrown errors during the sequence.
+ */
 async function runTests() {
   console.log('🚀 Starting Marketplace Integration Tests (Real API)...');
 

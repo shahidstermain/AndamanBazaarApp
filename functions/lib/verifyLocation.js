@@ -22,12 +22,22 @@ const RATE_LIMIT_CONFIG = {
 };
 // Verification expiration (90 days in milliseconds)
 const VERIFICATION_EXPIRATION_DAYS = 90;
+/**
+ * Determine whether a latitude/longitude pair falls inside the Andaman & Nicobar Islands bounding box.
+ * @returns {boolean} `true` if both coordinates are within the inclusive Andaman bounds, `false` otherwise.
+ */
 function isWithinAndamanBounds(lat, lng) {
     return (lat >= ANDAMAN_BOUNDS.minLat &&
         lat <= ANDAMAN_BOUNDS.maxLat &&
         lng >= ANDAMAN_BOUNDS.minLng &&
         lng <= ANDAMAN_BOUNDS.maxLng);
 }
+/**
+ * Fetches geolocation data for an IP address using ip-api.com, or returns null when unavailable or inapplicable.
+ *
+ * @param {string} ip - The client's IP address; local/private addresses (e.g., "127.*", "192.168.*", "10.*") or falsy/"unknown" values are treated as inapplicable and return `null`.
+ * @returns {Object|null} The geolocation payload from ip-api.com when successful (includes `status`, `country`, `countryCode`, `lat`, `lon`, `isp`), or `null` if the lookup fails, is timed out, or the IP is inapplicable.
+ */
 async function getIpGeolocation(ip) {
     if (!ip || ip === "unknown" || ip.startsWith("127.") || ip.startsWith("192.168.") || ip.startsWith("10.")) {
         return null;

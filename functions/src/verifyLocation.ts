@@ -33,6 +33,13 @@ interface IpGeoResponse {
   isp: string;
 }
 
+/**
+ * Checks whether the given geographic coordinates fall inside the Andaman & Nicobar Islands bounding box.
+ *
+ * @param lat - Latitude in decimal degrees
+ * @param lng - Longitude in decimal degrees
+ * @returns `true` if `lat` and `lng` are within the bounding box (inclusive), `false` otherwise.
+ */
 function isWithinAndamanBounds(lat: number, lng: number): boolean {
   return (
     lat >= ANDAMAN_BOUNDS.minLat &&
@@ -42,6 +49,12 @@ function isWithinAndamanBounds(lat: number, lng: number): boolean {
   );
 }
 
+/**
+ * Fetches geolocation information for a public IPv4 address from an external geolocation service.
+ *
+ * @param ip - The client IP address to look up; private, loopback, or the literal `"unknown"` will be treated as no lookup.
+ * @returns The IP geolocation data when the lookup succeeds (`IpGeoResponse`), `null` otherwise (including for private/loopback/unknown IPs, unsuccessful lookups, non-OK HTTP responses, or network/errors).
+ */
 async function getIpGeolocation(ip: string): Promise<IpGeoResponse | null> {
   if (!ip || ip === "unknown" || ip.startsWith("127.") || ip.startsWith("192.168.") || ip.startsWith("10.")) {
     return null;
