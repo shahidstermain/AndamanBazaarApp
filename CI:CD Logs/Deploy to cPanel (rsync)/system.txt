@@ -1,4 +1,0 @@
-2026-02-27T09:03:14.3470000Z Evaluating deploy.if
-2026-02-27T09:03:14.3470000Z Evaluating: (success() && (((github.ref == 'refs/heads/main') && (github.event_name == 'push'))))
-2026-02-27T09:03:14.3470000Z Expanded: (false && ((github.ref == 'refs/heads/main') && (github.event_name == 'push')))
-2026-02-27T09:03:14.3470000Z Result: false

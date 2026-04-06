@@ -2,44 +2,8 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Authentication Flow', () => {
   test.beforeEach(async ({ page }) => {
-    // Mock Supabase Auth
-    await page.route('**/auth/v1/token*', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          access_token: 'fake-token',
-          token_type: 'bearer',
-          expires_in: 3600,
-          refresh_token: 'fake-refresh-token',
-          user: { id: 'test-user-id', email: 'test@example.com', app_metadata: { provider: 'email' } },
-          session: { access_token: 'fake-token', user: { id: 'test-user-id', email: 'test@example.com' } }
-        })
-      })
-    })
-
-    await page.route('**/auth/v1/user', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          id: 'test-user-id',
-          email: 'test@example.com',
-          app_metadata: { provider: 'email' }
-        })
-      })
-    })
-
-    await page.route('**/auth/v1/session', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          session: { access_token: 'fake-token', user: { id: 'test-user-id', email: 'test@example.com' } }
-        })
-      })
-    })
-
+    // Auth is bypassed via VITE_E2E_BYPASS_AUTH=true (set in playwright.config.ts webServer).
+    // Firebase auth runs through identitytoolkit.googleapis.com — no route mock needed here.
     await page.goto('/auth')
   })
 
@@ -221,8 +185,8 @@ test.describe('Accessibility Tests', () => {
     // Run axe-core accessibility scan
     const violations = await page.evaluate(() => {
       return new Promise((resolve) => {
-        if (window.axe) {
-          window.axe.run().then(resolve)
+        if ((window as any).axe) {
+          (window as any).axe.run().then(resolve)
         } else {
           resolve([])
         }
@@ -343,7 +307,7 @@ test.describe('Performance Tests', () => {
       return new Promise((resolve) => {
         new PerformanceObserver((list) => {
           const entries = list.getEntries()
-          resolve(entries[0].processingStart - entries[0].startTime)
+          resolve((entries[0] as any).processingStart - entries[0].startTime)
         }).observe({ entryTypes: ['first-input'] })
       })
     })

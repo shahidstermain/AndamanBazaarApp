@@ -1,0 +1,216 @@
+name: Test And Deploy Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '30 1 * * *'
+
+env:
+  NODE_VERSION: '22'
+  VITE_SUPABASE_URL: https://mock.supabase.co
+  VITE_SUPABASE_ANON_KEY: mock-anon-key-for-testing-only-must-be-long-enough
+  VITE_CASHFREE_ENV: sandbox
+
+jobs:
+  unit-and-security-blocking:
+    name: Unit + Security (Blocking)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Run deterministic unit suites with coverage
+        run: |
+          npx vitest run \
+            --coverage \
+            --coverage.provider=v8 \
+            --coverage.reporter=text \
+            --coverage.reporter=json-summary \
+            --coverage.reporter=html \
+            --maxWorkers=1
+
+      - name: Run security audit suites (blocking)
+        run: npx vitest run tests/security/webhook-security.test.ts tests/security/security-audit.test.ts
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+
+  e2e-smoke-blocking:
+    name: E2E Smoke (Blocking)
+    runs-on: ubuntu-latest
+    needs: unit-and-security-blocking
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Build project
+        run: npm run build
+
+      - name: Run Playwright smoke suite (chromium)
+        run: npx playwright test tests/e2e/user-journeys.smoke.spec.ts --project=chromium --reporter=html
+        env:
+          VITE_E2E_BYPASS_AUTH: 'true'
+
+      - name: Upload Playwright smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-smoke-report
+          path: playwright-report/
+          retention-days: 14
+
+  # ─── Deploy to VPS via SSH ───────────────────────────────────────────────
+  deploy-to-vps:
+    name: Deploy to VPS (SSH)
+    runs-on: ubuntu-latest
+    needs: [unit-and-security-blocking]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production bundle
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_CASHFREE_ENV: production
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            set -e
+            APP_DIR="/opt/andamanbazaar"
+
+            echo "── Pulling latest code ──"
+            cd $APP_DIR
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "── Building and deploying containers ──"
+            docker compose down --remove-orphans 2>/dev/null || true
+            docker compose build --no-cache
+            docker compose up -d
+
+            echo "── Verifying deployment ──"
+            sleep 5
+            docker compose ps
+            echo "✓ Deployment complete"
+
+      - name: Verify deployment health
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            # Basic health check — verify containers are running
+            RUNNING=$(docker compose -f /opt/andamanbazaar/docker-compose.yml ps --format json 2>/dev/null | grep -c '"running"' || echo "0")
+            if [ "$RUNNING" -eq "0" ]; then
+              echo "::error::No running containers detected after deployment"
+              docker compose -f /opt/andamanbazaar/docker-compose.yml logs --tail=30
+              exit 1
+            fi
+            echo "✓ $RUNNING container(s) running"
+
+  e2e-extended-nonblocking:
+    name: E2E Extended (Non-Blocking)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run extended journeys
+        run: npx playwright test tests/e2e/user-journeys.extended.spec.ts --project=chromium --reporter=html
+        env:
+          VITE_E2E_BYPASS_AUTH: 'true'
+
+      - name: Upload Playwright extended report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-extended-report
+          path: playwright-report/
+          retention-days: 7
+
+  security-audit-nonblocking:
+    name: Security Audit (Non-Blocking)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security audit tests
+        run: npm run test:security

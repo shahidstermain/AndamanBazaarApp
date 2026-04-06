@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BrowserRouter } from 'react-router-dom'
 import { useState } from 'react'
+import { act } from 'react-dom/test-utils'
 
 // Mock the AuthView component
 const AuthView = () => {
@@ -98,8 +99,10 @@ describe('AuthView Component', () => {
     const form = screen.getByTestId('auth-form')
 
     // Enter invalid email
-    await user.type(emailInput, 'invalid-email')
-    fireEvent.submit(form)
+    await act(async () => {
+      await user.type(emailInput, 'invalid-email')
+      fireEvent.submit(form)
+    })
 
     await waitFor(() => {
       expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument()
@@ -115,9 +118,11 @@ describe('AuthView Component', () => {
     const submitButton = screen.getByRole('button', { name: /sign in/i })
 
     // Enter short password
-    await user.type(emailInput, 'test@example.com')
-    await user.type(passwordInput, '123')
-    await user.click(submitButton)
+    await act(async () => {
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, '123')
+      await user.click(submitButton)
+    })
 
     await waitFor(() => {
       expect(screen.getByText('Password must be at least 6 characters')).toBeInTheDocument()
@@ -132,13 +137,14 @@ describe('AuthView Component', () => {
     const passwordInput = screen.getByPlaceholderText('Password')
     const submitButton = screen.getByRole('button', { name: /sign in/i })
 
-    await user.type(emailInput, 'test@example.com')
-    await user.type(passwordInput, 'password123')
-    await user.click(submitButton)
+    await act(async () => {
+      await user.type(emailInput, 'test@example.com')
+      await user.type(passwordInput, 'password123')
+      await user.click(submitButton)
+    })
 
     expect(screen.getByRole('button', { name: /signing in/i })).toBeInTheDocument()
 
-    // Wait for the async submission to complete to avoid act() warnings
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: /signing in/i })).not.toBeInTheDocument()
     })
@@ -149,7 +155,9 @@ describe('AuthView Component', () => {
     renderAuthView()
 
     const submitButton = screen.getByRole('button', { name: /sign in/i })
-    await user.click(submitButton)
+    await act(async () => {
+      await user.click(submitButton)
+    })
 
     await waitFor(() => {
       expect(screen.getByText('Email is required')).toBeInTheDocument()

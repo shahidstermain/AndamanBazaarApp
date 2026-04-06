@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { doc, getDoc, getDocs, collection, query, where, orderBy, limit } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
+import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export const Dashboard: React.FC = () => {
+  const progressRef = React.useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     activeAds: 0,
@@ -22,50 +23,60 @@ export const Dashboard: React.FC = () => {
         if (!user) return;
 
         // 1. Fetch Profile Data
-        const profileSnap = await getDoc(doc(db, 'profiles', user.uid));
-        const profile = profileSnap.exists() ? profileSnap.data() : null;
+        const profileSnap = await getDocs(
+          query(collection(db, 'users'), where('__name__', '==', user.uid))
+        );
+        const profile = profileSnap.docs[0]?.data();
 
         // 2. Fetch User Listings for Counts
-        const listingsSnap = await getDocs(query(collection(db, 'listings'), where('user_id', '==', user.uid)));
-        const listings = listingsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+        const listingsSnap = await getDocs(
+          query(collection(db, 'listings'), where('userId', '==', user.uid))
+        );
+        const listings = listingsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
 
-        if (listings) {
-          const active = listings.filter(l => l.status === 'active').length;
-          const totalViews = listings.reduce((sum, l) => sum + (l.views_count || 0), 0);
+        if (listings.length >= 0) {
+          const active = listings.filter((l: any) => l.status === 'active').length;
+          const totalViews = listings.reduce((sum: number, l: any) => sum + (l.viewsCount || 0), 0);
 
           // Calculate response time from actual chats
           let responseTimeStr = '—';
           try {
-            const chatsSnap = await getDocs(query(collection(db, 'chats'), where('seller_id', '==', user.uid), limit(20)));
-            const userChats = chatsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+            const chatsSnap = await getDocs(
+              query(collection(db, 'chats'), where('sellerId', '==', user.uid), limit(20))
+            );
+            const userChats = chatsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
 
-            if (userChats && userChats.length > 0) {
+            if (userChats.length > 0) {
               const chatIds = userChats.map((c: any) => c.id);
-              // Firestore 'in' max 30
-              const msgSnap = await getDocs(query(collection(db, 'messages'), where('chat_id', 'in', chatIds.slice(0, 30)), where('sender_id', '==', user.uid), orderBy('created_at', 'asc')));
-              const firstReplies = msgSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-
-              if (firstReplies && firstReplies.length > 0) {
-                // Get first seller reply per chat
-                const firstReplyByChat = new Map<string, string>();
-                firstReplies.forEach(m => {
-                  if (!firstReplyByChat.has(m.chat_id)) firstReplyByChat.set(m.chat_id, m.created_at);
-                });
-
-                let totalMs = 0;
-                let count = 0;
-                userChats.forEach(chat => {
-                  const replyTime = firstReplyByChat.get(chat.id);
-                  if (replyTime) {
-                    const diff = new Date(replyTime).getTime() - new Date(chat.created_at).getTime();
-                    if (diff > 0) { totalMs += diff; count++; }
-                  }
-                });
-
-                if (count > 0) {
-                  const avgMins = Math.round(totalMs / count / 60000);
-                  responseTimeStr = avgMins < 60 ? `${avgMins} MIN${avgMins !== 1 ? 'S' : ''}` : `${Math.round(avgMins / 60)} HR${Math.round(avgMins / 60) !== 1 ? 'S' : ''}`;
+              // Fetch first seller replies from messages subcollections
+              const firstReplyByChat = new Map<string, number>();
+              await Promise.all(chatIds.map(async (chatId: string) => {
+                const msgSnap = await getDocs(
+                  query(collection(db, 'chats', chatId, 'messages'),
+                    where('senderId', '==', user.uid),
+                    orderBy('createdAt', 'asc'),
+                    limit(1))
+                );
+                if (!msgSnap.empty) {
+                  const ts = msgSnap.docs[0].data().createdAt;
+                  firstReplyByChat.set(chatId, ts?.toMillis?.() || 0);
                 }
+              }));
+
+              let totalMs = 0;
+              let count = 0;
+              userChats.forEach((chat: any) => {
+                const replyTime = firstReplyByChat.get(chat.id);
+                const chatCreated = chat.createdAt?.toMillis?.() || 0;
+                if (replyTime && chatCreated) {
+                  const diff = replyTime - chatCreated;
+                  if (diff > 0) { totalMs += diff; count++; }
+                }
+              });
+
+              if (count > 0) {
+                const avgMins = Math.round(totalMs / count / 60000);
+                responseTimeStr = avgMins < 60 ? `${avgMins} MIN${avgMins !== 1 ? 'S' : ''}` : `${Math.round(avgMins / 60)} HR${Math.round(avgMins / 60) !== 1 ? 'S' : ''}`;
               }
             }
           } catch { /* non-critical */ }
@@ -112,6 +123,14 @@ export const Dashboard: React.FC = () => {
     fetchStats();
   }, []);
 
+  useEffect(() => {
+    if (progressRef.current) {
+      progressRef.current.setAttribute('aria-valuenow', stats.successfulSales.toString());
+      progressRef.current.setAttribute('aria-valuemin', '0');
+      progressRef.current.setAttribute('aria-valuemax', targetSales.toString());
+    }
+  }, [stats.successfulSales, loading]);
+
   const targetSales = 5;
   const progressPercent = Math.min((stats.successfulSales / targetSales) * 100, 100);
 
@@ -156,7 +175,12 @@ export const Dashboard: React.FC = () => {
               <span>Progression</span>
               <span>{stats.successfulSales} / {targetSales} Sales</span>
             </div>
-            <div className="h-6 bg-white/10 rounded-full overflow-hidden border border-white/10 p-1">
+            <div 
+              ref={progressRef}
+              className="h-6 bg-white/10 rounded-full overflow-hidden border border-white/10 p-1"
+              role="progressbar"
+              aria-label="Sales progression to Island Legend"
+            >
               <div
                 className={`h-full bg-ocean-500 rounded-full transition-all duration-1000 ${stats.successfulSales >= targetSales ? 'w-full' :
                     stats.successfulSales === 4 ? 'w-4/5' :
@@ -213,7 +237,7 @@ export const Dashboard: React.FC = () => {
             <h3 className="font-black uppercase tracking-tight mb-6">Real-Time Pulse</h3>
             <div className="space-y-4">
               <div className="flex items-center space-x-4">
-                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">👤</div>
+                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center" aria-hidden="true">👤</div>
                 <div className="flex-1">
                   <p className="text-[10px] font-black uppercase">Recent Activity</p>
                   <p className="text-xs font-bold text-slate-400">Total Views: {stats.totalViews}</p>

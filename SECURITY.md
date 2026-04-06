@@ -40,7 +40,7 @@ You will receive a response within 48 hours. If the issue is confirmed, a patch 
 | Package | Version | CVEs | Fixed Version | Status |
 |---------|---------|------|--------------|--------|
 | `happy-dom` | 12.10.3 | CVE-2025-61927 (Critical), CVE-2024-51757 (Critical) | 20.0.0 | ✅ Upgraded |
-| `fastify` | 4.26.1 | CVE-2026-25224 (High 7.5), CVE-2026-25223 (Low 3.7) | 5.7.3 | ⚠️ Upgrade in `supabase/functions/` package.json |
+| `fastify` | 4.26.1 | CVE-2026-25224 (High 7.5), CVE-2026-25223 (Low 3.7) | 5.7.3 | ✅ Removed during Supabase to Firebase migration |
 
 ### 🟡 LOW — Dockerfile Security
 
@@ -74,8 +74,8 @@ Generate hashes via: https://www.srihash.org/
 | `src/pages/AuthView.tsx` | 24 | Decompose into sub-components |
 | `src/lib/postAdUtils.ts` → `saveDraft` | 20 | Extract upload, validation, DB steps into separate functions |
 | `src/lib/security.ts` | 18 | Split into focused utility modules |
-| `supabase/functions/generate-invoice/index.ts` | 17 | Add early-return guards, extract helpers |
-| `supabase/functions/cashfree-webhook/index.ts` | 26 | Extract payment verification logic |
+| `functions/src/payments/createInvoice.ts` | 17 | Add early-return guards, extract helpers |
+| `functions/src/payments/cashfreeWebhook.ts` | 26 | Extract payment verification logic |
 
 ### 🔵 LOW — Duplicate Code (19,517 duplicated lines)
 
@@ -100,5 +100,5 @@ Run `npx knip` or review the static analysis report to identify and remove unuse
 - [ ] Add SRI hashes to all CDN resources
 - [ ] Run `npm audit` before submitting a PR
 - [ ] Keep dependencies up to date — check monthly
-- [ ] Supabase RLS policies must be reviewed for every new table
+- [ ] Firebase Security Rules (Firestore/Storage) must be reviewed for every new collection/path
 - [ ] All server-side inputs must be validated with Zod schemas

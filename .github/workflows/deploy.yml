@@ -1,0 +1,332 @@
+name: Deploy AndamanBazaar
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  NODE_VERSION: '20'
+  FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+jobs:
+  # =====================================================
+  # LINT & TYPE CHECK
+  # =====================================================
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run ESLint
+        run: npx eslint . --ext .ts,.tsx --max-warnings=0
+        
+      - name: Run TypeScript compiler
+        run: npx tsc --noEmit
+
+  # =====================================================
+  # UNIT & INTEGRATION TESTS
+  # =====================================================
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run unit tests
+        run: npm run test:unit -- --reporter=verbose
+        
+      - name: Run integration tests
+        run: npm run test:integration -- --reporter=verbose
+        
+      - name: Run security tests
+        run: npm run test:security -- --reporter=verbose
+        
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  # =====================================================
+  # BUILD APPLICATION
+  # =====================================================
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: test
+    
+    strategy:
+      matrix:
+        environment: [staging, production]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Set environment variables
+        run: |
+          if [ "${{ matrix.environment }}" == "production" ]; then
+            echo "VITE_SUPABASE_URL=${{ secrets.PROD_SUPABASE_URL }}" >> .env.production
+            echo "VITE_SUPABASE_ANON_KEY=${{ secrets.PROD_SUPABASE_ANON_KEY }}" >> .env.production
+            echo "VITE_SUPABASE_PROJECT_ID=${{ secrets.PROD_SUPABASE_PROJECT_ID }}" >> .env.production
+            echo "VITE_CASHFREE_ENV=production" >> .env.production
+            echo "VITE_GOOGLE_GENERATIVE_AI_API_KEY=${{ secrets.PROD_GEMINI_API_KEY }}" >> .env.production
+          else
+            echo "VITE_SUPABASE_URL=${{ secrets.STAGING_SUPABASE_URL }}" >> .env.staging
+            echo "VITE_SUPABASE_ANON_KEY=${{ secrets.STAGING_SUPABASE_ANON_KEY }}" >> .env.staging
+            echo "VITE_SUPABASE_PROJECT_ID=${{ secrets.STAGING_SUPABASE_PROJECT_ID }}" >> .env.staging
+            echo "VITE_CASHFREE_ENV=sandbox" >> .env.staging
+            echo "VITE_GOOGLE_GENERATIVE_AI_API_KEY=${{ secrets.STAGING_GEMINI_API_KEY }}" >> .env.staging
+          fi
+        
+      - name: Build application
+        run: npm run build
+        env:
+          NODE_ENV: ${{ matrix.environment == 'production' && 'production' || 'staging' }}
+          
+      - name: Generate health check file
+        run: |
+          cat > dist/health.json << 'EOF'
+          {
+            "status": "healthy",
+            "version": "${{ github.sha }}",
+            "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "environment": "${{ matrix.environment }}",
+            "build": "${{ github.run_id }}"
+          }
+          EOF
+        
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.environment }}
+          path: dist/
+          retention-days: 14
+
+  # =====================================================
+  # E2E TESTS (Staging Only)
+  # =====================================================
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/staging' || github.event.inputs.environment == 'staging'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Download staging build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-staging
+          path: dist/
+          
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+        
+      - name: Start server and run E2E tests
+        run: |
+          npm run preview -- --host 0.0.0.0 --port 5173 &
+          sleep 5
+          npm run test:e2e
+          
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # =====================================================
+  # DEPLOY TO STAGING (Firebase Hosting)
+  # =====================================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build, e2e]
+    if: github.ref == 'refs/heads/staging' || github.event.inputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging.andamanbazaar.in
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Download staging build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-staging
+          path: dist/
+          
+      - name: Deploy to Firebase Hosting (Staging)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
+          channelId: staging
+          
+      - name: Verify deployment health
+        run: |
+          sleep 30
+          curl -sf https://staging.andamanbazaar.in/health.json || exit 1
+          echo "✅ Staging health check passed"
+
+  # =====================================================
+  # DEPLOY TO PRODUCTION (Firebase Hosting)
+  # =====================================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'production'
+    environment:
+      name: production
+      url: https://andamanbazaar.in
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Download production build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-production
+          path: dist/
+          
+      - name: Deploy to Firebase Hosting (Production)
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
+          channelId: live
+          
+      - name: Verify production health
+        run: |
+          sleep 30
+          curl -sf https://andamanbazaar.in/health.json || exit 1
+          echo "✅ Production health check passed"
+          
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "🚀 Production deployment successful!"
+          echo "Version: ${{ github.sha }}"
+          echo "URL: https://andamanbazaar.in"
+
+  # =====================================================
+  # DOCKER BUILD (Alternative)
+  # =====================================================
+  docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # =====================================================
+  # PERFORMANCE AUDIT
+  # =====================================================
+  lighthouse:
+    name: Lighthouse CI
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/staging'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          urls: |
+            https://staging.andamanbazaar.in/
+            https://staging.andamanbazaar.in/login
+            https://staging.andamanbazaar.in/listings
+          budgetPath: ./lighthouse-budget.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true

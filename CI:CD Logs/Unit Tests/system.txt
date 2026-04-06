@@ -1,8 +1,0 @@
-2026-02-27T09:01:48.0380000Z Requested labels: ubuntu-latest
-2026-02-27T09:01:48.0380000Z Job defined at: shahidster1711/AndamanBazaarApp/.github/workflows/ci.yml@refs/heads/main
-2026-02-27T09:01:48.0380000Z Waiting for a runner to pick up this job...
-2026-02-27T09:01:48.0370000Z Evaluating unit-tests.if
-2026-02-27T09:01:48.0370000Z Evaluating: success()
-2026-02-27T09:01:48.0370000Z Result: true
-2026-02-27T09:01:48.4030000Z Job is waiting for a hosted runner to come online.
-2026-02-27T09:01:48.4030000Z Job is about to start running on the hosted runner: GitHub Actions 1000000186

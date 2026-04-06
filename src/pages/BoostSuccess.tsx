@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { getDocs, collection, query, where } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { auth } from '../lib/firebase';
 import { CheckCircle, XCircle, ArrowLeft, Loader2 } from 'lucide-react';
 import { COPY } from '../lib/localCopy';
 
@@ -9,7 +8,7 @@ export const BoostSuccess: React.FC = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const orderId = searchParams.get('order_id');
-    const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading');
+    const [status, setStatus] = useState<'loading' | 'success' | 'failed' | 'pending'>('loading');
     const [listingId, setListingId] = useState<string | null>(null);
 
     useEffect(() => {
@@ -20,35 +19,41 @@ export const BoostSuccess: React.FC = () => {
 
         const checkOrderStatus = async () => {
             try {
-                // Fetch the listing_boost record to check its status
-                const boostSnap = await getDocs(query(collection(db, 'listing_boosts'), where('cashfree_order_id', '==', orderId)));
-                if (boostSnap.empty) throw new Error('Order not found');
-                const data = boostSnap.docs[0].data() as any;
+                // Server-side verification — never trust client/query-param values directly
+                const user = auth.currentUser;
+                if (!user) {
+                    setStatus('failed');
+                    return;
+                }
 
-                if (data.status === 'paid') {
+                const idToken = await user.getIdToken();
+                const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+                const region = 'us-central1';
+
+                const response = await fetch(
+                    `https://${region}-${projectId}.cloudfunctions.net/verifyBoostPayment?orderId=${encodeURIComponent(orderId)}`,
+                    {
+                        method: 'GET',
+                        headers: { Authorization: `Bearer ${idToken}` },
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error('Verification request failed');
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.status === 'paid') {
                     setStatus('success');
-                    setListingId(data.listing_id);
-                } else if (data.status === 'failed' || data.status === 'refunded') {
+                    setListingId(data.order?.listingId ?? null);
+                } else if (data.status === 'failed' || data.status === 'expired') {
                     setStatus('failed');
                 } else {
-                    // Still pending, wait and poll once more or tell user to wait
-                    // For simplicity, we assume the webhook might take a few seconds
-                    setTimeout(async () => {
-                        const retrySnap = await getDocs(query(collection(db, 'listing_boosts'), where('cashfree_order_id', '==', orderId)));
-                        const retryData = retrySnap.empty ? null : retrySnap.docs[0].data() as any;
-
-                        if (retryData?.status === 'paid') {
-                            setStatus('success');
-                            setListingId(retryData.listing_id);
-                        } else {
-                            // Assuming success ultimately, since webhook handles it async
-                            // Real prod apps would set up real-time supabase subscription here
-                            setStatus('success');
-                        }
-                    }, 3000);
+                    setStatus('pending');
                 }
             } catch (err) {
-                console.error("Error verifying order:", err);
+                console.error('Error verifying order:', err);
                 setStatus('failed');
             }
         };
@@ -59,6 +64,24 @@ export const BoostSuccess: React.FC = () => {
     return (
         <div className="min-h-screen bg-warm-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl shadow-xl border border-warm-100 p-8 max-w-sm w-full text-center">
+                {status === 'pending' && (
+                    <div className="py-8 flex flex-col items-center animate-fade-in">
+                        <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center text-amber-500 mb-6">
+                            <Loader2 size={40} />
+                        </div>
+                        <h2 className="text-2xl font-black font-heading text-midnight-800 mb-2">Payment Processing</h2>
+                        <p className="text-warm-600 mb-8">
+                            Your payment is being processed. This can take a few moments. We'll update this page automatically once confirmed.
+                        </p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="bg-warm-200 hover:bg-warm-300 text-midnight-800 font-bold py-3 px-6 rounded-xl w-full transition-colors flex items-center justify-center gap-2"
+                        >
+                            <ArrowLeft size={18} /> Refresh Status
+                        </button>
+                    </div>
+                )}
+
                 {status === 'loading' && (
                     <div className="py-8 flex flex-col items-center">
                         <Loader2 size={48} className="text-coral-500 animate-spin mb-4" />

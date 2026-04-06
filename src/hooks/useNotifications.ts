@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { collection, query, where, orderBy, onSnapshot, getDocs, doc, getDoc } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
+import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 
 export const useNotifications = () => {
   const location = useLocation();
@@ -21,90 +21,87 @@ export const useNotifications = () => {
     let isActive = true;
     const unsubscribers: (() => void)[] = [];
 
-    const primeChatIds = async (userId: string) => {
-      const buyerSnap = await getDocs(query(collection(db, 'chats'), where('buyer_id', '==', userId)));
-      const sellerSnap = await getDocs(query(collection(db, 'chats'), where('seller_id', '==', userId)));
-      if (!isActive) return;
-
-      const ids = new Set<string>();
-      buyerSnap.docs.forEach(d => ids.add(d.id));
-      sellerSnap.docs.forEach(d => ids.add(d.id));
-      chatIdsRef.current = ids;
-    };
-
     const getSenderName = async (senderId: string) => {
       const cached = senderNameCacheRef.current.get(senderId);
       if (cached) return cached;
 
-      const profileSnap = await getDoc(doc(db, 'profiles', senderId));
-      const name = profileSnap.exists() ? (profileSnap.data().name || 'Someone') : 'Someone';
-      senderNameCacheRef.current.set(senderId, name);
-      return name;
+      try {
+        const snap = await getDoc(doc(db, 'users', senderId));
+        const name = snap.exists() ? (snap.data().name || 'Someone') : 'Someone';
+        senderNameCacheRef.current.set(senderId, name);
+        return name;
+      } catch {
+        return 'Someone';
+      }
     };
 
-    const setup = async () => {
+    const setup = () => {
       const user = auth.currentUser;
       if (!user || !isActive) return;
 
-      await primeChatIds(user.uid);
-      if (!isActive) return;
-
-      // Listen for new messages in user's chats using Firestore onSnapshot
-      // We listen to all chats the user is involved in
-      const buyerChatsUnsub = onSnapshot(
-        query(collection(db, 'chats'), where('buyer_id', '==', user.uid)),
-        () => primeChatIds(user.uid)
+      // Subscribe to buyer-side chats
+      const buyerChatsQ = query(
+        collection(db, 'chats'),
+        where('buyerId', '==', user.uid)
       );
-      unsubscribers.push(buyerChatsUnsub);
-
-      const sellerChatsUnsub = onSnapshot(
-        query(collection(db, 'chats'), where('seller_id', '==', user.uid)),
-        () => primeChatIds(user.uid)
+      const sellerChatsQ = query(
+        collection(db, 'chats'),
+        where('sellerId', '==', user.uid)
       );
-      unsubscribers.push(sellerChatsUnsub);
 
-      // Listen for new messages across all chats
-      // Note: Firestore doesn't support filtering by a dynamic set of chat_ids easily.
-      // We'll listen to messages collection and filter client-side.
-      const messagesUnsub = onSnapshot(
-        query(collection(db, 'messages'), orderBy('created_at', 'desc')),
-        (snapshot) => {
-          if (!isActive) return;
-          snapshot.docChanges().forEach(async (change) => {
-            if (change.type !== 'added') return;
-            const msg = change.doc.data() as any;
-            if (!msg?.chat_id || !msg?.sender_id) return;
-            if (msg.sender_id === user.uid) return;
-            if (!chatIdsRef.current.has(msg.chat_id)) return;
+      const handleChatsSnap = (snap: any) => {
+        if (!isActive) return;
+        snap.docs.forEach((d: any) => chatIdsRef.current.add(d.id));
+      };
 
-            const isChatOpen = location.pathname === `/chats/${msg.chat_id}`;
-            if (isChatOpen && document.visibilityState === 'visible') return;
+      unsubscribers.push(onSnapshot(buyerChatsQ, handleChatsSnap));
+      unsubscribers.push(onSnapshot(sellerChatsQ, handleChatsSnap));
 
-            if (Notification.permission !== 'granted') return;
+      // Subscribe to new messages across user's chats
+      const messagesQ = query(
+        collection(db, 'messages'),
+        where('recipientId', '==', user.uid)
+      );
 
-            const senderName = await getSenderName(msg.sender_id);
-            const body = msg.message_text || 'New message';
+      unsubscribers.push(onSnapshot(messagesQ, async (snap) => {
+        if (!isActive) return;
+        for (const change of snap.docChanges()) {
+          if (change.type !== 'added') continue;
+          const msg = change.doc.data();
+          if (!msg?.chatId || !msg?.senderId) continue;
+          if (msg.senderId === user.uid) continue;
+          if (!chatIdsRef.current.has(msg.chatId)) continue;
 
-            try {
-              new Notification(`New message from ${senderName}`, {
-                body,
-                icon: '/logo192.png',
-                tag: msg.chat_id,
-              });
-            } catch {
-              // ignore
-            }
-          });
+          const isChatOpen = location.pathname === `/chats/${msg.chatId}`;
+          if (isChatOpen && document.visibilityState === 'visible') continue;
+          if (Notification.permission !== 'granted') continue;
+
+          const senderName = await getSenderName(msg.senderId);
+          const body = msg.content || 'New message';
+
+          try {
+            new Notification(`New message from ${senderName}`, {
+              body,
+              icon: '/logo192.png',
+              tag: msg.chatId,
+            });
+          } catch {
+            // ignore
+          }
         }
-      );
-      unsubscribers.push(messagesUnsub);
+      }));
     };
 
-    setup();
+    // Wait for auth state to resolve
+    const unsubAuth = auth.onAuthStateChanged((user) => {
+      if (user && isActive) setup();
+    });
 
     return () => {
       isActive = false;
-      unsubscribers.forEach(unsub => unsub());
+      unsubAuth();
+      unsubscribers.forEach(fn => fn());
     };
   }, [location.pathname]);
 };
+

@@ -1,5 +1,6 @@
 {
   "projects": {
+    "prod": "andamanbazaarfirebase",
     "default": "andamanbazaarfirebase"
   },
   "targets": {},

@@ -1,108 +1,380 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Auth helper
+    // Helper functions
     function isAuthenticated() {
-      return request.auth != null;
+      return request.auth != null && request.auth.uid != null;
     }
     
-    // Ownership helper
+    function isAdmin() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isModerator() {
+      return isAuthenticated() && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['moderator', 'admin'];
+    }
+    
     function isOwner(userId) {
-      return request.auth.uid == userId;
+      return isAuthenticated() && request.auth.uid == userId;
     }
-
-    match /profiles/{userId} {
-      allow read: if true;
-      allow create, update, delete: if isAuthenticated() && isOwner(userId);
+    
+    function isActiveUser(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.isActive == true;
     }
-
-    match /listings/{listingId} {
-      allow read: if true;
-      allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated() && isOwner(resource.data.user_id);
+    
+    function isNotBanned(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.isBanned != true;
     }
-
-    match /favorites/{favoriteId} {
-      allow read, update, delete: if isAuthenticated() && isOwner(resource.data.user_id);
-      allow create: if isAuthenticated() && isOwner(request.resource.data.user_id);
+    
+    function isValidTimestamp(value) {
+      return value is timestamp;
     }
-
-    match /chats/{chatId} {
-      allow read, update: if isAuthenticated() && (request.auth.uid == resource.data.buyer_id || request.auth.uid == resource.data.seller_id);
-      allow create: if isAuthenticated();
+    
+    // Deny all by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // users collection
+    match /users/{userId} {
+      allow read: if isAuthenticated() && 
+                   isActiveUser(userId) && 
+                   isNotBanned(userId) &&
+                   (isOwner(userId) || isModerator());
       
+      allow update: if isOwner(userId) && 
+                    isActiveUser(userId) && 
+                    isNotBanned(userId) &&
+                    request.resource.data.keys().hasAll(['name', 'phone', 'avatar', 'contactPreferences']) &&
+                    request.resource.data.role == resource.data.role &&
+                    request.resource.data.isBanned == resource.data.isBanned &&
+                    request.resource.data.isActive == resource.data.isActive;
+      
+      // Allow self-registration: authenticated user may create their own document
+      // with strictly validated defaults — cannot self-assign admin/moderator roles
+      allow create: if isOwner(userId) &&
+                    request.resource.data.keys().hasAll([
+                      'id', 'email', 'name', 'role', 'isActive', 'isBanned',
+                      'locationVerified', 'contactPreferences', 'stats',
+                      'createdAt', 'updatedAt', 'lastActiveAt'
+                    ]) &&
+                    request.resource.data.id == request.auth.uid &&
+                    request.resource.data.role == 'user' &&
+                    request.resource.data.isBanned == false &&
+                    request.resource.data.isActive == true;
+      allow create: if isAdmin();
+      allow delete: if false;
+    }
+    
+    // listings collection
+    match /listings/{listingId} {
+      allow read: if resource.data.isActive == true &&
+                   resource.data.status in ['active', 'sold'] &&
+                   resource.data.status != 'deleted';
+      
+      allow read: if isOwner(resource.data.userId);
+      allow read: if isModerator();
+      
+      allow create: if isAuthenticated() && 
+                    isActiveUser(request.auth.uid) && 
+                    isNotBanned(request.auth.uid) &&
+                    isOwner(request.resource.data.userId) &&
+                    request.resource.data.keys().hasAll([
+                      'title', 'description', 'price', 'category', 'city', 
+                      'status', 'userId', 'createdAt', 'updatedAt'
+                    ]) &&
+                    request.resource.data.status in ['draft', 'active'] &&
+                    request.resource.data.userId == request.auth.uid &&
+                    isValidTimestamp(request.resource.data.createdAt) &&
+                    isValidTimestamp(request.resource.data.updatedAt);
+      
+      allow update: if isOwner(resource.data.userId) && 
+                    isActiveUser(request.auth.uid) && 
+                    isNotBanned(request.auth.uid) &&
+                    request.resource.data.userId == resource.data.userId &&
+                    request.resource.data.status != 'deleted' &&
+                    request.resource.data.isFeatured == resource.data.isFeatured &&
+                    request.resource.data.featuredUntil == resource.data.featuredUntil;
+      
+      allow update: if isModerator() &&
+                    isValidTimestamp(request.resource.data.updatedAt);
+      
+      allow delete: if false;
+    }
+    
+    // chats collection
+    match /chats/{chatId} {
+      allow read: if (isOwner(resource.data.buyerId) || 
+                    isOwner(resource.data.sellerId)) &&
+                    isActiveUser(resource.data.buyerId) &&
+                    isActiveUser(resource.data.sellerId) &&
+                    isNotBanned(resource.data.buyerId) &&
+                    isNotBanned(resource.data.sellerId);
+      
+      allow read: if isModerator();
+      
+      allow create: if isAuthenticated() && 
+                    isActiveUser(request.auth.uid) && 
+                    isNotBanned(request.auth.uid) &&
+                    isOwner(request.resource.data.buyerId) &&
+                    get(/databases/$(database)/documents/listings/$(request.resource.data.listingId)).data.userId == request.resource.data.sellerId &&
+                    get(/databases/$(database)/documents/listings/$(request.resource.data.listingId)).data.isActive == true &&
+                    !exists(/databases/$(database)/documents/chats/$(chatId)) &&
+                    request.resource.data.keys().hasAll([
+                      'buyerId', 'sellerId', 'listingId', 'createdAt', 'updatedAt'
+                    ]) &&
+                    isValidTimestamp(request.resource.data.createdAt) &&
+                    isValidTimestamp(request.resource.data.updatedAt);
+      
+      allow update: if (isOwner(resource.data.buyerId) || 
+                    isOwner(resource.data.sellerId)) &&
+                    isActiveUser(resource.data.buyerId) &&
+                    isActiveUser(resource.data.sellerId) &&
+                    isNotBanned(resource.data.buyerId) &&
+                    isNotBanned(resource.data.sellerId) &&
+                    request.resource.data.buyerId == resource.data.buyerId &&
+                    request.resource.data.sellerId == resource.data.sellerId &&
+                    request.resource.data.listingId == resource.data.listingId &&
+                    isValidTimestamp(request.resource.data.updatedAt);
+      
+      allow delete: if false;
+      
+      // messages subcollection
       match /messages/{messageId} {
-        allow read, create: if isAuthenticated(); // Should ideally check if user is part of the chat
+        allow read: if (isOwner(get(/databases/$(database)/documents/chats/$(chatId)).data.buyerId) || 
+                      isOwner(get(/databases/$(database)/documents/chats/$(chatId)).data.sellerId)) &&
+                      isActiveUser(get(/databases/$(database)/documents/chats/$(chatId)).data.buyerId) &&
+                      isActiveUser(get(/databases/$(database)/documents/chats/$(chatId)).data.sellerId) &&
+                      isNotBanned(get(/databases/$(database)/documents/chats/$(chatId)).data.buyerId) &&
+                      isNotBanned(get(/databases/$(database)/documents/chats/$(chatId)).data.sellerId);
+        
+        allow read: if isModerator();
+        
+        allow create: if isAuthenticated() && 
+                      isActiveUser(request.auth.uid) && 
+                      isNotBanned(request.auth.uid) &&
+                      (isOwner(get(/databases/$(database)/documents/chats/$(chatId)).data.buyerId) || 
+                       isOwner(get(/databases/$(database)/documents/chats/$(chatId)).data.sellerId)) &&
+                      (request.resource.data.senderId == get(/databases/$(database)/documents/chats/$(chatId)).data.buyerId ||
+                       request.resource.data.senderId == get(/databases/$(database)/documents/chats/$(chatId)).data.sellerId) &&
+                      request.resource.data.senderId == request.auth.uid &&
+                      request.resource.data.keys().hasAll([
+                        'content', 'type', 'senderId', 'senderRole', 'createdAt'
+                      ]) &&
+                      isValidTimestamp(request.resource.data.createdAt);
+        
+        allow update: if isOwner(resource.data.senderId) &&
+                      isActiveUser(request.auth.uid) && 
+                      isNotBanned(request.auth.uid) &&
+                      request.resource.data.senderId == resource.data.senderId &&
+                      request.resource.data.type == resource.data.type &&
+                      isValidTimestamp(request.resource.data.updatedAt);
+        
+        allow delete: if false;
       }
     }
-
-    match /bookings/{bookingId} {
-      allow read: if isAuthenticated() && (isOwner(resource.data.user_id) || isOwner(resource.data.host_id));
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (isOwner(resource.data.user_id) || isOwner(resource.data.host_id));
+    
+    // favorites collection
+    match /favorites/{favoriteId} {
+      allow read: if isOwner(resource.data.userId) &&
+                    isActiveUser(request.auth.uid) && 
+                    isNotBanned(request.auth.uid);
+      
+      allow read: if isOwner(get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.userId) &&
+                    isActiveUser(get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.userId) &&
+                    isNotBanned(get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.userId);
+      
+      allow create: if isAuthenticated() && 
+                    isActiveUser(request.auth.uid) && 
+                    isNotBanned(request.auth.uid) &&
+                    isOwner(request.resource.data.userId) &&
+                    request.resource.data.userId == request.auth.uid &&
+                    get(/databases/$(database)/documents/listings/$(request.resource.data.listingId)).data.isActive == true &&
+                    !exists(/databases/$(database)/documents/favorites/$(favoriteId)) &&
+                    request.resource.data.keys().hasAll([
+                      'userId', 'listingId', 'createdAt'
+                    ]) &&
+                    isValidTimestamp(request.resource.data.createdAt);
+      
+      allow delete: if isOwner(resource.data.userId) &&
+                    isActiveUser(request.auth.uid) && 
+                    isNotBanned(request.auth.uid);
+      
+      allow update: if false;
     }
     
-    match /listing_boosts/{boostId} {
-      allow read, create: if isAuthenticated() && isOwner(request.resource.data.user_id);
-      allow update: if isAuthenticated() && isOwner(resource.data.user_id);
-    }
-    
-    match /invoices/{invoiceId} {
-      allow read: if isAuthenticated() && isOwner(resource.data.user_id);
-      allow create: if false; // Only written by Cloud Functions
-    }
-
+    // reports collection
     match /reports/{reportId} {
-      allow create: if isAuthenticated();
-      allow read, update, delete: if false; // Only admin can read/update (via Cloud Functions or Admin SDK)
+      allow read: if isOwner(resource.data.reporterId) &&
+                    isActiveUser(request.auth.uid) && 
+                    isNotBanned(request.auth.uid);
+      
+      allow read: if isModerator();
+      
+      allow create: if isAuthenticated() && 
+                    isActiveUser(request.auth.uid) && 
+                    isNotBanned(request.auth.uid) &&
+                    isOwner(request.resource.data.reporterId) &&
+                    request.resource.data.reporterId == request.auth.uid &&
+                    request.resource.data.keys().hasAll([
+                      'type', 'targetId', 'reason', 'description', 'reporterId', 'createdAt'
+                    ]) &&
+                    request.resource.data.type in ['listing', 'user', 'message'] &&
+                    isValidTimestamp(request.resource.data.createdAt);
+      
+      allow update: if isModerator() &&
+                    isValidTimestamp(request.resource.data.updatedAt);
+      
+      allow delete: if false;
     }
     
-    match /admin_users/{userId} {
-      allow read: if true;
-      allow write: if false;
+    // listingBoosts collection
+    match /listingBoosts/{boostId} {
+      allow read: if isOwner(resource.data.userId) &&
+                    isActiveUser(request.auth.uid) && 
+                    isNotBanned(request.auth.uid);
+      
+      allow read: if isOwner(get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.userId) &&
+                    isActiveUser(get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.userId) &&
+                    isNotBanned(get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.userId);
+      
+      allow read: if isAdmin();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
     
-    match /pricing_tiers/{tierId} {
-      allow read: if true;
-      allow write: if isAuthenticated(); // Should ideally check listing owner
+    // invoices collection
+    match /invoices/{invoiceId} {
+      allow read: if isOwner(resource.data.userId) &&
+                    isActiveUser(request.auth.uid) && 
+                    isNotBanned(request.auth.uid);
+      
+      allow read: if isAdmin();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
     
-    match /experience_availability/{availId} {
-      allow read: if true;
-      allow write: if isAuthenticated(); // Should ideally check listing owner
-    }
-    
-    match /todos/{todoId} {
-      allow read, write: if isAuthenticated() && isOwner(resource.data.user_id);
-    }
-
-    // ===== Smart Activity & Trust Engine ===== //
-
-    match /activities/{activityId} {
-      allow read: if true;
-      // Only Cloud Functions (via Admin SDK) can write activity documents.
-      // Direct client writes are not permitted.
-      allow create, update, delete: if false;
-    }
-
-    match /reviews/{reviewId} {
-      allow read: if true;
-      // Reviews are written server-side by the createReview Cloud Function.
+    // paymentAuditLog collection
+    match /paymentAuditLog/{logId} {
+      allow read: if isAdmin();
       allow create: if false;
       allow update, delete: if false;
     }
 
-    match /operators/{operatorId} {
-      allow read: if true;
-      // Operator trust records are written by computeTrustScore Cloud Function.
-      allow write: if false;
+    // payments collection — written by Cloud Functions (Admin SDK) only
+    // Buyers and sellers may read their own payment documents
+    match /payments/{orderId} {
+      allow read: if isAuthenticated() &&
+                    (request.auth.uid == resource.data.buyerId ||
+                     request.auth.uid == resource.data.sellerId);
+      allow read: if isAdmin();
+      // No client writes — all writes are via Cloud Functions with Admin SDK
+      allow create, update, delete: if false;
     }
 
-    match /audit_logs/{logId} {
-      allow read: if false;
-      allow create: if isAuthenticated();
+    // paymentEvents collection — immutable audit log, server-write only
+    match /paymentEvents/{eventId} {
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    // purchases collection — written by webhook (Admin SDK), read by buyer/seller
+    match /purchases/{purchaseId} {
+      allow read: if isAuthenticated() &&
+                    (request.auth.uid == resource.data.buyerId ||
+                     request.auth.uid == resource.data.sellerId);
+      allow read: if isAdmin();
+      allow create, update, delete: if false;
+    }
+
+    // notifications collection — written by Cloud Functions, read by recipient only
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() &&
+                    request.auth.uid == resource.data.userId;
+      allow update: if isAuthenticated() &&
+                    request.auth.uid == resource.data.userId &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']) &&
+                    request.resource.data.read == true;
+      allow create, delete: if false;
+    }
+
+    // auditLogs collection
+    match /auditLogs/{logId} {
+      allow read: if isOwner(resource.data.userId) &&
+                    isActiveUser(request.auth.uid) && 
+                    isNotBanned(request.auth.uid);
+      
+      allow read: if isAdmin();
+      allow create: if false;
+      allow update, delete: if false;
+    }
+    
+    // securityEvents collection
+    match /securityEvents/{eventId} {
+      allow read: if isAdmin();
+      allow create: if false;
+      
+      allow update: if isAdmin() &&
+                    request.resource.data.resolved == true &&
+                    request.resource.data.resolvedBy == request.auth.uid &&
+                    isValidTimestamp(request.resource.data.resolvedAt);
+      
+      allow delete: if false;
+    }
+    
+    // listingViews: intentionally omitted — write-only via Admin SDK in Cloud Functions.
+    // No client reads permitted. Covered by catch-all deny-all at top.
+    
+    // rateLimits collection
+    match /rateLimits/{limitId} {
+      allow read, write: if false;
+    }
+    
+    // categories collection
+    match /categories/{categoryId} {
+      allow read: if resource.data.isActive == true;
+      allow read: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if false;
+    }
+    
+    // appConfig collection
+    match /appConfig/{configId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // recommendations collection
+    match /recommendations/{recId} {
+      allow read: if isOwner(resource.data.userId) &&
+                    isActiveUser(request.auth.uid) && 
+                    isNotBanned(request.auth.uid) &&
+                    resource.data.expiresAt > request.time;
+      
+      allow create, update: if false;
+      allow delete: if false;
+    }
+    
+    // trending collection
+    match /trending/{trendingId} {
+      allow read: if true;
+      allow create, update: if false;
+      allow delete: if false;
+    }
+    
+    // fcmTokens collection — push notification registration
+    // Users can only read/write their own token document (keyed by uid).
+    // Server reads all tokens via Admin SDK for broadcast.
+    match /fcmTokens/{userId} {
+      allow read, write: if request.auth != null &&
+                           request.auth.uid == userId &&
+                           isActiveUser(request.auth.uid) &&
+                           isNotBanned(request.auth.uid);
+      allow read: if isAdmin();
+      allow delete: if request.auth != null && request.auth.uid == userId;
     }
   }
 }

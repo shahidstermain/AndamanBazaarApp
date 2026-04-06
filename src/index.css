@@ -1,8 +1,7 @@
+/* stylelint-disable at-rule-no-unknown */
 @tailwind base;
 @tailwind components;
-@tailwind utilities;
-
-/* ============================================
+@tailwind utilities;/* ============================================
    CSS CUSTOM PROPERTIES — ISLAND DESIGN TOKENS
    Refined from Stitch designs: Ocean + Coral palette
    ============================================ */
@@ -183,6 +182,10 @@
    COMPONENT LAYER — Stitch-Refined
    ============================================ */
 @layer components {
+  /* --- Typography Scale --- */
+  .text-2xs { font-size: 0.625rem; line-height: 0.75rem; } /* 10px - labels, badges */
+  .text-3xs { font-size: 0.5rem; line-height: 0.625rem; } /* 8px - tiny badges */
+
   .app-container {
     @apply max-w-7xl mx-auto px-4 md:px-6;
   }
@@ -392,7 +395,7 @@
 
   /* --- Hero Tags (Stitch-inspired pill badge) --- */
   .hero-tag {
-    @apply inline-flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full shadow-sm border border-gray-100;
+    @apply inline-flex items-center gap-1.5 bg-white px-3 py-1.5 rounded-full shadow-sm;
   }
 
   .hero-tag .icon {
@@ -575,7 +578,7 @@
     display: none;
   }
 
-  @supports (scrollbar-width: none) {
+  @supports (scrollbar-width: none) or (scrollbar-color: auto) {
     .hide-scrollbar {
       scrollbar-width: none;
     }
@@ -690,6 +693,15 @@
 
 .animate-glow-pulse {
   animation: glowPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
 }
 
 @keyframes slideInUp {

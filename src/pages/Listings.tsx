@@ -1,14 +1,15 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { collection, query, where, orderBy, limit, getDocs, doc, deleteDoc, setDoc } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
-import { Listing } from '../types';
-import { Search, MapPin, Heart, Sparkles, Filter, X, ChevronDown, ArrowUpDown, Loader2 } from 'lucide-react';
+import { auth, db } from '../lib/firebase';
+import { collection, query, where, orderBy, getDocs, addDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { TrustBadge } from '../components/TrustBadge';
+import { FreshnessBadge } from '../components/FreshnessBadge';
+import { Search, MapPin, Heart, Sparkles, Filter, X, ChevronDown, ArrowUpDown, Loader2, Bell } from 'lucide-react';
 import { useToast } from '../components/Toast';
 import { isDemoListing } from '../lib/demoListings';
-import { COPY } from '../lib/localCopy';
-import { FilterSidebar, ActivityFilters, DEFAULT_FILTERS, PRICE_MAX } from '../components/FilterSidebar';
+import { UrgentBadge } from '../components/UrgentBadge';
+import { Seo } from '../components/Seo';
+import { FilterSidebar, FilterState, DurationOption } from '../components/FilterSidebar';
 
 const CATEGORIES = [
   { label: '🌊 All', slug: 'all' },
@@ -21,6 +22,31 @@ const CATEGORIES = [
   { label: '🛒 General', slug: 'other' },
   { label: '🏖️ Tourism', slug: 'tourism' },
 ];
+
+const AREAS = [
+  { label: '🏝️ All Areas', value: '' },
+  { label: '🌆 Port Blair', value: 'Port Blair' },
+  { label: '🏖️ Havelock Island', value: 'Havelock' },
+  { label: '🏝️ Neil Island', value: 'Neil Island' },
+  { label: '🌴 Diglipur', value: 'Diglipur' },
+  { label: '🌊 Car Nicobar', value: 'Car Nicobar' },
+  { label: '🏞️ Mayabunder', value: 'Mayabunder' },
+];
+
+const CONDITIONS = [
+  { label: 'All Conditions', value: '' },
+  { label: 'New', value: 'new' },
+  { label: 'Used', value: 'used' },
+  { label: 'Refurbished', value: 'refurbished' },
+];
+
+const DATE_RANGES = [
+  { label: 'Any time', value: '' },
+  { label: 'Last 24 hours', value: '1' },
+  { label: 'Last 7 days', value: '7' },
+  { label: 'Last 30 days', value: '30' },
+];
+
 const PAGE_SIZE = 20;
 
 type SortOption = 'newest' | 'price_low' | 'price_high' | 'most_viewed';
@@ -36,95 +62,34 @@ export const Listings: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+  // Unified filter state
+  const [showVerifiedOnly, setShowVerifiedOnly] = useState(searchParams.get('verified') === 'true');
+  const [showUrgentOnly, setShowUrgentOnly] = useState(searchParams.get('urgent') === 'true');
   const [activeCategory, setActiveCategory] = useState<string | null>(searchParams.get('category'));
+  const [activeArea, setActiveArea] = useState<string>(searchParams.get('area') || '');
+  const [activeCondition, setActiveCondition] = useState<string>(searchParams.get('condition') || '');
+  const [activeDateRange, setActiveDateRange] = useState<string>(searchParams.get('dateRange') || '');
+  const [filters, setFilters] = useState<FilterState>({
+    location: searchParams.get('area') || '',
+    category: searchParams.get('category') ? (CATEGORIES.find(c => c.slug === searchParams.get('category'))?.label.replace(/[^a-zA-Z\s]/g, '').trim() || '') : '',
+    minPrice: '',
+    maxPrice: '',
+    durations: [],
+  });
   const [listings, setListings] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
   const { showToast } = useToast();
 
-  // Sort & Filter state
   const [sortBy, setSortBy] = useState<SortOption>('newest');
-  const [showFilters, setShowFilters] = useState(false);
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
   const [showSortDropdown, setShowSortDropdown] = useState(false);
-  const [showVerifiedOnly, setShowVerifiedOnly] = useState(searchParams.get('verified') === 'true');
-  const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
-  // Activity sidebar filters
-  const [activityFilters, setActivityFilters] = useState<ActivityFilters>(DEFAULT_FILTERS);
-  const [showSidebar, setShowSidebar] = useState(false);
-
-  // Infinite scroll observer
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const buildQuery = useCallback((offset: number) => {
-    const constraints: any[] = [where('status', '==', 'active')];
-
-    const cat = searchParams.get('category');
-    if (cat && cat !== 'all') {
-      constraints.push(where('category_id', '==', cat));
-    }
-
-    const verified = searchParams.get('verified');
-    if (verified === 'true') {
-      constraints.push(where('is_location_verified', '==', true));
-    }
-
-    if (activityFilters.location) {
-      constraints.push(where('city', '==', activityFilters.location));
-    }
-    if (activityFilters.category) {
-      constraints.push(where('category_id', '==', activityFilters.category));
-    }
-
-    // Sorting
-    switch (sortBy) {
-      case 'price_low':
-        constraints.push(orderBy('price', 'asc'));
-        break;
-      case 'price_high':
-        constraints.push(orderBy('price', 'desc'));
-        break;
-      case 'most_viewed':
-        constraints.push(orderBy('views_count', 'desc'));
-        break;
-      case 'newest':
-      default:
-        constraints.push(orderBy('created_at', 'desc'));
-        break;
-    }
-
-    constraints.push(limit(PAGE_SIZE));
-
-    return query(collection(db, 'listings'), ...constraints);
-  }, [searchParams, sortBy, activityFilters]);
-
-  const applyClientSideFilters = useCallback((results: any[]) => {
-    let filtered = results;
-
-    // Price — client-side (avoids composite index requirement)
-    filtered = filtered.filter(
-      (l) =>
-        l.price >= activityFilters.priceMin &&
-        (activityFilters.priceMax >= PRICE_MAX || l.price <= activityFilters.priceMax)
-    );
-
-    // Duration — client-side
-    if (activityFilters.durations.length > 0) {
-      filtered = filtered.filter(
-        (l) => l.duration && activityFilters.durations.includes(l.duration)
-      );
-    }
-
-    return filtered;
-  }, [activityFilters]);
-
-  /** 
-   * Fetches listings from Supabase with native filters and applies client-side filters.
-   */
   const fetchListings = useCallback(async (reset = true) => {
     if (reset) {
       setLoading(true);
@@ -134,51 +99,101 @@ export const Listings: React.FC = () => {
     }
 
     try {
-      const q = buildQuery(reset ? 0 : (page + 1) * PAGE_SIZE);
-      const snapshot = await getDocs(q);
-      const results = snapshot.docs.map(d => {
-        const data = d.data();
-        return { id: d.id, ...data, images: data.images || [] };
-      });
+      const q = searchQuery.toLowerCase();
+      
+      const constraints: any[] = [where('status', '==', 'active')];
+      
+      if (filters.category && filters.category !== 'All Categories') {
+        const catSlug = filters.category.toLowerCase().replace(/\s+/g, '-');
+        constraints.push(where('categoryId', '==', catSlug));
+      }
+      if (filters.location && filters.location !== 'All Locations') {
+         constraints.push(where('city', '==', filters.location));
+      }
+      
+      if (showVerifiedOnly) constraints.push(where('isLocationVerified', '==', true));
+      if (showUrgentOnly) constraints.push(where('is_urgent', '==', true));
 
-      // Apply client-side filters (search query, price range)
-      const searchQ = searchParams.get('q')?.toLowerCase();
-      let filtered = results;
-      if (searchQ) {
-        filtered = filtered.filter((l: any) =>
-          l.title?.toLowerCase().includes(searchQ) ||
-          l.description?.toLowerCase().includes(searchQ)
+      switch (sortBy) {
+        case 'price_low': constraints.push(orderBy('price', 'asc')); break;
+        case 'price_high': constraints.push(orderBy('price', 'desc')); break;
+        case 'most_viewed': constraints.push(orderBy('viewsCount', 'desc')); break;
+        default: constraints.push(orderBy('createdAt', 'desc')); break;
+      }
+
+      const snap = await getDocs(query(collection(db, 'listings'), ...constraints));
+      let results = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+
+      if (q) {
+        results = results.filter(l =>
+          l.title?.toLowerCase().includes(q) || l.description?.toLowerCase().includes(q)
         );
       }
-      if (minPrice && !isNaN(Number(minPrice))) {
-        filtered = filtered.filter((l: any) => l.price >= Number(minPrice));
+      if (filters.minPrice !== '' && !isNaN(Number(filters.minPrice))) {
+        results = results.filter(l => (l.price ?? 0) >= Number(filters.minPrice));
       }
-      if (maxPrice && !isNaN(Number(maxPrice))) {
-        filtered = filtered.filter((l: any) => l.price <= Number(maxPrice));
+      if (filters.maxPrice !== '' && !isNaN(Number(filters.maxPrice))) {
+        results = results.filter(l => (l.price ?? 0) <= Number(filters.maxPrice));
       }
-      filtered = applyClientSideFilters(filtered);
+      if (filters.durations.length > 0) {
+        results = results.filter(l => {
+          if (!l.durationMinutes) return false;
+          const mins = l.durationMinutes;
+          if (filters.durations.includes('< 2 hours') && mins < 120) return true;
+          if (filters.durations.includes('Half Day') && mins >= 120 && mins <= 360) return true;
+          if (filters.durations.includes('Full Day') && mins > 360) return true;
+          return false;
+        });
+      }
+
+      const offset = reset ? 0 : (page + 1) * PAGE_SIZE;
+      const paged = results.slice(offset, offset + PAGE_SIZE);
 
       if (reset) {
-        setListings(filtered);
+        setListings(paged);
       } else {
-        setListings(prev => [...prev, ...filtered]);
+        setListings(prev => [...prev, ...paged]);
       }
 
-      setHasMore(results.length === PAGE_SIZE);
+      setHasMore(results.length > offset + PAGE_SIZE);
       if (!reset) setPage(prev => prev + 1);
+      setError(null);
     } catch (err) {
       console.error('Error fetching listings:', err);
+      setError('Failed to load listings. Please check your connection.');
       setListings([]);
     } finally {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [buildQuery, applyClientSideFilters, page, searchParams, minPrice, maxPrice]);
+  }, [searchQuery, sortBy, filters, page, showVerifiedOnly, showUrgentOnly]);
+
+  const handleSaveSearch = async () => {
+    if (!auth.currentUser) {
+      showToast('Please login to save searches', 'error');
+      return;
+    }
+    try {
+      await addDoc(collection(db, 'saved_searches'), {
+        userId: auth.currentUser.uid,
+        query: searchQuery,
+        category: filters.category,
+        minPrice: filters.minPrice,
+        maxPrice: filters.maxPrice,
+        area: filters.location,
+        createdAt: serverTimestamp(),
+      });
+      showToast('Search saved! You\'ll be notified of new listings.', 'success');
+    } catch (err) {
+      console.error('Error saving search:', err);
+      showToast('Failed to save search', 'error');
+    }
+  };
 
   useEffect(() => {
-    fetchListings(true);
-    fetchFavorites();
-  }, [activeCategory, searchParams.get('q'), searchParams.get('verified'), sortBy, activityFilters]);
+    void fetchListings(true);
+    void fetchFavorites();
+  }, [filters, searchQuery, showVerifiedOnly, showUrgentOnly, sortBy]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -187,7 +202,7 @@ export const Listings: React.FC = () => {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !loadingMore) {
-          fetchListings(false);
+          void fetchListings(false);
         }
       },
       { rootMargin: '200px' }
@@ -211,55 +226,19 @@ export const Listings: React.FC = () => {
   const fetchFavorites = async () => {
     const user = auth.currentUser;
     if (!user) return;
-
-    const favsSnapshot = await getDocs(
-      query(collection(db, 'favorites'), where('user_id', '==', user.uid))
-    );
-    const favIds = new Set(favsSnapshot.docs.map(d => d.data().listing_id as string));
-    setFavorites(favIds);
-  };
-
-  const handleCategorySelect = (slug: string) => {
-    const val = slug === 'all' ? null : slug;
-    setActiveCategory(val);
-
-    const newParams = new URLSearchParams(searchParams);
-    if (val) newParams.set('category', val);
-    else newParams.delete('category');
-    setSearchParams(newParams);
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'favorites'), where('userId', '==', user.uid))
+      );
+      setFavorites(new Set(snap.docs.map(d => d.data().listingId as string)));
+    } catch (err) {
+      console.error('Error fetching favorites:', err);
+    }
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const newParams = new URLSearchParams(searchParams);
-    if (searchQuery.trim()) newParams.set('q', searchQuery.trim());
-    else newParams.delete('q');
-    setSearchParams(newParams);
-  };
-
-  const handleApplyPriceFilter = () => {
-    if (minPrice && maxPrice && Number(minPrice) > Number(maxPrice)) {
-      showToast('Min price cannot be greater than max price.', 'warning');
-      return;
-    }
-    const newParams = new URLSearchParams(searchParams);
-    if (showVerifiedOnly) newParams.set('verified', 'true');
-    else newParams.delete('verified');
-    setSearchParams(newParams);
-    fetchListings(true);
-    setShowFilters(false);
-  };
-
-  const handleClearFilters = () => {
-    setMinPrice('');
-    setMaxPrice('');
-    setSortBy('newest');
-    setShowVerifiedOnly(false);
-    setActivityFilters(DEFAULT_FILTERS);
-    const newParams = new URLSearchParams(searchParams);
-    newParams.delete('verified');
-    setSearchParams(newParams);
-    handleCategorySelect('all');
+    void fetchListings(true);
   };
 
   const toggleFavorite = async (listingId: string, e: React.MouseEvent) => {
@@ -272,232 +251,221 @@ export const Listings: React.FC = () => {
       return;
     }
 
-    const favDocId = `${user.uid}_${listingId}`;
-    const favRef = doc(db, 'favorites', favDocId);
     const isFav = favorites.has(listingId);
     if (isFav) {
-      await deleteDoc(favRef);
+      const snap = await getDocs(
+        query(collection(db, 'favorites'), where('userId', '==', user.uid), where('listingId', '==', listingId))
+      );
+      await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
       setFavorites(prev => { const n = new Set(prev); n.delete(listingId); return n; });
     } else {
-      await setDoc(favRef, { user_id: user.uid, listing_id: listingId, created_at: new Date().toISOString() });
+      await addDoc(collection(db, 'favorites'), {
+        userId: user.uid,
+        listingId,
+        createdAt: serverTimestamp(),
+      });
       setFavorites(prev => { const n = new Set(prev); n.add(listingId); return n; });
     }
   };
 
-  const hasActiveFilters =
-    minPrice ||
-    maxPrice ||
-    sortBy !== 'newest' ||
-    showVerifiedOnly ||
-    activityFilters.location !== '' ||
-    activityFilters.category !== '' ||
-    activityFilters.durations.length > 0 ||
-    activityFilters.priceMin !== DEFAULT_FILTERS.priceMin ||
-    activityFilters.priceMax !== DEFAULT_FILTERS.priceMax;
+  const hasActiveFilters = filters.minPrice !== '' || filters.maxPrice !== '' || sortBy !== 'newest' || showVerifiedOnly || showUrgentOnly || filters.location !== '' || filters.category !== '' || filters.durations.length > 0;
+
+  const pageTitle = searchQuery ? `Search results for "${searchQuery}"` : filters.category && filters.category !== 'All Categories' ? `Listings in ${filters.category}` : 'Browse All Listings';
+  const pageDescription = `Find local goods, services, and produce for sale in the Andaman & Nicobar Islands. ${searchQuery ? `Results for ${searchQuery}.` : ''}`;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Mobile Filter FAB */}
-      <button
-        onClick={() => setShowSidebar(true)}
-        className={`lg:hidden fixed bottom-6 right-6 z-40 flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm shadow-card-hover transition-all active:scale-95 ${
-          hasActiveFilters
-            ? 'bg-teal-600 text-white'
-            : 'bg-white border border-warm-200 text-midnight-700'
-        }`}
-        aria-label="Open activity filters"
-      >
-        <Filter size={15} className={hasActiveFilters ? 'text-white' : 'text-teal-500'} />
-        Filters
-        {hasActiveFilters && <span className="w-2 h-2 bg-white rounded-full" />}
-      </button>
-      <div className="mb-8 space-y-8">
-        {/* Search Bar */}
-        <form onSubmit={handleSearchSubmit} className="max-w-3xl mx-auto relative group">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-warm-300 group-focus-within:text-teal-500 transition-colors pointer-events-none">
-            <Search size={20} />
-          </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search across the islands…"
-            className="input-island h-14 pl-12 pr-12 shadow-card"
-          />
-          {searchQuery && (
-            <button onClick={() => { setSearchQuery(''); handleCategorySelect('all'); }} type="button" title="Clear search" aria-label="Clear search" className="absolute right-4 top-1/2 -translate-y-1/2 text-warm-300 hover:text-midnight-700 transition-colors">
-              <X size={18} />
-            </button>
-          )}
-        </form>
-
-        {/* Category + Filter/Sort Row */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 hide-scrollbar">
-            {CATEGORIES.map(cat => {
-              const isActive = cat.slug === 'all' ? !activeCategory : activeCategory === cat.slug;
-              return (
-                <button
-                  key={cat.slug}
-                  onClick={() => handleCategorySelect(cat.slug)}
-                  className={`flex-shrink-0 px-4 py-2 rounded-full text-[11px] font-bold transition-all duration-200 ${isActive
-                    ? 'bg-teal-600 text-white shadow-teal-glow scale-105'
-                    : 'bg-white text-warm-400 border border-warm-200 hover:border-teal-300 hover:text-teal-600'
-                    }`}
-                >
-                  {cat.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Sort & Filter Controls */}
-          <div className="flex items-center justify-between max-w-3xl mx-auto">
-            {/* Sort Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setShowSortDropdown(!showSortDropdown)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-warm-200 text-xs font-bold text-midnight-700 hover:border-teal-300 transition-all shadow-card"
-              >
-                <ArrowUpDown size={13} className="text-teal-500" />
-                <span>{SORT_LABELS[sortBy]}</span>
-                <ChevronDown size={13} className={`transition-transform text-warm-300 ${showSortDropdown ? 'rotate-180' : ''}`} />
-              </button>
-              {showSortDropdown && (
-                <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl border border-warm-200 shadow-card-hover z-30 overflow-hidden min-w-[210px] animate-fade-in">
-                  {(Object.keys(SORT_LABELS) as SortOption[]).map(key => (
-                    <button
-                      key={key}
-                      onClick={() => { setSortBy(key); setShowSortDropdown(false); }}
-                      className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors ${sortBy === key ? 'bg-teal-50 text-teal-700 font-black' : 'text-midnight-700 hover:bg-warm-50'
-                        }`}
-                    >
-                      {SORT_LABELS[key]}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Filter Button */}
+    <>
+      <Seo title={pageTitle} description={pageDescription} />
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="flex flex-col lg:flex-row gap-8">
+          
+          {/* Mobile Filter Toggle */}
+          <div className="lg:hidden flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-black text-midnight-700">Explore</h1>
             <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold transition-all shadow-card ${hasActiveFilters
-                ? 'bg-teal-50 border-teal-300 text-teal-700'
-                : 'bg-white border-warm-200 text-midnight-700 hover:border-teal-300'
-                }`}
+              onClick={() => setIsMobileFiltersOpen(!isMobileFiltersOpen)}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-warm-200 rounded-xl shadow-sm text-sm font-bold text-midnight-700"
             >
-              <Filter size={13} className={hasActiveFilters ? 'text-teal-500' : 'text-warm-400'} />
-              <span>Filters</span>
-              {hasActiveFilters && <span className="w-2 h-2 bg-teal-500 rounded-full" />}
+              <Filter size={16} className="text-teal-600" />
+              Filters
+              {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-teal-500" />}
             </button>
           </div>
 
-          {/* Price Filter Panel */}
-          {showFilters && (
-            <div className="max-w-3xl mx-auto bg-white rounded-2xl border border-warm-200 shadow-card-hover p-5 space-y-4 animate-fade-in">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-heading font-bold text-midnight-700">Price Range</h4>
-                <button onClick={() => setShowFilters(false)} title="Close filters" aria-label="Close filters" className="text-warm-300 hover:text-midnight-700 transition-colors">
-                  <X size={18} />
-                </button>
-              </div>
+          {/* Sidebar */}
+          <div className={`w-full lg:w-72 flex-shrink-0 ${isMobileFiltersOpen ? 'block' : 'hidden lg:block'}`}>
+            <FilterSidebar filters={filters} onChange={setFilters} className="sticky top-24 z-20" />
+          </div>
+
+          {/* Main Content */}
+          <div className="flex-1 space-y-6">
+            
+            {/* Search Bar & Sort Row */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-warm-200 shadow-sm">
+              <form onSubmit={handleSearchSubmit} className="relative flex-1">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-warm-400">
+                  <Search size={18} />
+                </div>
+                <input
+                  id="search-input"
+                  name="q"
+                  aria-label="Search listings"
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search across the islands…"
+                  className="w-full h-12 pl-12 pr-12 bg-warm-50 border-none rounded-xl text-sm font-medium focus:ring-2 focus:ring-teal-500/20 transition-all"
+                />
+                {searchQuery && (
+                  <button aria-label="Clear search" title="Clear search" onClick={() => { setSearchQuery(''); handleSearchSubmit({ preventDefault: () => {} } as any); }} type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-warm-300 hover:text-midnight-700">
+                    <X size={16} />
+                  </button>
+                )}
+              </form>
+
               <div className="flex items-center gap-3">
-                <div className="flex-1">
-                  <label className="text-[10px] font-bold text-warm-400 uppercase tracking-widest mb-1.5 block">Min (₹)</label>
-                  <input type="number" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} placeholder="0" className="input-island" />
+                {/* Sort Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowSortDropdown(!showSortDropdown)}
+                    className="flex items-center gap-2 px-4 py-3 rounded-xl bg-warm-50 text-xs font-bold text-midnight-700 hover:bg-warm-100 transition-colors"
+                  >
+                    <ArrowUpDown size={14} className="text-teal-600" />
+                    <span className="whitespace-nowrap">{SORT_LABELS[sortBy]}</span>
+                    <ChevronDown size={14} className="text-warm-400" />
+                  </button>
+                  {showSortDropdown && (
+                    <div className="absolute top-full right-0 mt-2 bg-white rounded-xl border border-warm-200 shadow-xl z-30 min-w-[200px] overflow-hidden">
+                      {(Object.keys(SORT_LABELS) as SortOption[]).map(key => (
+                        <button
+                          key={key}
+                          onClick={() => { setSortBy(key); setShowSortDropdown(false); }}
+                          className={`w-full text-left px-5 py-3 text-xs font-bold transition-colors ${sortBy === key ? 'bg-teal-50 text-teal-700' : 'text-midnight-700 hover:bg-warm-50'}`}
+                        >
+                          {SORT_LABELS[key]}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <span className="text-warm-200 font-black mt-5">—</span>
-                <div className="flex-1">
-                  <label className="text-[10px] font-bold text-warm-400 uppercase tracking-widest mb-1.5 block">Max (₹)</label>
-                  <input type="number" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} placeholder="Any" className="input-island" />
-                </div>
-              </div>
-              <div className="flex items-center justify-between rounded-2xl border border-warm-200 px-4 py-3">
-                <div>
-                  <p className="text-xs font-bold text-midnight-700">Verified Sellers Only</p>
-                  <p className="text-[10px] text-warm-400">GPS-verified island residents</p>
-                </div>
+
                 <button
-                  type="button"
-                  role="switch"
-                  aria-checked={showVerifiedOnly === true}
-                  onClick={() => setShowVerifiedOnly(prev => !prev)}
-                  aria-label="Toggle verified sellers only"
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${showVerifiedOnly ? 'bg-teal-600' : 'bg-warm-200'}`}
+                  onClick={handleSaveSearch}
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl bg-warm-50 text-xs font-bold text-midnight-700 hover:bg-warm-100 transition-colors"
+                  title="Save Search"
                 >
-                  <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${showVerifiedOnly ? 'translate-x-5' : 'translate-x-1'}`} />
+                  <Bell size={14} className="text-warm-400" />
+                  <span className="hidden sm:inline">Save</span>
                 </button>
               </div>
-              <div className="flex gap-3">
-                <button onClick={handleClearFilters} className="btn-secondary flex-1 text-sm py-2.5">Clear All</button>
-                <button onClick={handleApplyPriceFilter} className="btn-primary flex-[2] text-sm py-2.5">Apply Filters</button>
+
+              {/* Toggles Row */}
+              <div className="flex items-center gap-4 px-2 overflow-x-auto no-scrollbar">
+                <button
+                  role="switch"
+                  aria-checked={showVerifiedOnly ? "true" : "false"}
+                  onClick={() => setShowVerifiedOnly(!showVerifiedOnly)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                    showVerifiedOnly 
+                      ? 'bg-teal-500 text-white shadow-teal-mnm' 
+                      : 'bg-warm-50 text-warm-400 hover:bg-warm-100'
+                  }`}
+                >
+                  <Sparkles size={12} className={showVerifiedOnly ? 'animate-pulse' : ''} />
+                  Verified
+                </button>
+
+                <button
+                  role="switch"
+                  aria-checked={showUrgentOnly ? "true" : "false"}
+                  onClick={() => setShowUrgentOnly(!showUrgentOnly)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                    showUrgentOnly 
+                      ? 'bg-coral-500 text-white shadow-coral-mnm' 
+                      : 'bg-warm-50 text-warm-400 hover:bg-warm-100'
+                  }`}
+                >
+                  <Bell size={12} className={showUrgentOnly ? 'animate-bounce-subtle' : ''} />
+                  Urgent
+                </button>
               </div>
             </div>
-          )}
+
+      {/* Results Count */}
+      {!loading && listings.length > 0 && (
+        <div className="flex items-center justify-between mb-6">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            {listings.length} {listings.length === 1 ? 'item' : 'items'}{hasMore ? '+' : ''} found
+          </p>
         </div>
-      </div>
+      )}
 
-      {/* Main layout: Sidebar + Grid */}
-      <div className="flex gap-8 items-start">
-        {/* Filter Sidebar — desktop always visible, mobile overlay */}
-        <FilterSidebar
-          filters={activityFilters}
-          onChange={(f) => setActivityFilters(f)}
-          isOpen={showSidebar}
-          onClose={() => setShowSidebar(false)}
-        />
-
-        {/* Right column: results count + grid + sentinel */}
-        <div className="flex-1 min-w-0">
-          {/* Results Count */}
-          {!loading && listings.length > 0 && (
-            <div className="flex items-center justify-between mb-6">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                {listings.length} {listings.length === 1 ? 'item' : 'items'}{hasMore ? '+' : ''} found
+      {/* Listings Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
+        {loading ? (
+          [1, 2, 3, 4, 5, 6, 7, 8].map(n => <ListingSkeleton key={n} />)
+        ) : error ? (
+          <div className="col-span-full py-24 text-center space-y-5 bg-red-50 rounded-3xl border-2 border-dashed border-red-200 animate-fade-in">
+            <div className="text-5xl animate-bounce">⚠️</div>
+            <div className="space-y-1.5">
+              <h3 className="text-xl font-heading font-bold text-red-700">Connection Trouble</h3>
+              <p className="text-red-600/80 text-sm max-w-xs mx-auto">{error}</p>
+            </div>
+            <button 
+              onClick={() => void fetchListings(true)} 
+              className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95"
+            >
+              Try Again
+            </button>
+          </div>
+        ) : listings.length === 0 ? (
+          <div className="col-span-full py-24 text-center space-y-5 bg-warm-50 rounded-3xl border-2 border-dashed border-warm-200 animate-fade-in">
+            <div className="text-5xl animate-float">🏝️</div>
+            <div className="space-y-1.5">
+              <h3 className="text-xl font-heading font-bold text-midnight-700">
+                {searchQuery ? `No results for "${searchQuery}"` : 'No listings found in this category'}
+              </h3>
+              <p className="text-warm-400 text-sm max-w-xs mx-auto">
+                {hasActiveFilters 
+                  ? "Try adjusting your filters or search for 'All' to see more results."
+                  : "We couldn't find any listings here. Check back later or be the first to post!"}
               </p>
             </div>
-          )}
-
-          {/* Listings Grid */}
-          <div className="grid grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
-            {loading ? (
-              [1, 2, 3, 4, 5, 6].map(n => <ListingSkeleton key={n} />)
-            ) : listings.length === 0 ? (
-              <div className="col-span-full py-24 text-center space-y-5 bg-warm-50 rounded-3xl border-2 border-dashed border-warm-200 animate-fade-in">
-                <div className="text-5xl animate-float">🏝️</div>
-                <div className="space-y-1.5">
-                  <h3 className="text-xl font-heading font-bold text-midnight-700">{COPY.EMPTY_STATE.NO_SEARCH_RESULTS}</h3>
-                  <p className="text-warm-400 text-sm max-w-xs mx-auto">{COPY.EMPTY_STATE.NO_LISTINGS}</p>
-                </div>
-                <button onClick={handleClearFilters} className="btn-primary text-sm py-2.5">Clear Filters</button>
-              </div>
-            ) : (
-              listings.map((listing) => (
-                <ListingItem
-                  key={listing.id}
-                  listing={listing}
-                  isFavorited={favorites.has(listing.id)}
-                  onToggleFavorite={(e) => toggleFavorite(listing.id, e)}
-                />
-              ))
-            )}
-          </div>
-
-          {/* Infinite Scroll Sentinel */}
-          {hasMore && !loading && listings.length > 0 && (
-            <div ref={sentinelRef} className="flex items-center justify-center py-12">
-              {loadingMore && (
-                <div className="flex items-center gap-3">
-                  <Loader2 size={20} className="animate-spin text-ocean-600" />
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading more...</span>
-                </div>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mt-4">
+              {hasActiveFilters ? (
+                <button onClick={() => setFilters({ location: '', category: '', minPrice: '', maxPrice: '', durations: [] })} className="btn-secondary text-sm py-2.5">Clear Filters</button>
+              ) : (
+                <Link to="/post" className="btn-primary text-sm py-2.5">Post a Listing</Link>
               )}
+            </div>
+          </div>
+        ) : (
+          listings.map((listing) => (
+            <ListingItem
+              key={listing.id}
+              listing={listing}
+              isFavorited={favorites.has(listing.id)}
+              onToggleFavorite={(e) => toggleFavorite(listing.id, e)}
+            />
+          ))
+        )}
+      </div>
+
+      {/* Infinite Scroll Sentinel */}
+      {hasMore && !loading && listings.length > 0 && (
+        <div ref={sentinelRef} className="flex items-center justify-center py-12">
+          {loadingMore && (
+            <div className="flex items-center gap-3">
+              <Loader2 size={20} className="animate-spin text-ocean-600" />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loading more...</span>
             </div>
           )}
         </div>
+      )}
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -536,6 +504,12 @@ const ListingItem: React.FC<{ listing: any, isFavorited: boolean, onToggleFavori
           loading="lazy"
           alt={listing.title}
         />
+        {/* Urgent Badge */}
+        {listing.is_urgent && (
+          <div className="absolute top-2 left-2 z-10">
+            <UrgentBadge size="sm" />
+          </div>
+        )}
         <button
           onClick={onToggleFavorite}
           className={`absolute top-2 right-2 w-9 h-9 rounded-full flex items-center justify-center shadow-glass z-10 transition-all active:scale-90 ${isFavorited ? 'bg-coral-500' : 'bg-white/90 backdrop-blur-sm'
@@ -552,6 +526,29 @@ const ListingItem: React.FC<{ listing: any, isFavorited: boolean, onToggleFavori
         {listing.city && (
           <div className="absolute bottom-2 left-2 bg-white/90 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center gap-1 text-[9px] font-bold text-midnight-700 shadow-sm z-10">
             <MapPin size={8} className="text-teal-500" />{listing.city}
+          </div>
+        )}
+        {/* Freshness Badge */}
+        <div className="absolute top-8 left-2 z-10">
+          <FreshnessBadge
+            lastActiveAt={listing.last_active_at}
+            availabilityStatus={listing.availability_status}
+            responseRate={listing.response_rate}
+            avgResponseHours={listing.avg_response_hours}
+            size="sm"
+          />
+        </div>
+        {/* Trust Badge */}
+        {listing.seller && listing.seller.length > 0 && listing.seller[0].trust_level && listing.seller[0].trust_level !== 'newbie' && (
+          <div className="absolute bottom-8 left-2 flex items-center gap-2 z-10">
+            <TrustBadge level={listing.seller[0].trust_level} size="sm" showLabel={false} />
+            <Link 
+              to={`/seller/${listing.seller[0].user_id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-[10px] text-warm-600 hover:text-teal-600 transition-colors bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full"
+            >
+              {listing.seller[0].full_name}
+            </Link>
           </div>
         )}
         {/* Demo Badge */}

@@ -13,7 +13,7 @@ const defaultFilters: FilterValues = {
   priceMax: "",
 };
 
-export const ActivitiesPage = () => {
+const ActivitiesPage = () => {
   const [filters, setFilters] = useState<FilterValues>(defaultFilters);
   const [page, setPage] = useState(1);
   const [leadOpen, setLeadOpen] = useState(false);
@@ -108,3 +108,6 @@ export const ActivitiesPage = () => {
     </div>
   );
 };
+
+export { ActivitiesPage };
+export default ActivitiesPage;

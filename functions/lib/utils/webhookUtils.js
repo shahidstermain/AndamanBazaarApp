@@ -1,0 +1,109 @@
+"use strict";
+/**
+ * Utility functions for webhook processing that don't depend on heavy backend libraries.
+ * This allows them to be easily tested in frontend environments.
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.parseWebhookEvent = exports.verifyWebhookSignature = void 0;
+const node_crypto_1 = __importDefault(require("node:crypto"));
+/**
+ * Verify webhook signature using HMAC SHA256
+ *
+ * Per Cashfree v2025-01-01 API:
+ * - Signature header: x-webhook-signature
+ * - Timestamp header: x-webhook-ts
+ * - Signature = base64(HMAC-SHA256(timestamp + rawBody, clientSecret))
+ * - Use Client Secret Key (CASHFREE_SECRET_KEY)
+ */
+const verifyWebhookSignature = (payload, signature, secretKey, timestamp) => {
+    try {
+        const clientSecret = secretKey || process.env.CASHFREE_SECRET_KEY;
+        if (!clientSecret) {
+            console.error('CASHFREE_SECRET_KEY not found for webhook verification');
+            return false;
+        }
+        // v2025-01-01: signature = HMAC-SHA256(timestamp + rawBody)
+        const signatureData = timestamp ? `${timestamp}${payload}` : payload;
+        const expectedSignature = node_crypto_1.default
+            .createHmac('sha256', clientSecret)
+            .update(signatureData)
+            .digest('base64');
+        return signature === expectedSignature;
+    }
+    catch (error) {
+        console.error('Webhook signature verification failed', error);
+        return false;
+    }
+};
+exports.verifyWebhookSignature = verifyWebhookSignature;
+/**
+ * Parse webhook event payload
+ */
+const parseWebhookEvent = (payload) => {
+    try {
+        if (!payload || typeof payload !== 'string' || payload.trim() === '') {
+            throw new Error('Empty payload');
+        }
+        const event = JSON.parse(payload);
+        if (!event || typeof event !== 'object' || Array.isArray(event)) {
+            throw new Error('Payload must be a JSON object');
+        }
+        // Normalize v2025-01-01 format to include legacy fields for backward compatibility
+        const normalizedEvent = normalizeWebhookEvent(event);
+        return normalizedEvent;
+    }
+    catch (error) {
+        throw new Error(`Webhook event parsing failed: ${error instanceof Error ? error.message : 'Invalid JSON'}`);
+    }
+};
+exports.parseWebhookEvent = parseWebhookEvent;
+/**
+ * Normalize v2025-01-01 webhook event to include legacy fields
+ */
+const normalizeWebhookEvent = (event) => {
+    // If already has legacy fields, return as is
+    if (event.orderId) {
+        return event;
+    }
+    // v2025-01-01 format has nested data structure
+    if (event.data && event.data.order) {
+        const normalized = {
+            ...event,
+            timestamp: event.event_time,
+            orderId: event.data.order.order_id,
+            orderAmount: event.data.order.order_amount,
+            orderCurrency: event.data.order.order_currency,
+            orderStatus: deriveOrderStatus(event.type, event.data.payment?.payment_status),
+        };
+        // Add payment fields if present
+        if (event.data.payment) {
+            normalized.paymentId = event.data.payment.cf_payment_id;
+            normalized.paymentAmount = event.data.payment.payment_amount;
+            normalized.paymentCurrency = event.data.payment.payment_currency;
+            normalized.paymentStatus = event.data.payment.payment_status;
+            normalized.paymentTime = event.data.payment.payment_time;
+            normalized.paymentCompletionTime = event.data.payment.payment_time;
+        }
+        return normalized;
+    }
+    return event;
+};
+/**
+ * Derive order status from event type and payment status
+ */
+const deriveOrderStatus = (eventType, paymentStatus) => {
+    if (eventType === 'PAYMENT_SUCCESS_WEBHOOK' || paymentStatus === 'SUCCESS') {
+        return 'PAID';
+    }
+    if (eventType === 'PAYMENT_FAILED_WEBHOOK' || paymentStatus === 'FAILED') {
+        return 'ACTIVE';
+    }
+    if (eventType === 'PAYMENT_USER_DROPPED_WEBHOOK') {
+        return 'ACTIVE';
+    }
+    return 'ACTIVE';
+};
+//# sourceMappingURL=webhookUtils.js.map

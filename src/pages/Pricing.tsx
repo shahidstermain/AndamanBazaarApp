@@ -44,7 +44,7 @@ const TIER_ICONS: Record<string, { icon: LucideIcon; color: string; bgColor: str
 const BENEFITS = [
     {
         title: 'Massive Visibility',
-        desc: 'Reach thousands of verified local buyers in Andaman & Nicobar islands.',
+        desc: 'Reach verified local buyers across the Andaman & Nicobar islands.',
         icon: Users,
         color: 'text-blue-500',
         bg: 'bg-blue-50'
@@ -278,12 +278,14 @@ export const Pricing: React.FC = () => {
                         {/* Floating Trust stats */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="glass-dark p-8 rounded-3xl space-y-2">
-                                <span className="text-4xl font-black block">2.5k+</span>
-                                <span className="text-[10px] font-black uppercase tracking-[0.2rem] opacity-70">Local Sellers</span>
+                                <Users size={32} className="text-white mb-3" />
+                                <span className="text-xl font-black block leading-tight">Local<br/>Community</span>
+                                <span className="text-[10px] font-black uppercase tracking-[0.2rem] opacity-70 mt-2 block">Islanders Only</span>
                             </div>
                             <div className="glass-dark p-8 rounded-3xl space-y-2">
-                                <span className="text-4xl font-black block">12k+</span>
-                                <span className="text-[10px] font-black uppercase tracking-[0.2rem] opacity-70">Items Traded</span>
+                                <TrendingUp size={32} className="text-white mb-3" />
+                                <span className="text-xl font-black block leading-tight">Island<br/>Trade</span>
+                                <span className="text-[10px] font-black uppercase tracking-[0.2rem] opacity-70 mt-2 block">Buy & Sell</span>
                             </div>
                             <div className="glass-dark p-8 rounded-3xl space-y-2 col-span-2">
                                 <div className="flex items-center gap-2 mb-2">
@@ -324,7 +326,7 @@ export const Pricing: React.FC = () => {
                             <span className="text-2xl font-black tracking-tighter text-midnight-700">AndamanBazaar.</span>
                         </div>
                         <p className="text-midnight-400 text-sm font-medium leading-relaxed max-w-sm">
-                            The Islands' #1 local marketplace. Helping locals buy, sell, and trade since 2024.
+                            Buy & Sell locally in Andaman — no mainland scams.
                             Built with love in Port Blair.
                         </p>
                     </div>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { doc, getDoc, getDocs, updateDoc, collection, query, where, orderBy } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { db } from '../lib/firebase';
+import { auth } from '../lib/firebase';
+import { collection, getDocs, getCountFromServer, query, where, orderBy, updateDoc, doc } from 'firebase/firestore';
 import { Report, AppRole } from '../types';
 import {
   ShieldAlert, Users, FileText, CheckCircle, XCircle,
@@ -37,10 +38,13 @@ export const Admin: React.FC = () => {
         return;
       }
 
-      const rolesSnap = await getDocs(query(collection(db, 'user_roles'), where('user_id', '==', user.uid), where('role', '==', 'admin')));
-      const roles = rolesSnap.empty ? null : rolesSnap.docs[0].data();
+      const rolesSnap = await getDocs(
+        query(collection(db, 'user_roles'),
+          where('userId', '==', user.uid),
+          where('role', '==', 'admin'))
+      );
 
-      if (!roles) {
+      if (rolesSnap.empty) {
         showToast('Access denied. Admin privileges required.', 'error');
         navigate('/');
         return;
@@ -57,43 +61,22 @@ export const Admin: React.FC = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // Fetch all stats and reports in parallel
-      const [listingsSnap, activeSnap, pendingSnap, usersSnap, reportsSnap] = await Promise.all([
-        getDocs(collection(db, 'listings')),
-        getDocs(query(collection(db, 'listings'), where('status', '==', 'active'))),
-        getDocs(query(collection(db, 'reports'), where('status', '==', 'pending'))),
-        getDocs(collection(db, 'profiles')),
-        getDocs(query(collection(db, 'reports'), orderBy('created_at', 'desc')))
+      const [totalSnap, activeSnap, pendingSnap, usersSnap, reportsSnap] = await Promise.all([
+        getCountFromServer(collection(db, 'listings')),
+        getCountFromServer(query(collection(db, 'listings'), where('status', '==', 'active'))),
+        getCountFromServer(query(collection(db, 'reports'), where('status', '==', 'pending'))),
+        getCountFromServer(collection(db, 'users')),
+        getDocs(query(collection(db, 'reports'), orderBy('createdAt', 'desc'))),
       ]);
 
-      const totalListings = listingsSnap.size;
-      const activeListings = activeSnap.size;
-      const pendingReports = pendingSnap.size;
-      const totalUsers = usersSnap.size;
-
-      // Enrich reports with reporter and listing data
-      const reportsRaw = reportsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-      const reportsData = await Promise.all(reportsRaw.map(async (r: any) => {
-        let reporter = null;
-        let listing = null;
-        try {
-          if (r.reporter_id) { const s = await getDoc(doc(db, 'profiles', r.reporter_id)); if (s.exists()) reporter = s.data(); }
-          if (r.listing_id) { const s = await getDoc(doc(db, 'listings', r.listing_id)); if (s.exists()) listing = { id: s.id, ...s.data() }; }
-        } catch {}
-        return { ...r, reporter, listing };
-      }));
-      const error = null;
-
       setStats({
-        totalListings: totalListings || 0,
-        activeListings: activeListings || 0,
-        pendingReports: pendingReports || 0,
-        totalUsers: totalUsers || 0
+        totalListings: totalSnap.data().count,
+        activeListings: activeSnap.data().count,
+        pendingReports: pendingSnap.data().count,
+        totalUsers: usersSnap.data().count,
       });
 
-      if (error) throw error;
-      setReports(reportsData || []);
-
+      setReports(reportsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any);
     } catch (err) {
       console.error('Error fetching admin data:', err);
       showToast('Failed to load dashboard data', 'error');
@@ -104,11 +87,7 @@ export const Admin: React.FC = () => {
 
   const updateReportStatus = async (reportId: string, newStatus: string) => {
     try {
-      const reportRef = doc(db, 'reports', reportId);
-      await updateDoc(reportRef, { status: newStatus });
-      const error = null;
-
-      if (error) throw error;
+      await updateDoc(doc(db, 'reports', reportId), { status: newStatus });
 
       setReports(prev => prev.map(r => 
         r.id === reportId ? { ...r, status: newStatus as any } : r
@@ -254,7 +233,7 @@ export const Admin: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-warm-100 text-midnight-700 text-xs font-bold capitalize">
                           <AlertTriangle size={12} className="text-coral-500" />
-                          {report.reason?.replace('_', ' ') || 'Unknown Reason'}
+                          {report.reason.replace('_', ' ')}
                         </div>
                         {report.description && (
                           <p className="text-xs text-warm-500 mt-1 max-w-xs truncate" title={report.description}>

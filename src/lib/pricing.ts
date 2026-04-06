@@ -23,7 +23,7 @@ export interface BoostTierConfig {
 /**
  * Canonical boost tier definitions.
  * ⚠️  If you change prices here, you MUST also update:
- *   - supabase/functions/create-boost-order/index.ts (TIERS constant)
+ *   - functions/src/payments/createOrder.ts (tier pricing logic)
  */
 export const BOOST_TIERS: BoostTierConfig[] = [
     {

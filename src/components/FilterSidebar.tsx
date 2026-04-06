@@ -1,323 +1,176 @@
-import React from 'react';
-import { X, SlidersHorizontal } from 'lucide-react';
+import React, { useState } from 'react';
+import { SlidersHorizontal, MapPin, Clock, Tag, IndianRupee } from 'lucide-react';
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+export type DurationOption = '< 2 hours' | 'Half Day' | 'Full Day';
 
-export const ACTIVITY_LOCATIONS = [
-  { label: 'Any Location', value: '' },
-  { label: 'Port Blair',   value: 'port-blair' },
-  { label: 'Havelock',     value: 'havelock' },
-  { label: 'Neil Island',  value: 'neil-island' },
-  { label: 'Baratang',     value: 'baratang' },
-] as const;
-
-export const ACTIVITY_CATEGORIES = [
-  { label: 'All Categories', value: '' },
-  { label: '🤿 Water Sports', value: 'water-sports' },
-  { label: '🏛️ History',      value: 'history' },
-  { label: '🥾 Trekking',     value: 'trekking' },
-  { label: '🌴 Leisure',      value: 'leisure' },
-] as const;
-
-export const DURATION_OPTIONS = [
-  { label: '< 2 Hours', value: '<2h' },
-  { label: 'Half Day',  value: 'half-day' },
-  { label: 'Full Day',  value: 'full-day' },
-] as const;
-
-export const PRICE_MIN = 500;
-export const PRICE_MAX = 10000;
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-export interface ActivityFilters {
+export interface FilterState {
   location: string;
   category: string;
-  priceMin: number;
-  priceMax: number;
-  durations: string[];
+  minPrice: number | '';
+  maxPrice: number | '';
+  durations: DurationOption[];
 }
-
-export const DEFAULT_FILTERS: ActivityFilters = {
-  location: '',
-  category: '',
-  priceMin: PRICE_MIN,
-  priceMax: PRICE_MAX,
-  durations: [],
-};
-
-// ── Helper ────────────────────────────────────────────────────────────────────
-
-const formatPrice = (v: number) =>
-  v >= PRICE_MAX ? '₹10,000+' : `₹${v.toLocaleString('en-IN')}`;
-
-// ── Component ─────────────────────────────────────────────────────────────────
 
 interface FilterSidebarProps {
-  filters: ActivityFilters;
-  onChange: (filters: ActivityFilters) => void;
-  /** Mobile: whether the sidebar overlay is open */
-  isOpen?: boolean;
-  onClose?: () => void;
+  filters: FilterState;
+  onChange: (newFilters: FilterState) => void;
+  className?: string;
 }
 
-export const FilterSidebar: React.FC<FilterSidebarProps> = ({
-  filters,
-  onChange,
-  isOpen = true,
-  onClose,
-}) => {
-  const update = (partial: Partial<ActivityFilters>) =>
-    onChange({ ...filters, ...partial });
+const LOCATIONS = ['Port Blair', 'Havelock', 'Neil Island', 'Baratang', 'Diglipur', 'All Locations'];
+const CATEGORIES = ['All Categories', 'Water Sports', 'History', 'Trekking', 'Leisure', 'Experiences'];
+const DURATIONS: DurationOption[] = ['< 2 hours', 'Half Day', 'Full Day'];
 
-  const toggleDuration = (val: string) => {
-    const next = filters.durations.includes(val)
-      ? filters.durations.filter((d) => d !== val)
-      : [...filters.durations, val];
-    update({ durations: next });
+export const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onChange, className = '' }) => {
+  const [localPriceParams, setLocalPriceParams] = useState({ min: filters.minPrice, max: filters.maxPrice });
+
+  const handleLocationChange = (loc: string) => {
+    onChange({ ...filters, location: loc === 'All Locations' ? '' : loc });
   };
 
-  const hasActiveFilters =
-    filters.location !== '' ||
-    filters.category !== '' ||
-    filters.priceMin !== PRICE_MIN ||
-    filters.priceMax !== PRICE_MAX ||
-    filters.durations.length > 0;
+  const handleCategoryChange = (cat: string) => {
+    onChange({ ...filters, category: cat === 'All Categories' ? '' : cat });
+  };
 
-  const clearAll = () => onChange(DEFAULT_FILTERS);
+  const handleDurationToggle = (dur: DurationOption) => {
+    const newDurations = filters.durations.includes(dur)
+      ? filters.durations.filter((d) => d !== dur)
+      : [...filters.durations, dur];
+    onChange({ ...filters, durations: newDurations });
+  };
 
-  const inner = (
-    <div className="bg-white rounded-3xl border border-warm-200 shadow-card p-6 space-y-7 w-full">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+  const applyPrice = () => {
+    onChange({ ...filters, minPrice: localPriceParams.min, maxPrice: localPriceParams.max });
+  };
+
+  const clearAll = () => {
+    onChange({
+      location: '',
+      category: '',
+      minPrice: '',
+      maxPrice: '',
+      durations: [],
+    });
+    setLocalPriceParams({ min: '', max: '' });
+  };
+
+  return (
+    <div className={`bg-white rounded-2xl border border-warm-200 shadow-sm p-5 space-y-8 ${className}`}>
+      <div className="flex items-center justify-between pb-4 border-b border-warm-100">
         <div className="flex items-center gap-2">
-          <SlidersHorizontal size={16} className="text-teal-500" />
-          <h2 className="font-heading font-black text-midnight-700 text-sm uppercase tracking-wider">
-            Filters
-          </h2>
-          {hasActiveFilters && (
-            <span className="w-2 h-2 rounded-full bg-teal-500 flex-shrink-0" />
-          )}
+          <SlidersHorizontal size={18} className="text-teal-600" />
+          <h2 className="font-heading font-black text-midnight-800 text-lg">Filters</h2>
         </div>
-        <div className="flex items-center gap-2">
-          {hasActiveFilters && (
-            <button
-              onClick={clearAll}
-              className="text-[10px] font-bold text-teal-600 hover:text-teal-800 transition-colors uppercase tracking-wider"
-            >
-              Clear All
-            </button>
-          )}
-          {onClose && (
-            <button
-              onClick={onClose}
-              aria-label="Close filters"
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-warm-400 hover:text-midnight-700 hover:bg-warm-100 transition-colors lg:hidden"
-            >
-              <X size={16} />
-            </button>
-          )}
-        </div>
+        <button 
+          onClick={clearAll}
+          className="text-xs font-bold text-teal-600 hover:text-teal-700 transition"
+        >
+          CLEAR ALL
+        </button>
       </div>
 
-      {/* ── Location ────────────────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <h3 className="text-[10px] font-black text-warm-400 uppercase tracking-widest">
-          Location
-        </h3>
-        <div className="space-y-2">
-          {ACTIVITY_LOCATIONS.map(({ label, value }) => (
-            <label
-              key={value}
-              className="flex items-center gap-3 cursor-pointer group"
-            >
-              <input
-                type="radio"
-                name="activity-location"
-                value={value}
-                checked={filters.location === value}
-                onChange={() => update({ location: value })}
-                className="sr-only"
-              />
-              <span
-                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
-                  filters.location === value
-                    ? 'border-teal-500 bg-teal-500'
-                    : 'border-warm-300 group-hover:border-teal-400'
-                }`}
-              >
-                {filters.location === value && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-white" />
-                )}
-              </span>
-              <span
-                className={`text-sm font-semibold transition-colors ${
-                  filters.location === value
-                    ? 'text-teal-700'
-                    : 'text-midnight-700 group-hover:text-teal-600'
-                }`}
-              >
-                {label}
-              </span>
-            </label>
-          ))}
+      {/* Location */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-midnight-800 font-bold mb-3">
+          <MapPin size={16} className="text-warm-400" />
+          <h3>Location</h3>
         </div>
-      </section>
-
-      <hr className="border-warm-100" />
-
-      {/* ── Price Range ─────────────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h3 className="text-[10px] font-black text-warm-400 uppercase tracking-widest">
-          Price Range
-        </h3>
-        <div className="space-y-3">
-          {/* Min slider */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-[10px] font-bold text-warm-400">
-              <span>Min</span>
-              <span className="text-teal-600">{formatPrice(filters.priceMin)}</span>
-            </div>
-            <input
-              type="range"
-              min={PRICE_MIN}
-              max={PRICE_MAX}
-              step={500}
-              value={filters.priceMin}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                update({ priceMin: Math.min(v, filters.priceMax - 500) });
-              }}
-              className="w-full accent-teal-500 cursor-pointer"
-              aria-label="Minimum price"
-            />
-          </div>
-          {/* Max slider */}
-          <div className="space-y-1.5">
-            <div className="flex justify-between text-[10px] font-bold text-warm-400">
-              <span>Max</span>
-              <span className="text-teal-600">{formatPrice(filters.priceMax)}</span>
-            </div>
-            <input
-              type="range"
-              min={PRICE_MIN}
-              max={PRICE_MAX}
-              step={500}
-              value={filters.priceMax}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                update({ priceMax: Math.max(v, filters.priceMin + 500) });
-              }}
-              className="w-full accent-teal-500 cursor-pointer"
-              aria-label="Maximum price"
-            />
-          </div>
-          {/* Range visual */}
-          <div className="flex justify-between text-xs font-bold text-midnight-700 bg-teal-50 rounded-xl px-3 py-2 border border-teal-100">
-            <span>{formatPrice(filters.priceMin)}</span>
-            <span className="text-warm-300">–</span>
-            <span>{formatPrice(filters.priceMax)}</span>
-          </div>
-        </div>
-      </section>
-
-      <hr className="border-warm-100" />
-
-      {/* ── Duration ────────────────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <h3 className="text-[10px] font-black text-warm-400 uppercase tracking-widest">
-          Duration
-        </h3>
         <div className="space-y-2">
-          {DURATION_OPTIONS.map(({ label, value }) => {
-            const checked = filters.durations.includes(value);
+          {LOCATIONS.map((loc) => {
+            const isChecked = filters.location === loc || (loc === 'All Locations' && !filters.location);
             return (
-              <label
-                key={value}
-                className="flex items-center gap-3 cursor-pointer group"
-              >
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => toggleDuration(value)}
-                  className="sr-only"
-                />
-                <span
-                  className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 border-2 transition-colors ${
-                    checked
-                      ? 'border-teal-500 bg-teal-500'
-                      : 'border-warm-300 group-hover:border-teal-400'
-                  }`}
-                >
-                  {checked && (
-                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                      <path
-                        d="M1 4l3 3 5-6"
-                        stroke="white"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  )}
-                </span>
-                <span
-                  className={`text-sm font-semibold transition-colors ${
-                    checked
-                      ? 'text-teal-700'
-                      : 'text-midnight-700 group-hover:text-teal-600'
-                  }`}
-                >
-                  {label}
-                </span>
+              <label key={loc} className="flex items-center gap-3 cursor-pointer group">
+                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isChecked ? 'border-teal-500 bg-teal-500' : 'border-warm-300 group-hover:border-teal-400'}`}>
+                  {isChecked && <div className="w-2.5 h-2.5 bg-white rounded-sm" />}
+                </div>
+                <span className={`text-sm ${isChecked ? 'font-bold text-midnight-800' : 'text-warm-500'}`}>{loc}</span>
               </label>
             );
           })}
         </div>
-      </section>
+      </div>
 
-      <hr className="border-warm-100" />
+      <div className="h-px bg-warm-100" />
 
-      {/* ── Category ────────────────────────────────────────────────────── */}
-      <section className="space-y-3">
-        <h3 className="text-[10px] font-black text-warm-400 uppercase tracking-widest">
-          Activity Category
-        </h3>
-        <select
-          value={filters.category}
-          onChange={(e) => update({ category: e.target.value })}
-          aria-label="Filter by activity category"
-          className="w-full input-island text-sm"
-        >
-          {ACTIVITY_CATEGORIES.map(({ label, value }) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </section>
-    </div>
-  );
+      {/* Category */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-midnight-800 font-bold mb-3">
+          <Tag size={16} className="text-warm-400" />
+          <h3>Category</h3>
+        </div>
+        <div className="space-y-2">
+          {CATEGORIES.map((cat) => {
+            const isChecked = filters.category === cat || (cat === 'All Categories' && !filters.category);
+            return (
+              <label key={cat} className="flex items-center gap-3 cursor-pointer group">
+                <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${isChecked ? 'border-teal-500 border-4' : 'border-warm-300 group-hover:border-teal-400'}`} />
+                <span className={`text-sm ${isChecked ? 'font-bold text-midnight-800' : 'text-warm-500'}`}>{cat}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
 
-  return (
-    <>
-      {/* ── Desktop: always-visible sidebar ─────────────────────────────── */}
-      <aside className="hidden lg:block w-72 flex-shrink-0">{inner}</aside>
+      <div className="h-px bg-warm-100" />
 
-      {/* ── Mobile: slide-in overlay drawer ─────────────────────────────── */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex lg:hidden">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm animate-fade-in"
-            onClick={onClose}
-          />
-          {/* Panel */}
-          <div className="relative ml-auto w-[320px] max-w-full h-full bg-transparent overflow-y-auto p-4 animate-slide-up">
-            {inner}
+      {/* Price */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between font-bold mb-3">
+          <div className="flex items-center gap-2 text-midnight-800">
+            <IndianRupee size={16} className="text-warm-400" />
+            <h3>Price Range</h3>
           </div>
         </div>
-      )}
-    </>
+        
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-warm-400 text-xs font-bold">₹</span>
+            <input 
+              type="number"
+              placeholder="Min"
+              value={localPriceParams.min}
+              onChange={(e) => setLocalPriceParams(p => ({ ...p, min: e.target.value ? Number(e.target.value) : '' }))}
+              onBlur={applyPrice}
+              className="w-full bg-warm-50 border border-warm-200 rounded-lg py-2 pl-7 pr-3 text-sm font-medium focus:outline-none focus:border-teal-400 transition"
+            />
+          </div>
+          <span className="text-warm-300 font-bold">-</span>
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-warm-400 text-xs font-bold">₹</span>
+            <input 
+              type="number"
+              placeholder="Max"
+              value={localPriceParams.max}
+              onChange={(e) => setLocalPriceParams(p => ({ ...p, max: e.target.value ? Number(e.target.value) : '' }))}
+              onBlur={applyPrice}
+              className="w-full bg-warm-50 border border-warm-200 rounded-lg py-2 pl-7 pr-3 text-sm font-medium focus:outline-none focus:border-teal-400 transition"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="h-px bg-warm-100" />
+
+      {/* Duration */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-midnight-800 font-bold mb-3">
+          <Clock size={16} className="text-warm-400" />
+          <h3>Duration</h3>
+        </div>
+        <div className="space-y-2">
+          {DURATIONS.map((dur) => {
+            const isChecked = filters.durations.includes(dur);
+            return (
+              <label key={dur} className="flex items-center gap-3 cursor-pointer group">
+                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isChecked ? 'border-teal-500 bg-teal-500' : 'border-warm-300 group-hover:border-teal-400'}`}>
+                  {isChecked && <div className="w-2.5 h-2.5 bg-white rounded-sm" />}
+                </div>
+                <span className={`text-sm ${isChecked ? 'font-bold text-midnight-800' : 'text-warm-500'}`}>{dur}</span>
+              </label>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 };
