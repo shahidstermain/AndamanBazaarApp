@@ -107,10 +107,10 @@ describe('Payment Security Tests', () => {
       // Verify signature
       const verifySignature = (data: any, signature: string, secret: string) => {
         const expectedSignature = generateSignature(data, secret)
-        return crypto.timingSafeEqual(
-          Buffer.from(signature, 'hex'),
-          Buffer.from(expectedSignature, 'hex')
-        )
+        const sigBuffer = Buffer.from(signature, 'hex')
+        const expectedBuffer = Buffer.from(expectedSignature, 'hex')
+        if (sigBuffer.length !== expectedBuffer.length) return false
+        return crypto.timingSafeEqual(sigBuffer, expectedBuffer)
       }
       
       expect(verifySignature(paymentData, signature, secret)).toBe(true)
@@ -176,10 +176,10 @@ describe('Payment Security Tests', () => {
       
       const verifyWebhookSignature = (payload: any, signature: string, secret: string) => {
         const expectedSignature = generateWebhookSignature(payload, secret)
-        return crypto.timingSafeEqual(
-          Buffer.from(signature, 'hex'),
-          Buffer.from(expectedSignature, 'hex')
-        )
+        const sigBuffer = Buffer.from(signature, 'hex')
+        const expectedBuffer = Buffer.from(expectedSignature, 'hex')
+        if (sigBuffer.length !== expectedBuffer.length) return false
+        return crypto.timingSafeEqual(sigBuffer, expectedBuffer)
       }
       
       expect(verifyWebhookSignature(webhookPayload, signature, webhookSecret)).toBe(true)
