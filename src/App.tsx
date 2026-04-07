@@ -1,34 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
+import { HelmetProvider } from 'react-helmet-async';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db, isFirebaseConfigured } from './lib/firebase';
+import { auth as firebaseAuth, db } from './lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 import { Home } from './pages/Home';
-import { Listings } from './pages/Listings';
-import { ListingDetail } from './pages/ListingDetail';
-import { CreateListing } from './pages/CreateListing';
-import { ChatList } from './pages/ChatList';
-import { ChatRoom } from './pages/ChatRoom';
-import { Profile } from './pages/Profile';
-import { Dashboard } from './pages/Dashboard';
-import { Admin } from './pages/Admin';
 import { AuthView } from './pages/AuthView';
-import { BoostSuccess } from './pages/BoostSuccess';
-import { Todos } from './pages/Todos';
-import { PrivacyPolicy } from './pages/PrivacyPolicy';
-import { TermsOfService } from './pages/TermsOfService';
-import { About } from './pages/About';
-import { Pricing } from './pages/Pricing';
-import { ContactUs } from './pages/ContactUs';
-import { BecomeOperator } from './pages/BecomeOperator';
-import { ActivitiesPage } from './pages/ActivitiesPage';
-import ActivityDetail from './pages/ActivityDetail';
 import { NotFound } from './pages/NotFound';
 
 import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider } from './components/Toast';
+import { PerformanceMonitor } from './components/PerformanceMonitor';
+
+type LayoutUser = React.ComponentProps<typeof Layout>['user'];
+type User = NonNullable<LayoutUser>;
+
+const Listings = React.lazy(() => import('./pages/Listings').then((m) => ({ default: m.Listings })));
+const ListingDetail = React.lazy(() => import('./pages/ListingDetail').then((m) => ({ default: m.ListingDetail })));
+const SellerProfile = React.lazy(() => import('./pages/SellerProfile').then((m) => ({ default: m.SellerProfile })));
+const CreateListing = React.lazy(() => import('./pages/CreateListing').then((m) => ({ default: m.CreateListing })));
+const ChatList = React.lazy(() => import('./pages/ChatList').then((m) => ({ default: m.ChatList })));
+const ChatRoom = React.lazy(() => import('./pages/ChatRoom').then((m) => ({ default: m.ChatRoom })));
+const Profile = React.lazy(() => import('./pages/Profile').then((m) => ({ default: m.Profile })));
+const Dashboard = React.lazy(() => import('./pages/Dashboard').then((m) => ({ default: m.Dashboard })));
+const Admin = React.lazy(() => import('./pages/Admin').then((m) => ({ default: m.Admin })));
+const BoostSuccess = React.lazy(() => import('./pages/BoostSuccess').then((m) => ({ default: m.BoostSuccess })));
+const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy').then((m) => ({ default: m.PrivacyPolicy })));
+const TermsOfService = React.lazy(() => import('./pages/TermsOfService').then((m) => ({ default: m.TermsOfService })));
+const About = React.lazy(() => import('./pages/About').then((m) => ({ default: m.About })));
+const Pricing = React.lazy(() => import('./pages/Pricing').then((m) => ({ default: m.Pricing })));
+const ContactUs = React.lazy(() => import('./pages/ContactUs').then((m) => ({ default: m.ContactUs })));
+const TripPlanner = React.lazy(() => import('./pages/TripPlanner').then((m) => ({ default: m.TripPlanner })));
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -39,46 +43,36 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (bypassAuth) {
-      setUser(({ uid: 'e2e-user', email: 'e2e@example.com' } as unknown) as User);
-      setLoading(false);
-      return;
-    }
-    if (!isFirebaseConfigured()) {
+      setUser(({ id: 'e2e-user', email: 'e2e@example.com' } as unknown) as User);
       setLoading(false);
       return;
     }
 
-    const ensureProfileExists = async (firebaseUser: User) => {
+    const ensureProfileExists = async (firebaseUser: any) => {
       try {
-        const profileRef = doc(db, 'profiles', firebaseUser.uid);
+        const profileRef = doc(db, 'users', firebaseUser.uid);
         const profileSnap = await getDoc(profileRef);
-
         if (!profileSnap.exists()) {
           await setDoc(profileRef, {
-            id: firebaseUser.uid,
-            email: firebaseUser.email,
+            uid: firebaseUser.uid,
+            email: firebaseUser.email || '',
             name: firebaseUser.displayName || 'Island User',
-            profile_photo_url: firebaseUser.photoURL || '',
-            phone_number: firebaseUser.phoneNumber || null,
-            city: 'Port Blair',
-            area: null,
-            is_location_verified: false,
-            trust_level: 'newbie',
-            total_listings: 0,
-            successful_sales: 0,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          });
+            profilePhotoUrl: firebaseUser.photoURL || '',
+            createdAt: serverTimestamp(),
+          }, { merge: true });
         }
       } catch (err) {
-        console.error('Profile creation error:', err);
+        console.error('Profile fallback error:', err);
       }
     };
 
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
+    const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
       if (firebaseUser) {
+        const mapped = { id: firebaseUser.uid, email: firebaseUser.email || '' } as unknown as User;
+        setUser(mapped);
         await ensureProfileExists(firebaseUser);
+      } else {
+        setUser(null);
       }
       setLoading(false);
     });
@@ -99,36 +93,39 @@ const App: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        <BrowserRouter>
+      <HelmetProvider>
+        <ToastProvider>
+          <PerformanceMonitor />
+          <BrowserRouter>
           <Layout user={user}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/listings" element={<Listings />} />
-              <Route path="/listings/:id" element={<ListingDetail />} />
-              <Route path="/post" element={<RequireAuth user={user} loading={loading}><CreateListing /></RequireAuth>} />
-              <Route path="/chats" element={<RequireAuth user={user} loading={loading}><ChatList /></RequireAuth>} />
-              <Route path="/chats/:chatId" element={<RequireAuth user={user} loading={loading}><ChatRoom /></RequireAuth>} />
-              <Route path="/profile" element={<RequireAuth user={user} loading={loading}><Profile /></RequireAuth>} />
-              <Route path="/dashboard" element={<RequireAuth user={user} loading={loading}><Dashboard /></RequireAuth>} />
-              <Route path="/admin" element={<RequireAuth user={user} loading={loading}><Admin /></RequireAuth>} />
-              <Route path="/auth" element={<AuthView />} />
-              <Route path="/boost-success" element={<RequireAuth user={user} loading={loading}><BoostSuccess /></RequireAuth>} />
-              <Route path="/todos" element={<Todos />} />
-              <Route path="/privacy" element={<PrivacyPolicy />} />
-              <Route path="/terms" element={<TermsOfService />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/pricing" element={<Pricing />} />
-              <Route path="/contact" element={<ContactUs />} />
-              <Route path="/become-operator" element={<RequireAuth user={user} loading={loading}><BecomeOperator /></RequireAuth>} />
-              <Route path="/activities" element={<ActivitiesPage />} />
-              <Route path="/activities/:id" element={<ActivityDetail />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <Suspense fallback={<div className="flex justify-center items-center h-screen">Loading...</div>}>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/listings" element={<Listings />} />
+                <Route path="/listings/:id" element={<ListingDetail />} />
+                <Route path="/seller/:sellerId" element={<SellerProfile />} />
+                <Route path="/post" element={<RequireAuth user={user} loading={loading}><CreateListing /></RequireAuth>} />
+                <Route path="/chats" element={<RequireAuth user={user} loading={loading}><ChatList /></RequireAuth>} />
+                <Route path="/chats/:chatId" element={<RequireAuth user={user} loading={loading}><ChatRoom /></RequireAuth>} />
+                <Route path="/profile" element={<RequireAuth user={user} loading={loading}><Profile /></RequireAuth>} />
+                <Route path="/dashboard" element={<RequireAuth user={user} loading={loading}><Dashboard /></RequireAuth>} />
+                <Route path="/admin" element={<RequireAuth user={user} loading={loading}><Admin /></RequireAuth>} />
+                <Route path="/auth" element={<AuthView />} />
+                <Route path="/boost-success" element={<RequireAuth user={user} loading={loading}><BoostSuccess /></RequireAuth>} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfService />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/contact" element={<ContactUs />} />
+                <Route path="/planner" element={<RequireAuth user={user} loading={loading}><TripPlanner /></RequireAuth>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
           </Layout>
         </BrowserRouter>
       </ToastProvider>
-    </ErrorBoundary>
+    </HelmetProvider>
+  </ErrorBoundary>
   );
 
 };

@@ -1,12 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { User } from 'firebase/auth';
-import { collection, query, where, onSnapshot, or } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 import { Logo } from './Logo';
 import { OfflineBanner } from './OfflineBanner';
-
+import { useNotifications } from '../hooks/useNotifications';
+import { getUserChats, subscribeToUserChats } from '../lib/database';
+import { getCurrentUser } from '../lib/auth';
 import {
   Home, Search, PlusCircle, MessageCircle, User as UserIcon,
   BadgeCheck, Bell
@@ -14,10 +13,11 @@ import {
 
 interface LayoutProps {
   children: React.ReactNode;
-  user: User | null;
+  user: any | null;
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
+  useNotifications();
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -31,26 +31,29 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
   useEffect(() => {
     if (!user) return;
 
-    const chatsRef = collection(db, 'chats');
-    const q = query(
-      chatsRef,
-      or(
-        where('buyer_id', '==', user.uid),
-        where('seller_id', '==', user.uid)
-      )
-    );
+    const fetchUnread = async () => {
+      try {
+        const chats = await getUserChats(user.id);
+        if (chats) {
+          let count = 0;
+          chats.forEach((chat: any) => {
+            if (chat.buyerId === user.id) count += chat.buyerUnreadCount || 0;
+            if (chat.sellerId === user.id) count += chat.sellerUnreadCount || 0;
+          });
+          setUnreadCount(count);
+        }
+      } catch (error) {
+        console.error('Error fetching unread count:', error);
+      }
+    };
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      let count = 0;
-      snapshot.docs.forEach(doc => {
-        const chat = doc.data();
-        if (chat.buyer_id === user.uid) count += chat.buyer_unread_count || 0;
-        if (chat.seller_id === user.uid) count += chat.seller_unread_count || 0;
-      });
-      setUnreadCount(count);
-    });
+    fetchUnread();
 
-    return () => unsubscribe();
+    const unsubscribe = subscribeToUserChats(user.id, fetchUnread);
+
+    return () => { 
+      if (unsubscribe) unsubscribe();
+    };
   }, [user]);
 
   const isActive = (path: string) =>
@@ -85,7 +88,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
                 Andaman<span className="text-teal-600">Bazaar</span>
               </span>
               <span className="text-[9px] font-bold text-warm-400 uppercase tracking-[0.2em] mt-0.5">
-                Island Marketplace
+                Buy & Sell locally in Andaman
               </span>
             </div>
           </Link>
@@ -111,7 +114,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
                   className="w-9 h-9 rounded-full overflow-hidden border-2 border-warm-200 hover:border-teal-400 hover:shadow-teal-glow transition-all"
                 >
                   <img
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`}
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`}
                     alt="Profile"
                     className="w-full h-full"
                   />
@@ -144,7 +147,21 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
           </TabItem>
 
           {/* Search */}
-          <TabItem to="/listings" label="Search" active={isActive('/listings')}>
+          <TabItem 
+            to="/listings" 
+            label="Search" 
+            active={isActive('/listings')}
+            onClick={(e) => {
+              if (isActive('/listings')) {
+                e.preventDefault();
+                const searchInput = document.getElementById('search-input');
+                if (searchInput) {
+                  searchInput.focus();
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }
+            }}
+          >
             <Search size={22} strokeWidth={isActive('/listings') ? 2.5 : 2} />
           </TabItem>
 
@@ -194,7 +211,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
               <span className="font-heading font-black text-lg text-white">AndamanBazaar</span>
             </div>
             <p className="text-sm text-warm-400 leading-relaxed">
-              Hyperlocal marketplace exclusively for the Andaman & Nicobar Islands.
+              Buy & Sell locally in Andaman — no mainland scams.
               Built by islanders, for islanders. 🏝️
             </p>
           </div>
@@ -272,11 +289,12 @@ const NavLink: React.FC<{ to: string; active: boolean; children: React.ReactNode
   </Link>
 );
 
-const TabItem: React.FC<{ to: string; label: string; active: boolean; children: React.ReactNode }> = ({
-  to, label, active, children
+const TabItem: React.FC<{ to: string; label: string; active: boolean; onClick?: (e: React.MouseEvent) => void; children: React.ReactNode }> = ({
+  to, label, active, onClick, children
 }) => (
   <Link
     to={to}
+    onClick={onClick}
     className={`nav-item ${active ? 'active' : ''} active:scale-90 transition-transform`}
     aria-label={label}
   >

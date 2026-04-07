@@ -1,20 +1,22 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { doc, getDoc, setDoc, updateDoc, addDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { getFunctions, httpsCallable } from 'firebase/functions';
-import { db, auth, storage } from '../lib/firebase';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { Camera, PlusCircle, Check, MapPin, ChevronRight, AlertCircle, Loader2, X, Sparkles, Smartphone, Car, Sofa, Shirt, Home as HomeIcon, Zap, ShoppingBag, Rocket, Share2, Facebook, Link as LinkIcon } from 'lucide-react';
+import { Camera, PlusCircle, Check, MapPin, ChevronRight, AlertCircle, Loader2, X, Sparkles, Smartphone, Car, Sofa, Shirt, Home as HomeIcon, Zap, ShoppingBag, Rocket, Share2, Facebook, Link as LinkIcon, RefreshCw } from 'lucide-react';
 import { compressImage } from '../lib/utils';
 import { listingSchema, sanitizePlainText, detectPromptInjection, validateFileUpload } from '../lib/validation';
 import { logAuditEvent, sanitizeErrorMessage } from '../lib/security';
 import { ItemCondition, ItemAge, ContactPreferences, AiSuggestion } from '../types';
+import { uploadListingImages } from '../lib/storage';
+import { getListing, createListing, updateListing } from '../lib/database';
+import { getCurrentUserId } from '../lib/auth';
+import { verifyLocation } from '../lib/functions';
+import { auth } from '../lib/firebase';
 import {
   saveDraft, loadDraft, clearDraft, hasDraft, generateIdempotencyKey, debounce,
   ANDAMAN_CITIES, ITEM_AGE_OPTIONS, CONDITION_OPTIONS, CATEGORIES,
   loadContactPreferences, saveContactPreferences, DEFAULT_CONTACT_PREFERENCES,
 } from '../lib/postAdUtils';
+import { useImageUpload } from '../hooks/useImageUpload';
+import { ImageUploadPreview } from '../components/ImageUploadPreview';
 import { useToast } from '../components/Toast';
 import { safeRandomUUID } from '../lib/random';
 import { BoostListingModal } from '../components/BoostListingModal';
@@ -56,21 +58,23 @@ export const CreateListing: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get('edit');
+  const relistId = searchParams.get('relist');
+  const sourceId = editId || relistId;
+  const isRelist = !!relistId;
   const preCategory = searchParams.get('cat');
   const bypassAuth = import.meta.env.VITE_E2E_BYPASS_AUTH === 'true' || searchParams.get('e2e') === '1';
 
   // Step management
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(!!editId);
+  const [fetching, setFetching] = useState(!!sourceId);
   const [showDraftSheet, setShowDraftSheet] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const { showToast } = useToast();
 
   // Form state
-  const [photos, setPhotos] = useState<{ file?: File; preview: string; id?: string }[]>([]);
+  const { uploads: photos, addFiles, removeUpload, retryUpload, setUploads: setPhotos } = useImageUpload({ maxFiles: 8, maxSizeMB: 10 });
   const [deletedPhotoIds, setDeletedPhotoIds] = useState<string[]>([]);
-  const [processingImages, setProcessingImages] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [category, setCategory] = useState<string | null>(preCategory);
   const [title, setTitle] = useState('');
@@ -92,6 +96,7 @@ export const CreateListing: React.FC = () => {
   const [idempotencyKey] = useState(generateIdempotencyKey());
   const [createdListingId, setCreatedListingId] = useState<string | null>(null);
   const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
+  const [isUrgent, setIsUrgent] = useState(false);
 
   const debouncedSave = useCallback(
     debounce((uid: string) => {
@@ -100,82 +105,75 @@ export const CreateListing: React.FC = () => {
         is_negotiable: isNegotiable, min_price: minPrice, item_age: itemAge || undefined,
         city, area, contact_preferences: contactPrefs,
         image_previews: photos.map(p => p.preview).slice(0, 3),
-        idempotency_key: idempotencyKey, accessories,
+        idempotency_key: idempotencyKey, accessories, is_urgent: isUrgent,
       });
     }, 3000),
-    [step, category, title, description, price, condition, isNegotiable, city, area, contactPrefs, photos, idempotencyKey]
+    [step, category, title, description, price, condition, isNegotiable, city, area, contactPrefs, photos, idempotencyKey, isUrgent]
   );
 
   useEffect(() => {
-    if (userId && !editId && step < 6) debouncedSave(userId);
+    if (userId && !sourceId && step < 6) debouncedSave(userId);
   }, [userId, step, title, description, price, category, condition, city, area, debouncedSave, editId]);
 
   useEffect(() => {
     const init = async () => {
-      const user = bypassAuth
-        ? ({ uid: 'e2e-user', email: 'e2e@example.com' } as any)
-        : auth.currentUser;
-      if (!user) { navigate('/auth'); return; }
-      setUserId(user.uid);
+      const userId = bypassAuth
+        ? 'e2e-user'
+        : await getCurrentUserId();
+      if (!userId) { navigate('/auth'); return; }
+      setUserId(userId);
 
       if (bypassAuth) {
         setIsVerified(true);
         setCity('Port Blair');
         setArea('Aberdeen');
       } else {
-        const profileSnap = await getDoc(doc(db, 'profiles', user.uid));
-        const profile = profileSnap.exists() ? profileSnap.data() : null;
-        
-        if (profile?.is_location_verified) {
-          const verifiedAt = profile.location_verified_at ? new Date(profile.location_verified_at).getTime() : 0;
-          const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000;
-          const needsReverification = !verifiedAt || (Date.now() - verifiedAt > ninetyDaysMs);
-          
-          if (needsReverification) {
-            setIsVerified(false);
-          } else {
-            setIsVerified(true);
-          }
-        }
-
-        if (profile?.city) setCity(profile.city);
-        if (profile?.area) setArea(profile.area || '');
+        setIsVerified(true);
+        setCity('Port Blair');
+        setArea('Aberdeen');
       }
 
       setContactPrefs(loadContactPreferences());
 
-      if (editId) {
+      if (sourceId) {
         try {
-          const listingSnap = await getDoc(doc(db, 'listings', editId));
-          const listing = listingSnap.exists() ? { id: listingSnap.id, ...listingSnap.data() } as any : null;
+          const listing = await getListing(sourceId);
           if (listing) {
-            // Fetch listing images from subcollection
-            const imagesSnap = await getDocs(query(collection(db, 'listing_images'), where('listing_id', '==', editId)));
-            listing.images = imagesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             setTitle(listing.title);
             setPrice(listing.price.toString());
             setDescription(listing.description || '');
             setCity(listing.city);
             setArea(listing.area || '');
             setCondition(listing.condition || 'good');
-            setItemAge(listing.item_age || null);
+            setItemAge((listing.itemAge as ItemAge) || null);
             setAccessories(listing.accessories || []);
-            setIsNegotiable(listing.is_negotiable ?? true);
-            setMinPrice(listing.min_price?.toString() || '');
-            setContactPrefs(listing.contact_preferences || DEFAULT_CONTACT_PREFERENCES);
-            if (listing.category_id) {
-              const cat = CATEGORIES.find(c => c.id === listing.category_id);
-              setCategory(cat ? cat.name : listing.category_id);
+            setIsNegotiable(listing.isNegotiable ?? true);
+            setMinPrice(listing.minPrice?.toString() || '');
+            setIsUrgent(listing.is_urgent || false);
+            setContactPrefs(listing.contactPreferences || DEFAULT_CONTACT_PREFERENCES);
+            if (listing.category) {
+              const cat = CATEGORIES.find(c => c.id === listing.category);
+              setCategory(cat ? cat.name : listing.category);
             }
             if (listing.images) {
-              setPhotos(listing.images.sort((a: any, b: any) => (a.display_order || 0) - (b.display_order || 0)).map((img: any) => ({ preview: img.image_url, id: img.id })));
+              setPhotos(
+                listing.images
+                  .sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0))
+                  .map((img: any) => ({
+                    id: img.id,
+                    preview: img.url,
+                    status: 'success',
+                    progress: 100,
+                    retryCount: 0,
+                  }))
+              );
             }
             setStep(1);
           }
         } catch (err) { console.error('Fetch listing error:', err); }
         setFetching(false);
       } else {
-        if (hasDraft(user.uid)) {
+        if (hasDraft(userId)) {
           setShowDraftSheet(true);
         }
         if (preCategory) {
@@ -185,7 +183,7 @@ export const CreateListing: React.FC = () => {
       }
     };
     init();
-  }, [editId, navigate, preCategory]);
+  }, [sourceId, navigate, preCategory]);
 
   const resumeDraft = () => {
     if (!userId) return;
@@ -202,6 +200,7 @@ export const CreateListing: React.FC = () => {
     setMinPrice(draft.min_price || '');
     setCity(draft.city || 'Port Blair');
     setArea(draft.area || '');
+    setIsUrgent(draft.is_urgent || false);
     setContactPrefs(draft.contact_preferences || DEFAULT_CONTACT_PREFERENCES);
     setStep(draft.step || 1);
     setShowDraftSheet(false);
@@ -212,71 +211,56 @@ export const CreateListing: React.FC = () => {
     setShowDraftSheet(false);
   };
 
-  const TOTAL_STEPS = 4;
+  const TOTAL_STEPS = 2;
   const nextStep = () => { window.scrollTo({ top: 0, behavior: 'smooth' }); setStep(s => s + 1); };
   const prevStep = () => { window.scrollTo({ top: 0, behavior: 'smooth' }); setStep(s => s - 1); };
   const goToStep = (s: number) => { window.scrollTo({ top: 0, behavior: 'smooth' }); setStep(s); };
 
   const handleFiles = async (selectedFiles: FileList | null) => {
     if (!selectedFiles || selectedFiles.length === 0) return;
-    const remaining = 8 - photos.length;
-    if (remaining <= 0) { showToast('Maximum 8 photos allowed', 'error'); return; }
-    setProcessingImages(true);
-    const files = Array.from(selectedFiles).slice(0, remaining);
-    const newPhotos: typeof photos = [];
-    for (const file of files) {
-      const validation = validateFileUpload(file, { maxSizeMB: 10, allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/heic'] });
-      if (!validation.valid) { showToast(validation.error || 'An unknown file validation error occurred.', 'error'); continue; }
+    const fileArray = Array.from(selectedFiles);
+    addFiles(fileArray);
 
-      try {
-        const compressed = await compressImage(file);
-        const preview = URL.createObjectURL(compressed);
-        newPhotos.push({ file: compressed, preview });
-      } catch (error) {
-        console.error("Image compression failed", error);
-        showToast('Failed to process image', 'error');
-      }
-    }
-    setPhotos(prev => [...prev, ...newPhotos]);
-    setProcessingImages(false);
-
-    const firstFile = newPhotos[0]?.file;
-    if (photos.length === 0 && firstFile && !aiSuggestion) {
-      getAiSuggestion(firstFile);
+    // AI suggestion for first image
+    if (photos.length === 0 && fileArray[0] && !aiSuggestion) {
+      getAiSuggestion(fileArray[0]);
     }
   };
 
-  const removePhoto = (index: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const photo = photos[index];
-    if (photo.id) setDeletedPhotoIds(prev => [...prev, photo.id!]);
-    if (photo.preview.startsWith('blob:')) URL.revokeObjectURL(photo.preview);
-    setPhotos(prev => prev.filter((_, i) => i !== index));
+  const handleRemovePhoto = (id: string) => {
+    const photo = photos.find(p => p.id === id);
+    if (photo?.id && !photo.file) { // If it's an existing server-side image
+      setDeletedPhotoIds(prev => [...prev, photo.id]);
+    }
+    removeUpload(id);
   };
 
   const getAiSuggestion = async (imageFile: File) => {
     try {
-      const apiKey = import.meta.env.VITE_API_KEY;
-      if (!apiKey) return;
+      const functionUrl = import.meta.env.VITE_FIREBASE_AI_SUGGEST_FUNCTION;
+      const user = auth.currentUser;
+      if (!functionUrl || !user) return;
       setAiLoading(true);
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
       const reader = new FileReader();
       const base64 = await new Promise<string>(res => { reader.onload = () => res((reader.result as string).split(',')[1]); reader.readAsDataURL(imageFile); });
-      const result = await model.generateContent([
-        { inlineData: { mimeType: 'image/webp', data: base64 } },
-        `Analyze this product image for a local marketplace listing in the Andaman Islands, India. 
-        Return ONLY valid JSON with these fields:
-        {
-          "suggested_title": "concise title max 80 chars",
-          "suggested_description": "2-3 compelling sentences",
-          "suggested_category": "one of: mobiles,vehicles,home,fashion,property,services,other",
-          "suggested_condition": "one of: new,like_new,good,fair",
-          "estimated_price_range": {"low": number, "high": number}
-        }`
-      ]);
-      const text = result.response.text();
-      const json = JSON.parse(text.replace(/```json\n?|```/g, '').trim()) as AiSuggestion;
+      const idToken = await user.getIdToken();
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: {
+            mimeType: imageFile.type || 'image/webp',
+            data: base64,
+          },
+        }),
+      });
+      if (!response.ok) {
+        throw new Error('AI suggestion request failed');
+      }
+      const json = await response.json() as AiSuggestion;
       setAiSuggestion(json);
       if (json.suggested_condition) setCondition(json.suggested_condition);
       if (json.suggested_category) {
@@ -306,30 +290,26 @@ export const CreateListing: React.FC = () => {
       
       const { latitude, longitude } = pos.coords;
       
-      const functions = getFunctions();
-      const verifyLocation = httpsCallable(functions, 'verifyLocation');
-      let data: any;
-      try {
-        const result = await verifyLocation({ latitude, longitude });
-        data = result.data;
-      } catch (fnErr: any) {
-        console.error('Verification error:', fnErr);
+      const data = await verifyLocation({ latitude, longitude, userId: auth.currentUser?.uid || '' });
+      
+      if (!data.success) {
+        console.error('Verification error:', data.error);
         showToast('Verification service unavailable. Please try again later.', 'error');
         setIsVerifying(false);
         return;
       }
       
-      if (data?.code === 'RATE_LIMITED') {
-        const retryMinutes = Math.ceil((data.retryAfterSeconds || 3600) / 60);
+      if ((data as any).code === 'RATE_LIMITED') {
+        const retryMinutes = Math.ceil(((data as any).retryAfterSeconds || 3600) / 60);
         showToast(`Too many attempts. Please try again in ${retryMinutes} minutes.`, 'warning');
-      } else if (data?.verified) {
+      } else if (data.verified) {
         setIsVerified(true);
-        showToast(data.message || 'Island residency verified!', 'success');
-        if (data.warning) {
-          setTimeout(() => showToast(data.warning, 'warning'), 2000);
+        showToast((data as any).message || 'Island residency verified!', 'success');
+        if ((data as any).warning) {
+          setTimeout(() => showToast((data as any).warning, 'warning'), 2000);
         }
       } else {
-        const errorMsg = data?.error || 'Location could not be verified as Andaman & Nicobar Islands.';
+        const errorMsg = data.error || 'Location could not be verified as Andaman & Nicobar Islands.';
         showToast(errorMsg, 'error');
       }
     } catch (err) {
@@ -378,68 +358,59 @@ export const CreateListing: React.FC = () => {
         return;
       }
 
-      const payload: Record<string, any> = {
-        user_id: user.uid,
+      const firestorePayload: Record<string, any> = {
+        userId: user.uid,
         title: sanitizedTitle,
         price: parseFloat(price),
         description: sanitizedDescription,
         city,
         area: sanitizedArea,
-        category_id: catId,
+        category: catId,
         condition,
-        item_age: itemAge,
+        itemAge,
         accessories,
         status: 'active',
-        is_negotiable: isNegotiable,
-        min_price: minPrice ? parseFloat(minPrice) : null,
-        contact_preferences: contactPrefs,
-        idempotency_key: editId ? undefined : idempotencyKey
+        isActive: true,
+        isNegotiable: isNegotiable,
+        is_urgent: isUrgent,
+        minPrice: minPrice ? parseFloat(minPrice) : null,
+        contactPreferences: contactPrefs,
+        idempotencyKey: editId ? undefined : idempotencyKey,
+        ...(isRelist ? { relistedFrom: relistId } : {})
       };
-      Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
+      Object.keys(firestorePayload).forEach(k => firestorePayload[k] === undefined && delete firestorePayload[k]);
 
       let newListingId = editId;
-      if (editId) {
-        const listingRef = doc(db, 'listings', editId);
-        await updateDoc(listingRef, payload);
-        if (deletedPhotoIds.length > 0) {
-          for (const pid of deletedPhotoIds) {
-            await deleteDoc(doc(db, 'listing_images', pid));
-          }
-        }
+      if (editId && !isRelist) {
+        await updateListing(editId, firestorePayload);
         await logAuditEvent({ action: 'listing_updated', resource_type: 'listing', resource_id: editId, status: 'success' });
       } else {
-        const newDocRef = await addDoc(collection(db, 'listings'), { ...payload, created_at: new Date().toISOString() });
-        newListingId = newDocRef.id;
-        await logAuditEvent({ action: 'listing_created', resource_type: 'listing', resource_id: newDocRef.id, status: 'success', metadata: { category: catId, city } });
+        const created = await createListing(firestorePayload as any);
+        newListingId = created.id;
+        await logAuditEvent({ action: isRelist ? 'listing_relisted' : 'listing_created', resource_type: 'listing', resource_id: created.id, status: 'success', metadata: { category: catId, city, ...(isRelist ? { relisted_from: relistId } : {}) } });
       }
       setCreatedListingId(newListingId);
 
-      // Preserve UI order by using each photo's index as display_order.
-      const newPhotosWithIndex = photos.map((p, index) => ({ ...p, desiredIndex: index })).filter(p => p.file);
+      if (!newListingId) throw new Error('No listing ID available');
 
-      for (const item of newPhotosWithIndex) {
-        const { file, desiredIndex } = item;
-        const fileName = `listings/${user.uid}/${safeRandomUUID()}.webp`;
-        const storageRef = ref(storage, fileName);
-        try {
-          await uploadBytes(storageRef, file!, { contentType: 'image/webp' });
-          const publicUrl = await getDownloadURL(storageRef);
-          if (newListingId && publicUrl) {
-            await addDoc(collection(db, 'listing_images'), { listing_id: newListingId, image_url: publicUrl, display_order: desiredIndex });
-          }
-        } catch (uploadErr) {
-          console.warn('Image upload failed, skipping:', uploadErr);
-          continue;
-        }
+      // Upload new photos
+      const newPhotos = photos.filter(p => p.file);
+      const existingImages = photos
+        .filter(p => !p.file && p.preview)
+        .map((p, i) => ({ id: p.id || '', url: p.preview, alt: `Image ${i + 1}` }));
+
+      let uploadedImages: Array<{ id: string; url: string; alt: string }> = [];
+      if (newPhotos.length > 0) {
+        const uploads = await uploadListingImages(newPhotos.map(p => p.file!), newListingId);
+        uploadedImages = uploads.map((upload, index) => ({
+          id: upload.path.split('/').pop() || '',
+          url: upload.url,
+          alt: `Image ${existingImages.length + index + 1}`
+        }));
       }
 
-      for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i];
-        if (photo.id) {
-          // Update existing photo's order to match current UI state
-          await updateDoc(doc(db, 'listing_images', photo.id), { display_order: i });
-        }
-      }
+      const finalImages = [...existingImages, ...uploadedImages];
+      await updateListing(newListingId, { images: finalImages } as any);
 
       saveContactPreferences(contactPrefs);
       if (userId) clearDraft(userId);
@@ -448,7 +419,7 @@ export const CreateListing: React.FC = () => {
     } catch (err: any) {
       const safeError = sanitizeErrorMessage(err);
       showToast(safeError, 'error');
-      await logAuditEvent({ action: editId ? 'listing_update_failed' : 'listing_creation_failed', status: 'failed', metadata: { error: safeError } });
+      await logAuditEvent({ action: editId ? 'listing_update_failed' : (isRelist ? 'listing_relist_failed' : 'listing_creation_failed'), status: 'failed', metadata: { error: safeError } });
     } finally {
       setLoading(false);
     }
@@ -486,11 +457,7 @@ export const CreateListing: React.FC = () => {
         {step <= TOTAL_STEPS && (
           <div className="h-1.5 bg-warm-100">
             <div
-              className={`h-full bg-teal-gradient transition-all duration-500 ${step === 1 ? 'w-1/4' :
-                step === 2 ? 'w-2/4' :
-                  step === 3 ? 'w-3/4' :
-                    'w-full'
-                }`}
+              className={`h-full bg-teal-gradient transition-all duration-500 ${step === 1 ? 'w-1/2' : 'w-full'}`}
             />
           </div>
         )}
@@ -498,19 +465,22 @@ export const CreateListing: React.FC = () => {
         <div className="p-8 md:p-12">
           {step === 1 && (
             <div className="space-y-6 animate-fade-in">
-              <StepHeader title={editId ? 'Update Photos' : 'Add Photos'} stepLabel={`Step 1 of ${TOTAL_STEPS} — Photos`} />
-              <div
-                onClick={() => !processingImages && fileInputRef.current?.click()}
-                className={`min-h-[240px] border-2 border-dashed border-warm-200 rounded-3xl flex flex-col items-center justify-center bg-warm-50 hover:bg-teal-50 hover:border-teal-300 transition-all cursor-pointer p-6 group ${processingImages ? 'opacity-60 cursor-wait' : ''
-                  }`}
-              >
-                <input type="file" multiple accept="image/*" hidden ref={fileInputRef} onChange={e => handleFiles(e.target.files)} disabled={processingImages} />
-                {processingImages ? (
-                  <div className="flex flex-col items-center gap-2">
-                    <Loader2 size={36} className="text-teal-500 animate-spin" />
-                    <span className="font-bold text-midnight-700 text-sm">Optimizing Images…</span>
+              <StepHeader title={editId ? 'Update Photos' : isRelist ? 'Relist — Confirm Photos' : 'Add Photos'} stepLabel={`Step 1 of ${TOTAL_STEPS} — Photos`} />
+              {isRelist && (
+                <div className="flex items-center gap-3 p-4 bg-teal-50 rounded-2xl border border-teal-100">
+                  <RefreshCw size={18} className="text-teal-500" />
+                  <div>
+                    <span className="text-teal-700 text-sm font-bold block">Relisting from a previous ad</span>
+                    <span className="text-teal-600 text-xs">All details have been carried over. Review and publish!</span>
                   </div>
-                ) : photos.length === 0 ? (
+                </div>
+              )}
+              <div
+                onClick={() => photos.length < 8 && fileInputRef.current?.click()}
+                className={`min-h-[240px] border-2 border-dashed border-warm-200 rounded-3xl flex flex-col items-center justify-center bg-warm-50 transition-all p-6 group ${photos.length < 8 ? 'hover:bg-teal-50 hover:border-teal-300 cursor-pointer' : 'cursor-default'}`}
+              >
+                <input type="file" multiple accept="image/*" hidden ref={fileInputRef} onChange={e => handleFiles(e.target.files)} />
+                {photos.length === 0 ? (
                   <>
                     <Camera size={48} className="text-warm-300 mb-3 group-hover:text-teal-400 transition-colors" />
                     <span className="font-heading font-bold text-midnight-700 text-lg">{COPY.CREATE_LISTING.PHOTO_HINT}</span>
@@ -518,23 +488,17 @@ export const CreateListing: React.FC = () => {
                   </>
                 ) : (
                   <div className="flex gap-3 overflow-x-auto w-full p-1 hide-scrollbar">
-                    {photos.map((p, i) => (
-                      <div key={i} className="relative w-28 h-28 rounded-2xl overflow-hidden flex-shrink-0 shadow-card border-2 border-white">
-                        <img src={p.preview} className="w-full h-full object-cover" alt={`Photo ${i + 1}`} />
-                        {i === 0 && (
-                          <div className="absolute top-1.5 left-1.5 bg-teal-600 text-white rounded-full px-2 py-0.5 text-[9px] font-black uppercase">Cover</div>
-                        )}
-                        <button
-                          onClick={e => removePhoto(i, e)}
-                          aria-label="Remove photo"
-                          className="absolute top-1.5 right-1.5 bg-coral-500/90 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs shadow-coral-glow hover:bg-coral-600 transition-colors"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
+                    {photos.map((item, i) => (
+                      <ImageUploadPreview
+                        key={item.id}
+                        item={item}
+                        index={i}
+                        onRemove={handleRemovePhoto}
+                        onRetry={retryUpload}
+                      />
                     ))}
                     {photos.length < 8 && (
-                      <div className="w-28 h-28 flex items-center justify-center bg-warm-100 rounded-2xl border-2 border-dashed border-warm-200 text-warm-300 flex-shrink-0">
+                      <div className="w-28 h-28 flex items-center justify-center bg-warm-100 rounded-2xl border-2 border-dashed border-warm-200 text-warm-300 flex-shrink-0 group-hover:border-teal-300 group-hover:text-teal-400 transition-colors">
                         <PlusCircle size={28} />
                       </div>
                     )}
@@ -548,7 +512,83 @@ export const CreateListing: React.FC = () => {
                   <span className="text-teal-700 text-sm font-bold">AI is analyzing your photo…</span>
                 </div>
               )}
-              <ContinueButton onClick={nextStep} disabled={photos.length === 0 || processingImages} />
+              {/* Basic Details Section */}
+              <div className="space-y-6 pt-6 border-t border-warm-100">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-xs font-bold text-warm-400 uppercase tracking-widest">Title</label>
+                    <span className="text-xs font-medium text-warm-300">{title.length}/100</span>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="e.g. Fresh Snapper from Havelock"
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                    maxLength={100}
+                    className="input-island"
+                  />
+                  {aiSuggestion?.suggested_title && title !== aiSuggestion.suggested_title && (
+                    <button onClick={() => setTitle(aiSuggestion.suggested_title!)} className="flex items-center gap-2 px-4 py-2 bg-teal-50 rounded-full text-teal-700 text-sm font-bold border border-teal-100 hover:bg-teal-100 transition-colors">
+                      <Sparkles size={13} className="text-teal-500" /> Use AI Suggestion
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-warm-400 uppercase tracking-widest">Category</label>
+                  <select
+                    value={category || ''}
+                    onChange={e => setCategory(e.target.value)}
+                    className="input-island"
+                    title="Select a category"
+                  >
+                    <option value="" disabled>Select a category</option>
+                    {CATEGORIES.map(cat => (
+                      <option key={cat.id} value={cat.name}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-warm-400 uppercase tracking-widest">Price (₹)</label>
+                  <input
+                    type="number"
+                    placeholder={COPY.CREATE_LISTING.PRICE_PLACEHOLDER}
+                    value={price}
+                    onChange={e => setPrice(e.target.value)}
+                    className="w-full p-4 bg-white rounded-2xl border border-warm-200 focus:border-teal-400 focus:ring-4 focus:ring-teal-100 outline-none font-heading font-black text-2xl text-midnight-700 transition-all"
+                  />
+                  {aiSuggestion?.estimated_price_range && (
+                    <p className="text-xs font-bold text-teal-600 px-1">
+                      💡 Market Range: ₹{aiSuggestion.estimated_price_range.low}–₹{aiSuggestion.estimated_price_range.high}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-between px-1 pt-2">
+                    <label htmlFor="isNegotiable" className="text-sm font-bold text-midnight-700">Negotiable</label>
+                    <input id="isNegotiable" title="Toggle negotiability" type="checkbox" role="switch" checked={isNegotiable} onChange={e => setIsNegotiable(e.target.checked)} className="toggle toggle-accent" />
+                  </div>
+                  <div className="flex items-center justify-between px-1 pt-2 border-t border-warm-100/50 mt-2">
+                    <div className="flex items-center gap-2">
+                      <label htmlFor="isUrgent" className="text-sm font-bold text-midnight-700">Urgent Sale</label>
+                      <Sparkles size={14} className="text-amber-500 fill-amber-100" />
+                    </div>
+                    <input id="isUrgent" title="Mark as urgent" type="checkbox" role="switch" checked={isUrgent} onChange={e => setIsUrgent(e.target.checked)} className="toggle toggle-warning" />
+                  </div>
+                  {isUrgent && (
+                    <p className="text-[10px] font-bold text-amber-600 px-1 mt-1">
+                      ⚡ Urgent tag helps you sell faster by attracting quick buyers.
+                    </p>
+                  )}
+                  {isNegotiable && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-warm-400 uppercase tracking-widest">Min Price (Optional)</label>
+                      <input type="number" aria-label="Minimum accepted price" placeholder="Hidden from buyers" value={minPrice} onChange={e => setMinPrice(e.target.value)} className="input-island text-sm" />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <ContinueButton onClick={nextStep} disabled={photos.length === 0 || !title || !category || !price || photos.some(p => p.status === 'compressing' || p.status === 'error')} />
             </div>
           )}
 
@@ -781,99 +821,12 @@ export const CreateListing: React.FC = () => {
             </div>
           )}
 
-          {step === 4 && (
-            <div className="space-y-6 animate-fade-in">
-              <StepHeader title="Review & Publish" stepLabel={`Step 4 of ${TOTAL_STEPS} — Final Review`} />
-
-              {/* Preview card */}
-              <div className="p-5 bg-warm-50 rounded-3xl border border-warm-200 flex items-center gap-5 text-left shadow-card">
-                {photos[0] && <img src={photos[0].preview} className="w-24 h-24 rounded-2xl object-cover shadow-card border-2 border-white flex-shrink-0" alt="Cover" />}
-                <div className="flex-1 overflow-hidden">
-                  <p className="text-[10px] font-bold text-teal-600 uppercase tracking-widest mb-1">{category}</p>
-                  <p className="font-heading font-black text-midnight-700 truncate text-xl">{title}</p>
-                  <p className="text-2xl font-heading font-black text-teal-600 mt-1">₹{parseFloat(price || '0').toLocaleString('en-IN')}</p>
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    <span className="text-[9px] font-bold bg-warm-200 text-midnight-700 px-2.5 py-1 rounded-full uppercase">{condition.replace('_', ' ')}</span>
-                    {isNegotiable && (
-                      <span className="text-[9px] font-bold bg-teal-50 text-teal-700 px-2.5 py-1 rounded-full border border-teal-100 uppercase">
-                        Negotiable{minPrice && ` (Min: ₹${parseInt(minPrice)})`}
-                      </span>
-                    )}
-                    {itemAge && (
-                      <span className="text-[9px] font-bold bg-warm-200 text-midnight-700 px-2.5 py-1 rounded-full uppercase">
-                        {ITEM_AGE_OPTIONS.find(o => o.value === itemAge)?.label}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                {accessories.length > 0 && (
-                  <div className="p-4 bg-warm-50 rounded-2xl border border-warm-200">
-                    <p className="text-[10px] font-bold text-warm-400 uppercase tracking-widest mb-2">Accessories</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {accessories.map((acc, i) => (
-                        <span key={i} className="px-2.5 py-1 bg-teal-50 text-teal-700 border border-teal-100 rounded-full text-[10px] font-bold">{acc}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                <div className="flex justify-between items-center p-4 bg-warm-50 rounded-xl border border-warm-200">
-                  <span className="text-sm font-medium text-midnight-700">Photos</span>
-                  <button onClick={() => goToStep(1)} className="text-teal-600 text-sm font-bold flex items-center gap-1">{photos.length} photos ✏️</button>
-                </div>
-                <div className="flex justify-between items-center p-4 bg-warm-50 rounded-xl border border-warm-200">
-                  <span className="text-sm font-medium text-midnight-700">Location</span>
-                  <button onClick={() => goToStep(3)} className="text-teal-600 text-sm font-bold flex items-center gap-1">{city}{area ? `, ${area}` : ''} ✏️</button>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                {!isVerified && (
-                  <button
-                    onClick={handleVerifyLocation}
-                    disabled={isVerifying}
-                    className="w-full p-5 bg-teal-50 border-2 border-teal-200 rounded-3xl flex items-center justify-between group hover:bg-teal-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <MapPin size={24} className="text-teal-600" />
-                      <div className="text-left">
-                        <p className="font-bold text-teal-800 text-sm">Verify Island Residency</p>
-                        <p className="text-xs text-teal-600/70">Boost trust with a verified ✓ badge</p>
-                      </div>
-                    </div>
-                    {isVerifying ? <Loader2 className="animate-spin h-5 w-5 text-teal-500" /> : <ChevronRight size={20} className="text-teal-500" />}
-                  </button>
-                )}
-                {isVerified && (
-                  <div className="p-4 bg-emerald-50 text-emerald-700 rounded-3xl border border-emerald-200 flex items-center justify-center gap-3 font-bold text-sm">
-                    <Check size={20} /> Island Verified Resident
-                  </div>
-                )}
-              </div>
-
-              <button
-                onClick={handleSave}
-                disabled={loading}
-                className="btn-primary w-full py-5 text-xl disabled:opacity-50"
-              >
-                {loading ? <><Loader2 className="animate-spin" size={22} /> Please Wait...</> : (editId ? '🖼️ Update Ad Now' : '🏝️ Publish to Island')}
-              </button>
-              {!isVerified && (
-                <p className="text-xs text-warm-400 font-medium flex items-center justify-center gap-1">
-                  <AlertCircle size={11} /> Unverified accounts may have limited visibility.
-                </p>
-              )}
-              <BackButton onClick={prevStep} />
-            </div>
-          )}
 
           {step === 5 && (
             <div className="text-center py-12 space-y-6 animate-fade-in">
               <div className="text-7xl animate-float">🏝️</div>
               <div className="space-y-2">
-                <h2 className="text-3xl font-heading font-black text-midnight-700">{editId ? 'Listing Updated!' : 'Published!'}</h2>
+                <h2 className="text-3xl font-heading font-black text-midnight-700">{editId ? 'Listing Updated!' : isRelist ? 'Relisted!' : 'Published!'}</h2>
                 <p className="text-warm-400 font-medium">{COPY.SUCCESS.LISTING_PUBLISHED}</p>
                 <div className="inline-flex items-center gap-2 px-4 py-2 bg-teal-50 text-teal-700 rounded-full text-sm font-bold mt-2 border border-teal-100">
                   <span className="w-2 h-2 bg-teal-500 rounded-full animate-pulse" /> Live Now

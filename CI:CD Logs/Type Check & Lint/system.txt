@@ -1,8 +1,0 @@
-2026-02-27T09:01:48.0380000Z Evaluating typecheck.if
-2026-02-27T09:01:48.0380000Z Evaluating: success()
-2026-02-27T09:01:48.0380000Z Result: true
-2026-02-27T09:01:48.4040000Z Job is waiting for a hosted runner to come online.
-2026-02-27T09:01:48.4040000Z Job is about to start running on the hosted runner: GitHub Actions 1000000187
-2026-02-27T09:01:48.3870000Z Requested labels: ubuntu-latest
-2026-02-27T09:01:48.3870000Z Job defined at: shahidster1711/AndamanBazaarApp/.github/workflows/ci.yml@refs/heads/main
-2026-02-27T09:01:48.3870000Z Waiting for a runner to pick up this job...

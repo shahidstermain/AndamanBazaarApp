@@ -2,50 +2,13 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Enhanced Authentication & OAuth', () => {
   test.beforeEach(async ({ page }) => {
-    // Mock Supabase Auth
-    await page.route('**/auth/v1/token*', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          access_token: 'fake-token',
-          token_type: 'bearer',
-          expires_in: 3600,
-          refresh_token: 'fake-refresh-token',
-          user: { id: 'test-user-id', email: 'test@example.com', app_metadata: { provider: 'email' } },
-          session: { access_token: 'fake-token', user: { id: 'test-user-id', email: 'test@example.com' } }
-        })
-      })
-    })
-
-    await page.route('**/auth/v1/user', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          id: 'test-user-id',
-          email: 'test@example.com',
-          app_metadata: { provider: 'email' }
-        })
-      })
-    })
-
-    await page.route('**/auth/v1/session', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          session: { access_token: 'fake-token', user: { id: 'test-user-id', email: 'test@example.com' } }
-        })
-      })
-    })
-
+    // Auth is bypassed via VITE_E2E_BYPASS_AUTH=true (set in playwright.config.ts webServer).
+    // Firebase auth runs through identitytoolkit.googleapis.com — no route mock needed here.
     await page.goto('/auth')
   })
 
   test('should display OAuth diagnostic panel when authenticated', async ({ page }) => {
-    // We'll mock the Supabase session if possible.
-    // For this test, we'll try to perform a login and then check the diagnostic panel.
+    // Attempts a real login via the Firebase Auth form; diagnostic panel is shown post-login.
     
     await page.getByPlaceholder('name@domain.com').fill('test@example.com')
     await page.getByPlaceholder('••••••••').fill('Password123!')

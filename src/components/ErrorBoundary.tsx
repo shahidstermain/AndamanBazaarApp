@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw, WifiOff } from 'lucide-react';
+import { captureException } from '../lib/monitoring';
 
 interface Props {
     children: ReactNode;
@@ -27,8 +28,13 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 
     componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-        console.error('ErrorBoundary caught:', error, errorInfo);
-        // Future: send to Sentry or similar service
+        captureException(error, {
+            component: 'ErrorBoundary',
+            componentStack: errorInfo.componentStack,
+        });
+        if (import.meta.env.DEV) {
+            console.error('ErrorBoundary caught:', error, errorInfo);
+        }
     }
 
     componentDidMount() {

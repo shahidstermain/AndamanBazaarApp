@@ -1,0 +1,169 @@
+{
+  "routes": [
+    {
+      "id": "pb-havelock",
+      "from": "Port Blair",
+      "to": "Havelock",
+      "distance_km": 54,
+      "operators": [
+        {
+          "name": "Government Ferry",
+          "type": "slow",
+          "schedule": [
+            { "days": ["Mon", "Wed", "Fri"], "departure": "06:30", "arrival": "09:00", "duration_hours": 2.5 },
+            { "days": ["Tue", "Thu", "Sat"], "departure": "14:00", "arrival": "16:30", "duration_hours": 2.5 }
+          ],
+          "booking_url": "https://www.andamans.gov.in/ferry-booking"
+        },
+        {
+          "name": "Makruzz",
+          "type": "fast",
+          "schedule": [
+            { "days": ["Daily"], "departure": "08:00", "arrival": "09:30", "duration_hours": 1.5 },
+            { "days": ["Daily"], "departure": "13:00", "arrival": "14:30", "duration_hours": 1.5 }
+          ],
+          "booking_url": "https://www.makruzz.com"
+        },
+        {
+          "name": "Green Ocean",
+          "type": "fast",
+          "schedule": [
+            { "days": ["Daily"], "departure": "07:00", "arrival": "08:30", "duration_hours": 1.5 },
+            { "days": ["Daily"], "departure": "14:00", "arrival": "15:30", "duration_hours": 1.5 }
+          ],
+          "booking_url": "https://www.greenoceanseaways.com"
+        }
+      ]
+    },
+    {
+      "id": "havelock-neil",
+      "from": "Havelock",
+      "to": "Neil Island",
+      "distance_km": 18,
+      "operators": [
+        {
+          "name": "Government Ferry",
+          "type": "slow",
+          "schedule": [
+            { "days": ["Mon", "Wed", "Fri"], "departure": "10:00", "arrival": "11:30", "duration_hours": 1.5 }
+          ],
+          "booking_url": "https://www.andamans.gov.in/ferry-booking"
+        },
+        {
+          "name": "Makruzz",
+          "type": "fast",
+          "schedule": [
+            { "days": ["Daily"], "departure": "10:30", "arrival": "11:15", "duration_hours": 0.75 }
+          ],
+          "booking_url": "https://www.makruzz.com"
+        }
+      ]
+    },
+    {
+      "id": "pb-neil-direct",
+      "from": "Port Blair",
+      "to": "Neil Island",
+      "distance_km": 40,
+      "operators": [
+        {
+          "name": "Government Ferry",
+          "type": "slow",
+          "schedule": [
+            { "days": ["Tue", "Thu", "Sat"], "departure": "07:00", "arrival": "09:30", "duration_hours": 2.5 }
+          ],
+          "booking_url": "https://www.andamans.gov.in/ferry-booking"
+        }
+      ]
+    },
+    {
+      "id": "pb-rangat",
+      "from": "Port Blair",
+      "to": "Rangat",
+      "distance_km": 90,
+      "operators": [
+        {
+          "name": "Government Ferry",
+          "type": "slow",
+          "schedule": [
+            { "days": ["Mon", "Thu"], "departure": "06:00", "arrival": "10:00", "duration_hours": 4 }
+          ],
+          "booking_url": "https://www.andamans.gov.in/ferry-booking"
+        }
+      ]
+    },
+    {
+      "id": "pb-diglipur",
+      "from": "Port Blair",
+      "to": "Diglipur",
+      "distance_km": 185,
+      "operators": [
+        {
+          "name": "Government Ferry (via Rangat)",
+          "type": "slow",
+          "schedule": [
+            { "days": ["Tue", "Fri"], "departure": "05:30", "arrival": "14:00", "duration_hours": 8.5 }
+          ],
+          "booking_url": "https://www.andamans.gov.in/ferry-booking"
+        }
+      ]
+    },
+    {
+      "id": "pb-little-andaman",
+      "from": "Port Blair",
+      "to": "Little Andaman",
+      "distance_km": 120,
+      "operators": [
+        {
+          "name": "Government Ferry",
+          "type": "slow",
+          "schedule": [
+            { "days": ["Mon", "Thu"], "departure": "05:00", "arrival": "11:00", "duration_hours": 6 }
+          ],
+          "booking_url": "https://www.andamans.gov.in/ferry-booking"
+        }
+      ]
+    },
+    {
+      "id": "pb-car-nicobar",
+      "from": "Port Blair",
+      "to": "Car Nicobar",
+      "distance_km": 270,
+      "operators": [
+        {
+          "name": "M.V. Swaraj Dweep (Inter-Island)",
+          "type": "slow",
+          "schedule": [
+            { "days": ["Sat"], "departure": "16:00", "arrival": "08:00+1", "duration_hours": 16, "note": "Overnight journey" }
+          ],
+          "booking_url": "https://www.andamans.gov.in/ferry-booking"
+        }
+      ]
+    }
+  ],
+  "barge_services": [
+    {
+      "id": "pb-havelock-cargo",
+      "from": "Port Blair",
+      "to": "Havelock",
+      "type": "cargo_barge",
+      "frequency": "Weekly",
+      "schedule": "Every Wednesday",
+      "contact": "Port Blair Harbour Office: 03192-232471"
+    },
+    {
+      "id": "pb-neil-cargo",
+      "from": "Port Blair",
+      "to": "Neil Island",
+      "type": "cargo_barge",
+      "frequency": "Weekly",
+      "schedule": "Every Tuesday",
+      "contact": "Port Blair Harbour Office: 03192-232471"
+    }
+  ],
+  "monsoon_alerts": {
+    "active": false,
+    "message": "",
+    "affected_routes": []
+  },
+  "last_updated": "2026-03-01"
+}

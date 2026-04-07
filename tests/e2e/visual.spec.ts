@@ -62,78 +62,8 @@ test.describe('Visual Regression Tests', () => {
   });
 
   test('Create Listing Page Visual (Auth Required)', async ({ page }) => {
-    // Use the correct Supabase local storage key based on the project ref
-    // Project URL: https://msxeqzceqjatoaluempo.supabase.co
-    const projectRef = 'msxeqzceqjatoaluempo';
-    const authKey = `sb-${projectRef}-auth-token`;
-    
-    await page.addInitScript((arg) => {
-      const { key } = arg;
-      const nowSec = Math.floor(Date.now() / 1000);
-      const session = {
-        access_token: 'fake-token',
-        token_type: 'bearer',
-        expires_in: 3600,
-        expires_at: nowSec + 3600,
-        refresh_token: 'fake-refresh-token',
-        user: {
-          id: 'test-user',
-          email: 'test@example.com',
-          app_metadata: { provider: 'email' },
-          user_metadata: {}
-        }
-      };
-      window.localStorage.setItem(key, JSON.stringify(session));
-    }, { key: authKey });
-
-    // Mock the user endpoint to return the logged-in user
-    await page.route('**/auth/v1/user', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          id: 'test-user',
-          email: 'test@example.com',
-          app_metadata: { provider: 'email' },
-          user_metadata: {}
-        })
-      });
-    });
-
-    // Override the session mock to return a valid session
-    await page.route('**/auth/v1/session', route => {
-      const nowSec = Math.floor(Date.now() / 1000);
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          access_token: 'fake-token',
-          token_type: 'bearer',
-          expires_in: 3600,
-          refresh_token: 'fake-refresh-token',
-          user: {
-            id: 'test-user',
-            email: 'test@example.com',
-            app_metadata: { provider: 'email' },
-            user_metadata: {}
-          }
-        })
-      });
-    });
-
-    // Mock profile data
-    await page.route('**/rest/v1/profiles*', route => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify([{
-          id: 'test-user',
-          is_location_verified: true,
-          city: 'Port Blair',
-          area: 'Aberdeen'
-        }])
-      });
-    });
+    // VITE_E2E_BYPASS_AUTH=true is set by playwright.config.ts webServer command.
+    // Firebase auth is bypassed in test mode — no manual session injection needed.
 
     await page.goto('/post');
     await expect(page).toHaveURL(/\/post/);

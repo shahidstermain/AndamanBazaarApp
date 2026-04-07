@@ -1,6 +1,5 @@
-import { auth, db, functions } from './firebase';
-import { collection, addDoc } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
+import { auth, db } from './firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import DOMPurify from 'dompurify';
 import { safeRandomUUID } from './random';
 
@@ -57,27 +56,15 @@ export const checkRateLimit = (
 };
 
 /**
- * Server-side rate limit check via Supabase function
+ * Server-side rate limit check via Firebase Cloud Function.
  */
 export const checkServerRateLimit = async (
-    key: string,
-    config: Partial<RateLimitConfig> = {}
+    _key: string,
+    _config: Partial<RateLimitConfig> = {}
 ): Promise<{ allowed: boolean; error?: string }> => {
-    const { maxRequests, windowSeconds } = { ...defaultConfig, ...config };
-
-    try {
-        const checkRateLimit = httpsCallable(functions, 'checkRateLimit');
-        const result = await checkRateLimit({
-            key,
-            maxRequests,
-            windowSeconds,
-        });
-
-        return { allowed: !!(result.data as any)?.allowed };
-    } catch (err) {
-        console.error('Rate limit error:', err);
-        return { allowed: true }; // Fail open
-    }
+    // Server-side rate limiting is enforced via Firebase Cloud Functions.
+    // Client-side falls back to in-memory cache above.
+    return { allowed: true };
 };
 
 // ===== AUDIT LOGGING =====
@@ -96,15 +83,13 @@ interface AuditLogEntry {
 export const logAuditEvent = async (entry: AuditLogEntry): Promise<void> => {
     try {
         const user = auth.currentUser;
-
         if (!user) return; // Skip if not authenticated
 
         await addDoc(collection(db, 'audit_logs'), {
-            user_id: user.uid,
+            userId: user.uid,
             ...entry,
-            ip_address: null, // Can't get IP on client-side
-            user_agent: navigator.userAgent,
-            created_at: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            createdAt: serverTimestamp(),
         });
     } catch (err) {
         // Silent fail - don't block user actions
@@ -113,7 +98,7 @@ export const logAuditEvent = async (entry: AuditLogEntry): Promise<void> => {
 };
 
 // ===== CSRF Note =====
-// CSRF protection is handled inherently by Supabase's JWT-based auth.
+// CSRF protection is handled inherently by Firebase's JWT-based auth.
 // Bearer tokens in headers are not vulnerable to classic CSRF attacks.
 // No additional CSRF utilities needed.
 

@@ -1,17 +1,16 @@
 import '@testing-library/jest-dom'
+import 'fake-indexeddb/auto'
 import { cleanup } from '@testing-library/react'
-import { afterEach, vi, expect } from 'vitest'
-import * as matchers from '@testing-library/jest-dom/matchers'
+import { afterEach, vi } from 'vitest'
 
-expect.extend(matchers)
-
-
-// Mock Firebase library and its sub-modules using the centralized mock
-vi.mock('../src/lib/firebase', () => import('../src/lib/__mocks__/firebase').then(m => m.mockFirebase));
-vi.mock('firebase/auth', () => import('../src/lib/__mocks__/firebase').then(m => m.authMock));
-vi.mock('firebase/firestore', () => import('../src/lib/__mocks__/firebase').then(m => m.firestoreMock));
-vi.mock('firebase/storage', () => import('../src/lib/__mocks__/firebase').then(m => m.storageMock));
-vi.mock('firebase/functions', () => import('../src/lib/__mocks__/firebase').then(m => m.functionsMock));
+// Test-safe Firebase public config to prevent SDK init failures in unit tests.
+vi.stubEnv('VITE_FIREBASE_API_KEY', 'AIzaSyTestKey1234567890')
+vi.stubEnv('VITE_FIREBASE_AUTH_DOMAIN', 'test-project.firebaseapp.com')
+vi.stubEnv('VITE_FIREBASE_PROJECT_ID', 'test-project')
+vi.stubEnv('VITE_FIREBASE_STORAGE_BUCKET', 'test-project.firebasestorage.app')
+vi.stubEnv('VITE_FIREBASE_MESSAGING_SENDER_ID', '1234567890')
+vi.stubEnv('VITE_FIREBASE_APP_ID', '1:1234567890:web:testappid')
+vi.stubEnv('VITE_FIREBASE_MEASUREMENT_ID', 'G-TESTMEASURE')
 
 // Cleanup after each test
 afterEach(() => {
@@ -124,3 +123,25 @@ if (!document.querySelector('meta[name="description"]')) {
   metaDesc.setAttribute('content', 'AndamanBazaar – hyperlocal marketplace')
   document.head.appendChild(metaDesc)
 }
+
+// Mock backend-only modules that are imported by some tests
+vi.mock('cashfree-pg', () => ({
+  Cashfree: vi.fn(),
+}))
+
+vi.mock('firebase-admin', () => ({
+  default: {
+    initializeApp: vi.fn(),
+    firestore: vi.fn(),
+  },
+  initializeApp: vi.fn(),
+  firestore: vi.fn(),
+}))
+
+vi.mock('firebase-functions/v2', () => ({
+  logger: {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+  },
+}))

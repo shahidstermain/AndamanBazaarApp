@@ -3,55 +3,32 @@ import React from 'react';
 interface WhatsAppShareProps {
   url: string;
   title: string;
-  className?: string;
 }
 
-const WhatsAppIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    aria-hidden="true"
-  >
-    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-  </svg>
-);
-
-export const WhatsAppShare: React.FC<WhatsAppShareProps> = ({ url, title, className = '' }) => {
-  const encodedText = encodeURIComponent(`${title}\n${url}`);
-  const waUrl = `https://wa.me/?text=${encodedText}`;
+export const WhatsAppShare: React.FC<WhatsAppShareProps> = ({ url, title }) => {
+  const text = `🏝️ *AndamanBazaar Local Deal*\n\n*${title}*\n\nCheck details here 👇\n${url}\n\n#AndamanBazaar #PortBlair #AndamanIslands`;
+  const encodedText = encodeURIComponent(text);
+  const whatsappUrl = `https://wa.me/?text=${encodedText}`;
 
   return (
     <a
-      href={waUrl}
+      href={whatsappUrl}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={`Share on WhatsApp: ${title}`}
-      className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-sm text-white transition-all duration-200 hover:opacity-90 active:scale-95 shadow-sm bg-[#25D366] ${className}`}
+      className="flex flex-1 items-center justify-center gap-2 px-4 py-3 bg-[#25D366] hover:bg-[#128C7E] text-white rounded-xl font-bold transition-colors shadow-sm"
+      aria-label="Share on WhatsApp"
     >
-      <WhatsAppIcon size={18} />
-      <span>Share on WhatsApp</span>
-    </a>
-  );
-};
-
-/**
- * Compact icon-only variant for use inside image overlay icon-button rows.
- */
-export const WhatsAppShareIcon: React.FC<{ url: string; title: string }> = ({ url, title }) => {
-  const encodedText = encodeURIComponent(`${title}\n${url}`);
-  const waUrl = `https://wa.me/?text=${encodedText}`;
-
-  return (
-    <a
-      href={waUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={`Share on WhatsApp: ${title}`}
-      className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-glass border border-white/50 text-white transition-all active:scale-95 hover:opacity-90 z-10 bg-[#25D366]"
-    >
-      <WhatsAppIcon size={20} />
+      <svg 
+        xmlns="http://www.w3.org/2000/svg" 
+        width="20" 
+        height="20" 
+        viewBox="0 0 24 24" 
+        fill="currentColor" 
+        stroke="none"
+      >
+        <path d="M11.99 2C6.47 2 2 6.48 2 12c0 1.76.45 3.42 1.24 4.88L2 22l5.23-1.21A9.975 9.975 0 0 0 12 22c5.52 0 10-4.48 10-10S17.51 2 11.99 2zm5.78 14.36c-.25.71-1.42 1.34-1.95 1.41-.53.07-1.12.18-3.41-.77-2.75-1.13-4.52-4-4.66-4.18-.14-.19-1.11-1.48-1.11-2.82s.69-2.01.93-2.26c.24-.26.54-.31.72-.31.18 0 .36 0 .52.01.18.01.41-.07.63.46.23.55.8 1.95.87 2.1s.14.33.02.58c-.12.25-.19.4-.38.64-.19.23-.4.5-.58.68-.2.21-.4.43-.17.82.23.39 1.02 1.68 2.19 2.72 1.51 1.35 2.76 1.77 3.16 1.96.4.19.64.16.88-.11.24-.27 1.04-1.21 1.31-1.63.28-.42.56-.35.93-.21.36.14 2.3.109 2.69 1.28.4.19.65.29.75.45.1.17.1.98-.15 1.69z" />
+      </svg>
+      Share via WhatsApp
     </a>
   );
 };

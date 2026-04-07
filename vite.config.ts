@@ -14,17 +14,17 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico'],
+      includeAssets: ['favicon.png', 'favicon.ico'],
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
           {
-            // Cache Supabase storage images
-            urlPattern: /^https:\/\/.*supabase.*\/storage\//,
+            // Cache Firebase Storage images
+            urlPattern: /^https:\/\/(firebasestorage\.googleapis\.com|storage\.googleapis\.com)\//,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'listing-images',
+              cacheName: 'firebase-listing-images',
               expiration: {
                 maxEntries: 100,
                 maxAgeSeconds: 60 * 60 * 24 * 7, // Cache for 1 week
@@ -44,9 +44,9 @@ export default defineConfig({
         start_url: './',
         icons: [
           {
-            src: '/favicon.ico',
+            src: '/favicon.png',
             sizes: '64x64',
-            type: 'image/x-icon',
+            type: 'image/png',
           },
           {
             src: '/logo192.png',
@@ -67,9 +67,30 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  test: {
-    globals: true,
-    environment: 'happy-dom',
-    setupFiles: './tests/setup.ts',
+  build: {
+    // Raise warning threshold to 600 kB (from 500 kB default)
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          // Charts — only loaded on Dashboard; separate chunk improves caching
+          if (id.includes('recharts') || id.includes('d3-')) {
+            return 'vendor-charts';
+          }
+          // Firebase SDK — large, shared, cache-stable
+          if (id.includes('node_modules/firebase') || id.includes('node_modules/@firebase')) {
+            return 'vendor-firebase';
+          }
+          // Radix UI primitives
+          if (id.includes('@radix-ui')) {
+            return 'vendor-radix';
+          }
+          // Sentry error tracking
+          if (id.includes('@sentry')) {
+            return 'vendor-sentry';
+          }
+        },
+      },
+    },
   },
 });

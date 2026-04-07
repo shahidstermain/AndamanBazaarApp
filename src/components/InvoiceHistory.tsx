@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
+import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { FileText, Download, Mail, CheckCircle, Clock, AlertCircle, Loader2 } from 'lucide-react';
 
 // ============================================================
@@ -34,10 +34,12 @@ export const InvoiceHistory: React.FC = () => {
     const fetchInvoices = async () => {
         try {
             setLoading(true);
-            const q = query(collection(db, 'invoices'), orderBy('created_at', 'desc'));
-            const snapshot = await getDocs(q);
-            const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Invoice));
-            setInvoices(data);
+            const user = auth.currentUser;
+            if (!user) { setInvoices([]); return; }
+            const snap = await getDocs(
+                query(collection(db, 'invoices'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'))
+            );
+            setInvoices(snap.docs.map(d => ({ id: d.id, ...d.data() })) as Invoice[]);
         } catch (err: any) {
             setError(err.message || 'Failed to load invoices');
         } finally {

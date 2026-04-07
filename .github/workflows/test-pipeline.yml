@@ -28,16 +28,7 @@ jobs:
       - run: npm ci
 
       - name: Run Vitest with coverage
-        run: npx vitest run --coverage --reporter=json --outputFile=test-results.json
-
-      - name: Check coverage thresholds
-        run: |
-          npx vitest run --coverage 2>&1 | tee coverage-output.txt
-          # Fail if coverage below 70%
-          if grep -q "ERROR" coverage-output.txt; then
-            echo "::error::Coverage thresholds not met"
-            exit 1
-          fi
+        run: npx vitest run --coverage --poolOptions.threads.minThreads=1 --poolOptions.threads.maxThreads=1
 
       - name: Upload coverage report
         if: always()

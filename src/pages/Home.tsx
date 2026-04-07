@@ -1,13 +1,29 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { collection, query, where, orderBy, limit, getDocs, startAfter, DocumentSnapshot } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
+import { collection, query, where, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
 import { isDemoListing } from '../lib/demoListings';
 import { useToast } from '../components/Toast';
 import { COPY } from '../lib/localCopy';
+import { Seo } from '../components/Seo';
+import { TrustBadge } from '../components/TrustBadge';
+import { FreshnessBadge } from '../components/FreshnessBadge';
+import { BoostBadge } from '../components/BoostBadge';
+import { UrgentBadge } from '../components/UrgentBadge';
+import { FeaturedSection } from '../components/FeaturedSection';
 import {
-  Search, ArrowRight, Loader2, Heart, MapPin, Flame,
-  Fish, Leaf, Shell, Compass,
+  Search,
+  Sparkles,
+  Compass,
+  ArrowRight,
+  Flame,
+  LayoutGrid,
+  MapPin,
+  Heart,
+  Loader2,
+  Fish,
+  Leaf,
+  Shell,
   BadgeCheck
 } from 'lucide-react';
 
@@ -47,7 +63,292 @@ interface Listing {
   views_count?: number;
   images?: { image_url: string }[];
   is_demo?: boolean;
+  seller?: {
+    user_id: string;
+    trust_level: 'newbie' | 'verified' | 'legend';
+    full_name: string;
+    avatar_url: string;
+  }[] | null;
+  last_active_at?: string;
+  availability_status?: 'available' | 'sold_recently' | 'inactive';
+  response_rate?: number;
+  avg_response_hours?: number;
+  // Optional fields present in some listings / demo data
+  area?: string;
+  is_official?: boolean;
+  // Boost fields
+  isBoosted?: boolean;
+  boostTier?: 'spark' | 'boost' | 'power';
+  boostExpiresAt?: any; // Firestore Timestamp
+  is_urgent?: boolean;
 }
+
+// ============================================================
+//  SUB-COMPONENTS
+// ============================================================
+
+interface ListingCardProps {
+  listing: Listing;
+  saved: boolean;
+  onSave: (id: string, e: React.MouseEvent) => void;
+  timeAgo?: string;
+  style?: React.CSSProperties;
+}
+
+const ListingCard: React.FC<ListingCardProps> = ({ listing, saved, onSave, timeAgo, style }) => {
+  const imageUrl = listing.images?.length
+    ? listing.images[0].image_url
+    : `https://picsum.photos/seed/${listing.id}/400/400`;
+  const isDemo = listing.is_demo || isDemoListing(listing.id);
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isDemo) {
+      e.preventDefault();
+    }
+  };
+
+  return (
+    <Link
+      to={isDemo ? '#' : `/listings/${listing.id}`}
+      className="listing-card animate-fade-in-up"
+      style={style}
+      onClick={handleClick}
+    >
+      {/* Image */}
+      <div className="relative aspect-square overflow-hidden bg-warm-100 m-2 rounded-2xl">
+        <img
+          src={imageUrl}
+          alt={listing.title}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          loading="lazy"
+        />
+        {/* Save/Heart Button */}
+        <button
+          onClick={e => onSave(listing.id, e)}
+          className={`absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center shadow-glass transition-all duration-200 active:scale-90 ${saved ? 'bg-coral-500' : 'bg-white/90 backdrop-blur-sm'}`}
+          aria-label={saved ? 'Unsave listing' : 'Save listing'}
+        >
+          <Heart
+            size={14}
+            className={saved ? 'text-white fill-white' : 'text-warm-400'}
+          />
+        </button>
+        {listing.city && (
+          <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
+            <div className="bg-white/95 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1 text-[9px] font-black text-midnight-700 uppercase tracking-widest shadow-sm border border-warm-100/50">
+              <MapPin size={9} className="text-ocean-600" />
+              {listing.city}
+            </div>
+            {listing.is_official && (
+              <div className="bg-blue-600/90 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center gap-1 text-[8px] font-black text-white uppercase tracking-widest shadow-sm">
+                Official
+              </div>
+            )}
+          </div>
+        )}
+        {/* Freshness Badge */}
+        <div className="absolute top-8 left-2">
+          <FreshnessBadge
+            lastActiveAt={listing.last_active_at}
+            availabilityStatus={listing.availability_status}
+            responseRate={listing.response_rate}
+            avgResponseHours={listing.avg_response_hours}
+            size="sm"
+          />
+        </div>
+        {/* Trust Badge */}
+        {listing.seller && listing.seller.length > 0 && listing.seller[0].trust_level && listing.seller[0].trust_level !== 'newbie' && (
+          <div className="absolute bottom-2 left-2 flex items-center gap-2">
+            <TrustBadge level={listing.seller[0].trust_level} size="sm" showLabel={false} />
+            <Link 
+              to={`/seller/${listing.seller[0].user_id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-2xs text-warm-600 hover:text-teal-600 transition-colors bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full"
+            >
+              {listing.seller[0].full_name}
+            </Link>
+          </div>
+        )}
+        {/* Boost Badge */}
+        {listing.isBoosted && listing.boostTier && (
+          <div className="absolute bottom-2 right-2 z-10">
+            <BoostBadge tier={listing.boostTier} size="sm" />
+          </div>
+        )}
+        {/* Urgent Badge */}
+        {listing.is_urgent && (
+          <div className="absolute top-2 right-2 z-10">
+            <UrgentBadge size="sm" />
+          </div>
+        )}
+        {/* Featured Badge */}
+        {listing.is_featured && !listing.isBoosted && (
+          <div className={`absolute ${listing.seller && listing.seller.length > 0 && listing.seller[0].trust_level && listing.seller[0].trust_level !== 'newbie' ? 'top-2 right-2' : 'top-2 left-2'} bg-sandy-gradient text-midnight-700 text-3xs font-black uppercase px-2 py-0.5 rounded-full`}>
+            ✦ Featured
+          </div>
+        )}
+        {/* Demo Badge */}
+        {isDemo && !listing.isBoosted && (
+          <div className="absolute bottom-2 right-2 bg-warm-800/60 backdrop-blur-sm text-white/90 text-3xs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full z-10">
+            Demo
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="px-3 pb-3 flex-1 flex flex-col justify-between gap-1">
+        <div className="space-y-0.5">
+          <div className="flex items-center gap-1">
+            <h3 className="text-xs font-semibold text-midnight-700 line-clamp-1 leading-tight pr-2 flex-1">
+              {listing.title}
+            </h3>
+            {listing.is_official && (
+              <span className="text-[8px] font-black text-blue-600 uppercase tracking-tighter shrink-0">Team</span>
+            )}
+          </div>
+          {listing.area && (
+            <p className="text-[9px] font-bold text-warm-400 uppercase tracking-widest flex items-center gap-1">
+              📍 {listing.area}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center justify-between mt-1">
+          <span className="font-bold text-midnight-800 text-sm">
+            ₹{listing.price?.toLocaleString('en-IN') ?? '0'}
+          </span>
+          <div className="w-6 h-6 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100">
+            <ArrowRight size={10} className="text-gray-500" />
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+};
+
+interface HorizontalCardProps {
+  listing: Listing;
+  rank: number;
+  saved: boolean;
+  onSave: (id: string, e: React.MouseEvent) => void;
+}
+
+const HorizontalListingCard: React.FC<HorizontalCardProps> = ({ listing, rank, saved, onSave }) => {
+  const imageUrl = listing.images?.length
+    ? listing.images[0].image_url
+    : `https://picsum.photos/seed/${listing.id}/300/300`;
+  const isDemo = listing.is_demo || isDemoListing(listing.id);
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isDemo) {
+      e.preventDefault();
+    }
+  };
+
+  return (
+    <Link to={isDemo ? '#' : `/listings/${listing.id}`} className="w-44 flex-shrink-0 listing-card group" onClick={handleClick}>
+      <div className="relative aspect-square overflow-hidden bg-warm-100 m-2 rounded-2xl">
+        <img src={imageUrl} alt={listing.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
+        {/* Location & Official Badge */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
+          {listing.city && (
+            <div className="bg-white/95 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1 text-[8px] font-black text-midnight-700 uppercase tracking-widest shadow-sm border border-warm-100/50">
+              <MapPin size={8} className="text-ocean-600" />
+              {listing.city}
+            </div>
+          )}
+          {listing.is_official && (
+            <div className="bg-blue-600/90 backdrop-blur-sm px-2 py-0.5 rounded-full flex items-center gap-1 text-[7px] font-black text-white uppercase tracking-widest shadow-sm">
+              Official
+            </div>
+          )}
+        </div>
+
+        {/* Trust Badge or AndamanBazaar badge */}
+        <div className="absolute bottom-2 left-2 right-2 bg-white/90 backdrop-blur-md rounded-xl p-2 flex items-center gap-2">
+          {listing.seller && listing.seller.length > 0 && listing.seller[0].trust_level && listing.seller[0].trust_level !== 'newbie' ? (
+            <div className="flex items-center gap-2 flex-1">
+              <TrustBadge level={listing.seller[0].trust_level} size="sm" />
+              <Link 
+                to={`/seller/${listing.seller[0].user_id}`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-[10px] text-warm-600 hover:text-teal-600 transition-colors truncate"
+              >
+                {listing.seller[0].full_name}
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div className="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center flex-shrink-0">
+                <BadgeCheck size={12} className="text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="text-[10px] font-bold">Andaman<span className="text-blue-500">Bazaar</span></div>
+                <div className="text-[7px] text-gray-500 tracking-widest uppercase">Local . Trusted</div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Demo Badge */}
+        {isDemo && (
+          <div className="absolute top-2 right-10 bg-warm-800/60 backdrop-blur-sm text-white/90 text-[7px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full z-10">
+            Demo
+          </div>
+        )}
+
+        <button
+          onClick={e => onSave(listing.id, e)}
+          className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center shadow-glass transition-all ${saved ? 'bg-coral-500' : 'bg-white/90 backdrop-blur-sm'}`}
+          title={saved ? 'Unsave listing' : 'Save listing'}
+          aria-label={saved ? 'Unsave listing' : 'Save listing'}
+        >
+          <Heart size={12} className={saved ? 'text-white fill-white' : 'text-warm-400'} />
+        </button>
+      </div>
+      <div className="px-3 pb-3 flex flex-col gap-1">
+        <div className="flex items-center gap-1">
+          <h3 className="text-[11px] font-semibold text-midnight-700 line-clamp-1 leading-tight flex-1">
+            {listing.title}
+          </h3>
+          {listing.is_official && (
+            <span className="text-[7px] font-black text-blue-600 uppercase tracking-tighter shrink-0">Team</span>
+          )}
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="font-bold text-midnight-800 text-xs">
+            ₹{listing.price?.toLocaleString('en-IN') ?? '0'}
+          </span>
+          {listing.area && (
+             <span className="text-[8px] font-bold text-warm-400 uppercase tracking-tight truncate max-w-[60px]">
+               {listing.area}
+             </span>
+          )}
+        </div>
+      </div>
+    </Link>
+  );
+};
+
+const ListingCardSkeleton = () => (
+  <div className="premium-card overflow-hidden">
+    <div className="m-2 aspect-square rounded-2xl skeleton" />
+    <div className="px-3 pb-3 space-y-2">
+      <div className="h-3 skeleton w-3/4" />
+      <div className="h-4 skeleton w-1/4" />
+    </div>
+  </div>
+);
+
+const HorizontalCardSkeleton = () => (
+  <div className="w-44 flex-shrink-0 listing-card">
+    <div className="aspect-square m-2 rounded-2xl skeleton" />
+    <div className="px-3 pb-3 space-y-2">
+      <div className="h-3 skeleton w-5/6" />
+      <div className="h-4 skeleton w-1/3" />
+    </div>
+  </div>
+);
+
 
 // ============================================================
 //  MAIN HOME COMPONENT
@@ -60,6 +361,9 @@ export const Home: React.FC = () => {
   const [featuredListings, setFeaturedListings] = useState<Listing[]>([]);
   const [trendingListings, setTrendingListings] = useState<Listing[]>([]);
   const [recentListings, setRecentListings] = useState<Listing[]>([]);
+  const [boostedListings, setBoostedListings] = useState<Listing[]>([]);
+  const [urgentListings, setUrgentListings] = useState<Listing[]>([]);
+  const [loadingUrgent, setLoadingUrgent] = useState(false);
   const [loadingFeatured, setLoadingFeatured] = useState(true);
   const [loadingTrending, setLoadingTrending] = useState(true);
   const [loadingRecent, setLoadingRecent] = useState(true);
@@ -78,6 +382,8 @@ export const Home: React.FC = () => {
   useEffect(() => {
     fetchFeatured();
     fetchTrending();
+    fetchBoosted();
+    fetchUrgentListings();
     fetchRecent(0);
   }, []);
 
@@ -101,19 +407,15 @@ export const Home: React.FC = () => {
   const fetchFeatured = async () => {
     setLoadingFeatured(true);
     try {
-      const q = query(
-        collection(db, 'listings'),
-        where('status', '==', 'active'),
-        where('is_featured', '==', true),
-        orderBy('created_at', 'desc'),
-        limit(10)
+      const snap = await getDocs(
+        query(collection(db, 'listings'),
+          where('status', '==', 'active'),
+          where('isFeatured', '==', true),
+          orderBy('createdAt', 'desc'),
+          limit(10)
+        )
       );
-      const snapshot = await getDocs(q);
-      const results = snapshot.docs.map(doc => {
-        const d = doc.data();
-        return { id: doc.id, ...d, images: d.images || [] } as any;
-      });
-      setFeaturedListings(results);
+      setFeaturedListings(snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[]);
     } catch (err) {
       console.error('Featured fetch error:', err);
       setFeaturedListings([]);
@@ -125,18 +427,14 @@ export const Home: React.FC = () => {
   const fetchTrending = async () => {
     setLoadingTrending(true);
     try {
-      const q = query(
-        collection(db, 'listings'),
-        where('status', '==', 'active'),
-        orderBy('views_count', 'desc'),
-        limit(6)
+      const snap = await getDocs(
+        query(collection(db, 'listings'),
+          where('status', '==', 'active'),
+          orderBy('viewsCount', 'desc'),
+          limit(6)
+        )
       );
-      const snapshot = await getDocs(q);
-      const results = snapshot.docs.map(doc => {
-        const d = doc.data();
-        return { id: doc.id, ...d, images: d.images || [] } as any;
-      });
-      setTrendingListings(results);
+      setTrendingListings(snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[]);
     } catch (err) {
       console.error('Trending fetch error:', err);
       setTrendingListings([]);
@@ -145,27 +443,59 @@ export const Home: React.FC = () => {
     }
   };
 
+  const fetchBoosted = async () => {
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'listings'),
+          where('status', '==', 'active'),
+          where('isBoosted', '==', true),
+          where('boostExpiresAt', '>', Timestamp.now()),
+          orderBy('boostExpiresAt', 'desc'),
+          limit(6)
+        )
+      );
+      setBoostedListings(snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[]);
+    } catch (err) {
+      console.error('Boosted fetch error:', err);
+      setBoostedListings([]);
+    }
+  };
+
+  const fetchUrgentListings = async () => {
+    setLoadingUrgent(true);
+    try {
+      const snap = await getDocs(
+        query(collection(db, 'listings'),
+          where('status', '==', 'active'),
+          where('is_urgent', '==', true),
+          orderBy('createdAt', 'desc'),
+          limit(6)
+        )
+      );
+      setUrgentListings(snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[]);
+    } catch (err) {
+      console.error('Urgent fetch error:', err);
+      setUrgentListings([]);
+    } finally {
+      setLoadingUrgent(false);
+    }
+  };
+
   const fetchRecent = async (pageIndex: number) => {
     if (pageIndex === 0) setLoadingRecent(true);
     else setLoadingMore(true);
     try {
-      const q = query(
-        collection(db, 'listings'),
-        where('status', '==', 'active'),
-        orderBy('created_at', 'desc'),
-        limit(RECENT_PAGE_SIZE)
+      const snap = await getDocs(
+        query(collection(db, 'listings'),
+          where('status', '==', 'active'),
+          orderBy('createdAt', 'desc'),
+          limit((pageIndex + 1) * RECENT_PAGE_SIZE)
+        )
       );
-      const snapshot = await getDocs(q);
-      const results = snapshot.docs.map(doc => {
-        const d = doc.data();
-        return { id: doc.id, ...d, images: d.images || [] } as any;
-      });
-      if (pageIndex === 0) {
-        setRecentListings(results);
-      } else {
-        setRecentListings(prev => [...prev, ...results]);
-      }
-      setHasMore(results.length === RECENT_PAGE_SIZE);
+      const all = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+      const paged = all.slice(pageIndex * RECENT_PAGE_SIZE);
+      setRecentListings(prev => pageIndex === 0 ? all.slice(0, RECENT_PAGE_SIZE) : [...prev, ...paged]);
+      setHasMore(all.length === (pageIndex + 1) * RECENT_PAGE_SIZE);
       setPage(pageIndex);
     } catch (err) {
       console.error('Recent fetch error:', err);
@@ -216,7 +546,12 @@ export const Home: React.FC = () => {
   const { h, m, ss } = formatTimer(flashTime);
 
   return (
-    <div className="min-h-screen bg-warm-50 pb-28 md:pb-12">
+    <>
+      <Seo 
+        title="Andaman's Local Marketplace" 
+        description="Buy & Sell locally in Andaman — no mainland scams. Your trusted community marketplace for the Andaman & Nicobar Islands."
+      />
+      <div className="min-h-screen bg-warm-50 pb-28 md:pb-12">
 
       {/* ── HERO — IMMERSIVE OCEAN ── */}
       <section className="relative overflow-hidden wave-divider bg-gradient-ocean-deep">
@@ -230,7 +565,7 @@ export const Home: React.FC = () => {
             <div className="reveal">
               <span className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 px-4 py-2 rounded-full text-white/90 text-[11px] md:text-xs font-bold uppercase tracking-[0.15em]">
                 <span className="w-2 h-2 rounded-full bg-teal-300 animate-pulse" />
-                Andaman's Own Marketplace
+                Buy & Sell locally in Andaman
               </span>
             </div>
 
@@ -262,6 +597,9 @@ export const Home: React.FC = () => {
                       <Search size={18} className="text-white/50" />
                     </div>
                     <input
+                      id="home-search-input"
+                      name="q"
+                      aria-label="Search listings"
                       type="text"
                       value={searchQuery}
                       onChange={e => setSearchQuery(e.target.value)}
@@ -324,6 +662,69 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
+      {/* ── AI TRIP PLANNER PROMO ── */}
+      <section className="px-4 mb-10">
+        <div className="app-container">
+          <Link 
+            to="/planner" 
+            className="group relative block rounded-[32px] overflow-hidden bg-midnight-900 shadow-elevated transition-transform active:scale-[0.98]"
+          >
+            {/* Mesh Background */}
+            <div className="absolute inset-0 bg-mesh opacity-30 group-hover:opacity-40 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-br from-ocean-600/40 to-transparent pointer-events-none" />
+            
+            <div className="relative z-10 p-8 md:p-12 flex flex-col md:flex-row md:items-center justify-between gap-8">
+              <div className="max-w-xl">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="bg-teal-500/20 backdrop-blur-md px-3 py-1 rounded-full border border-teal-500/30 flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-teal-400" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-teal-300">Beta Early Access</span>
+                  </div>
+                </div>
+                <h2 className="text-3xl md:text-5xl font-display font-black text-white leading-tight mb-4">
+                  Plan your perfect <br />
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-300 to-emerald-300">Island Escape</span> with AI
+                </h2>
+                <p className="text-white/60 text-base md:text-lg font-medium leading-relaxed mb-6">
+                  Personalized itineraries, ferry schedules, and island-hopping logic — generated in seconds for your unique travel style.
+                </p>
+                <div className="flex items-center gap-4">
+                  <span className="bg-white text-midnight-900 px-6 py-3 rounded-2xl font-heading font-black text-sm transition-all group-hover:shadow-ocean-glow">
+                    Start Planning
+                  </span>
+                  <div className="flex -space-x-3">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="w-10 h-10 rounded-full border-2 border-midnight-900 bg-warm-200 overflow-hidden shadow-lg">
+                        <img src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="User" className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                    <div className="w-10 h-10 rounded-full border-2 border-midnight-900 bg-teal-500 flex items-center justify-center text-[10px] font-black text-white shadow-lg">
+                      500+
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative md:w-1/3 flex justify-center">
+                <div className="w-64 h-64 md:w-80 md:h-80 relative">
+                  <div className="absolute inset-0 bg-teal-500/20 rounded-full blur-3xl animate-pulse" />
+                  <div className="relative z-10 w-full h-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-[40px] p-6 shadow-2xl rotate-3 group-hover:rotate-6 transition-transform duration-700">
+                    <div className="space-y-4">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="h-12 bg-white/5 rounded-xl border border-white/5 animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />
+                      ))}
+                      <div className="h-20 bg-teal-500/20 rounded-xl border border-teal-500/20 flex items-center justify-center">
+                        <Compass className="text-teal-400 animate-spin-slow" size={32} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Link>
+        </div>
+      </section>
+
       {/* ── FLASH DEALS ── */}
       {FLASH_DEALS_ENABLED && (
       <section className="px-4 mb-10">
@@ -369,29 +770,31 @@ export const Home: React.FC = () => {
       )}
 
       {/* ── FEATURED LISTINGS ── */}
+      <FeaturedSection
+        listings={featuredListings as any[]}
+        loading={loadingFeatured}
+        savedListings={savedListings}
+        onSave={toggleSave}
+      />
+
+      {/* ── URGENT DEALS ── */}
+      {urgentListings.length > 0 && (
       <section className="px-4 mb-10">
         <div className="app-container">
           <div className="section-header px-0 reveal">
             <div>
               <h2 className="font-heading font-extrabold text-xl text-midnight-700 tracking-tight flex items-center gap-2">
-                Featured <span className="text-amber-500">Picks</span>
+                ⚡ <span className="text-red-600">Urgent</span> Deals
               </h2>
-              <p className="text-xs text-warm-400 font-medium mt-1">Example Listings</p>
+              <p className="text-xs text-warm-400 font-medium mt-1">Must go fast! Great local offers</p>
             </div>
+            <Link to="/listings?urgent=true" className="section-link text-red-600 font-bold">See All <ArrowRight size={14} /></Link>
           </div>
           <div className="overflow-x-auto hide-scrollbar -mx-4 px-4 md:mx-0 md:px-0">
             <div className="flex gap-4 w-max pb-2">
-              {loadingFeatured
+              {loadingUrgent
                 ? [1, 2, 3].map(n => <HorizontalCardSkeleton key={n} />)
-                : featuredListings.length === 0 ? (
-                  <div className="empty-state py-12 px-8 text-center rounded-3xl border-2 border-dashed border-warm-200 bg-warm-50 min-w-[280px]">
-                    <h3 className="font-heading font-bold text-midnight-700 mb-1">🛍️ No listings yet</h3>
-                    <p className="text-sm text-warm-400 mb-4">Be the first to list something in your island!</p>
-                    <Link to="/create" className="btn-primary text-sm py-2.5 inline-block">
-                      Post a Free Listing
-                    </Link>
-                  </div>
-                ) : featuredListings.map((listing, i) => (
+                : urgentListings.map((listing, i) => (
                   <HorizontalListingCard
                     key={listing.id}
                     listing={listing}
@@ -405,6 +808,7 @@ export const Home: React.FC = () => {
           </div>
         </div>
       </section>
+      )}
 
       {/* ── TRENDING ON THE ISLANDS ── */}
       <section className="px-4 mb-10">
@@ -424,9 +828,9 @@ export const Home: React.FC = () => {
                 ? [1, 2, 3].map(n => <HorizontalCardSkeleton key={n} />)
                 : trendingListings.length === 0 ? (
                   <div className="empty-state py-12 px-8 text-center rounded-3xl border-2 border-dashed border-warm-200 bg-warm-50 min-w-[280px]">
-                    <h3 className="font-heading font-bold text-midnight-700 mb-1">🛍️ No listings yet</h3>
-                    <p className="text-sm text-warm-400 mb-4">Be the first to list something in your island!</p>
-                    <Link to="/create" className="btn-primary text-sm py-2.5 inline-block">
+                    <h3 className="font-heading font-bold text-midnight-700 mb-1">🔥 No trending items</h3>
+                    <p className="text-sm text-warm-400 mb-4">Post something amazing to get featured here!</p>
+                    <Link to="/post" className="btn-primary text-sm py-2.5 inline-block">
                       Post a Free Listing
                     </Link>
                   </div>
@@ -471,7 +875,7 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* ── FRESH ARRIVALS GRID ── */}
+      {/* ── FRESH ARRIVALS GRID (boosted listings first) ── */}
       <section className="px-4 mb-10">
         <div className="app-container">
           <div className="section-header reveal">
@@ -484,24 +888,30 @@ export const Home: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {loadingRecent
               ? [1, 2, 3, 4].map(n => <ListingCardSkeleton key={n} />)
-              : recentListings.length === 0 ? (
-                <div className="col-span-full empty-state py-16 text-center rounded-3xl border-2 border-dashed border-warm-200 bg-warm-50">
-                  <h3 className="font-heading font-bold text-midnight-700 text-lg mb-2">🛍️ No listings yet</h3>
-                  <p className="text-sm text-warm-400 mb-4">Be the first to list something in your island!</p>
-                  <Link to="/create" className="btn-primary text-sm py-2.5 inline-block">
-                    Post a Free Listing
-                  </Link>
-                </div>
-              ) : recentListings.map((listing, i) => (
-                <ListingCard
-                  key={listing.id}
-                  listing={listing}
-                  saved={savedListings.has(listing.id)}
-                  onSave={toggleSave}
-                  timeAgo={formatTimeAgo(listing.created_at)}
-                  style={{ animationDelay: `${i * 50}ms` }}
-                />
-              ))
+              : (() => {
+                  // Merge boosted listings at the top, then non-boosted recent
+                  const boostedIds = new Set(boostedListings.map(l => l.id));
+                  const nonBoosted = recentListings.filter(l => !boostedIds.has(l.id));
+                  const merged = [...boostedListings, ...nonBoosted];
+                  return merged.length === 0 ? (
+                    <div className="col-span-full empty-state py-16 text-center rounded-3xl border-2 border-dashed border-warm-200 bg-warm-50">
+                      <h3 className="font-heading font-bold text-midnight-700 text-lg mb-2">✨ No fresh arrivals</h3>
+                      <p className="text-sm text-warm-400 mb-4">Be the first to post your local goods today!</p>
+                      <Link to="/post" className="btn-primary text-sm py-2.5 inline-block">
+                        Post a Free Listing
+                      </Link>
+                    </div>
+                  ) : merged.map((listing, i) => (
+                    <ListingCard
+                      key={listing.id}
+                      listing={listing}
+                      saved={savedListings.has(listing.id)}
+                      onSave={toggleSave}
+                      timeAgo={formatTimeAgo(listing.created_at)}
+                      style={{ animationDelay: `${i * 50}ms` }}
+                    />
+                  ));
+                })()
             }
           </div>
           {
@@ -553,185 +963,6 @@ export const Home: React.FC = () => {
       </section>
 
     </div>
+    </>
   );
 };
-
-// ============================================================
-//  SUB-COMPONENTS
-// ============================================================
-
-interface ListingCardProps {
-  listing: Listing;
-  saved: boolean;
-  onSave: (id: string, e: React.MouseEvent) => void;
-  timeAgo?: string;
-  style?: React.CSSProperties;
-}
-
-const ListingCard: React.FC<ListingCardProps> = ({ listing, saved, onSave, timeAgo, style }) => {
-  const imageUrl = listing.images?.length
-    ? listing.images[0].image_url
-    : `https://picsum.photos/seed/${listing.id}/400/400`;
-  const isDemo = listing.is_demo || isDemoListing(listing.id);
-
-  const handleClick = (e: React.MouseEvent) => {
-    if (isDemo) {
-      e.preventDefault();
-    }
-  };
-
-  return (
-    <Link
-      to={isDemo ? '#' : `/listings/${listing.id}`}
-      className="listing-card animate-fade-in-up"
-      style={style}
-      onClick={handleClick}
-    >
-      {/* Image */}
-      <div className="relative aspect-square overflow-hidden bg-warm-100 m-2 rounded-2xl">
-        <img
-          src={imageUrl}
-          alt={listing.title}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-          loading="lazy"
-        />
-        {/* Save/Heart Button */}
-        <button
-          onClick={e => onSave(listing.id, e)}
-          className={`absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center shadow-glass transition-all duration-200 active:scale-90 ${saved ? 'bg-coral-500' : 'bg-white/90 backdrop-blur-sm'
-            }`}
-          aria-label={saved ? 'Unsave listing' : 'Save listing'}
-        >
-          <Heart
-            size={14}
-            className={saved ? 'text-white fill-white' : 'text-warm-400'}
-          />
-        </button>
-        {listing.city && (
-          <div className="absolute top-2 left-2 bg-white/95 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1 text-[9px] font-bold text-midnight-700 uppercase tracking-wide shadow-sm">
-            <MapPin size={10} className="text-ocean-600" style={{ color: '#006D77' }} />
-            {listing.city}
-          </div>
-        )}
-        {/* Featured Badge */}
-        {listing.is_featured && (
-          <div className="absolute top-2 left-2 bg-sandy-gradient text-midnight-700 text-[8px] font-black uppercase px-2 py-0.5 rounded-full">
-            ✦ Featured
-          </div>
-        )}
-        {/* Demo Badge */}
-        {isDemo && (
-          <div className="absolute bottom-2 right-2 bg-warm-800/60 backdrop-blur-sm text-white/90 text-[7px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full z-10">
-            Demo
-          </div>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="px-3 pb-3 flex-1 flex flex-col justify-between gap-1">
-        <h3 className="text-[12px] font-semibold text-midnight-700 line-clamp-2 leading-tight pr-2">
-          {listing.title}
-        </h3>
-        <div className="flex items-center justify-between mt-1">
-          <span className="font-bold text-midnight-800 text-sm">
-            ₹{listing.price?.toLocaleString('en-IN') ?? '0'}
-          </span>
-          <div className="w-6 h-6 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100">
-            <ArrowRight size={10} className="text-gray-500" />
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-};
-
-interface HorizontalCardProps {
-  listing: Listing;
-  rank: number;
-  saved: boolean;
-  onSave: (id: string, e: React.MouseEvent) => void;
-}
-
-const HorizontalListingCard: React.FC<HorizontalCardProps> = ({ listing, rank, saved, onSave }) => {
-  const imageUrl = listing.images?.length
-    ? listing.images[0].image_url
-    : `https://picsum.photos/seed/${listing.id}/300/300`;
-  const isDemo = listing.is_demo || isDemoListing(listing.id);
-
-  const handleClick = (e: React.MouseEvent) => {
-    if (isDemo) {
-      e.preventDefault();
-    }
-  };
-
-  return (
-    <Link to={isDemo ? '#' : `/listings/${listing.id}`} className="w-44 flex-shrink-0 listing-card group" onClick={handleClick}>
-      <div className="relative aspect-square overflow-hidden bg-warm-100 m-2 rounded-2xl">
-        <img src={imageUrl} alt={listing.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" loading="lazy" />
-        {/* Location badge */}
-        {listing.city && (
-          <div className="absolute top-2 left-2 bg-white/95 backdrop-blur-sm px-2 py-1 rounded-full flex items-center gap-1 text-[9px] font-bold text-midnight-700 uppercase tracking-wide shadow-sm">
-            <MapPin size={10} className="text-ocean-600" style={{ color: '#006D77' }} />
-            {listing.city}
-          </div>
-        )}
-
-        {/* AndamanBazaar badge */}
-        <div className="absolute bottom-2 left-2 right-2 bg-white/90 backdrop-blur-md rounded-xl p-2 flex items-center gap-2">
-          <div className="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center flex-shrink-0">
-            <BadgeCheck size={12} className="text-white" />
-          </div>
-          <div>
-            <div className="text-[10px] font-bold">Andaman<span className="text-blue-500">Bazaar</span></div>
-            <div className="text-[7px] text-gray-500 tracking-widest uppercase">Local . Trusted</div>
-          </div>
-        </div>
-
-        {/* Demo Badge */}
-        {isDemo && (
-          <div className="absolute top-2 right-10 bg-warm-800/60 backdrop-blur-sm text-white/90 text-[7px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full z-10">
-            Demo
-          </div>
-        )}
-
-        <button
-          onClick={e => onSave(listing.id, e)}
-          className={`absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center shadow-glass transition-all ${saved ? 'bg-coral-500' : 'bg-white/90 backdrop-blur-sm'}`}
-          title={saved ? 'Unsave listing' : 'Save listing'}
-          aria-label={saved ? 'Unsave listing' : 'Save listing'}
-        >
-          <Heart size={12} className={saved ? 'text-white fill-white' : 'text-warm-400'} />
-        </button>
-      </div>
-      <div className="px-3 pb-3 pt-1">
-        <h4 className="text-[13px] font-semibold text-midnight-700 line-clamp-1 leading-tight mb-1">{listing.title}</h4>
-        <div className="flex items-center justify-between">
-          <span className="font-bold text-midnight-800 text-sm">₹{listing.price?.toLocaleString('en-IN')}</span>
-          <div className="w-6 h-6 rounded-full bg-gray-50 flex items-center justify-center border border-gray-100">
-            <ArrowRight size={10} className="text-gray-500" />
-          </div>
-        </div>
-      </div>
-    </Link>
-  );
-};
-
-const ListingCardSkeleton = () => (
-  <div className="premium-card overflow-hidden">
-    <div className="m-2 aspect-square rounded-2xl skeleton" />
-    <div className="px-3 pb-3 space-y-2">
-      <div className="h-3 skeleton w-3/4" />
-      <div className="h-3 skeleton w-1/2" />
-    </div>
-  </div>
-);
-
-const HorizontalCardSkeleton = () => (
-  <div className="w-44 flex-shrink-0 premium-card overflow-hidden">
-    <div className="m-2 aspect-square rounded-2xl skeleton" />
-    <div className="px-3 pb-3 space-y-2">
-      <div className="h-3 skeleton w-3/4" />
-      <div className="h-3 skeleton w-1/2" />
-    </div>
-  </div>
-);

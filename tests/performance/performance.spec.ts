@@ -31,7 +31,7 @@ test.describe('Performance Tests', () => {
         new PerformanceObserver((list) => {
           const entries = list.getEntries()
           if (entries.length > 0) {
-            resolve(entries[0].processingStart - entries[0].startTime)
+            resolve((entries[0] as any).processingStart - entries[0].startTime)
           } else {
             resolve(0)
           }

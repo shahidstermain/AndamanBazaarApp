@@ -74,10 +74,12 @@ export const BoostListingModal: React.FC<BoostListingModalProps> = ({
             }
 
             const idToken = await user.getIdToken();
+            const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+            const region = 'us-central1';
 
-            const functionsUrl = import.meta.env.VITE_FIREBASE_FUNCTIONS_URL || '';
+            // Call the dedicated createBoostOrder Cloud Function (HTTPS onRequest)
             const response = await fetch(
-                `${functionsUrl}/createBoostOrder`,
+                `https://${region}-${projectId}.cloudfunctions.net/createBoostOrder`,
                 {
                     method: 'POST',
                     headers: {

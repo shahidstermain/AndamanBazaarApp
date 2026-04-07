@@ -10,10 +10,12 @@ export interface DemoListing {
     title: string;
     price: number;
     city: string;
+    area?: string;
     description: string;
     condition: string;
     category_id: string;
     is_featured: boolean;
+    is_official?: boolean;
     is_demo: true;
     views_count: number;
     created_at: string;
@@ -33,11 +35,13 @@ export const DEMO_LISTINGS: DemoListing[] = [
         title: 'Samsung Galaxy M34 5G — 6/128 GB, Midnight Blue',
         price: 11500,
         city: 'Port Blair',
+        area: 'Goalghar',
         description:
             'Used for about 8 months. Screen guard on since day 1, no scratches. Battery health still great — easily lasts a full day. Charger and box included. Selling because upgraded.',
         condition: 'like_new',
         category_id: 'other',
         is_featured: true,
+        is_official: true,
         is_demo: true,
         views_count: 142,
         created_at: daysAgo(1),
@@ -48,6 +52,7 @@ export const DEMO_LISTINGS: DemoListing[] = [
         title: 'HP 15s Laptop — i3 12th Gen, 8GB/512 SSD',
         price: 28000,
         city: 'Port Blair',
+        area: 'Aberdeen Bazaar',
         description:
             '1.5 years old, mostly used for office work and browsing. Runs smooth, no lag. Minor wear on the edges. Original charger included, no box. Moving to mainland so selling.',
         condition: 'good',
@@ -80,11 +85,13 @@ export const DEMO_LISTINGS: DemoListing[] = [
         title: 'Honda Activa 6G — 2022 Model, White, 12k km',
         price: 62000,
         city: 'Port Blair',
+        area: 'Junglighat',
         description:
             'Single owner, regular service at Honda showroom. All documents clear. Insurance valid till March 2027. Small dent on the left panel, everything else perfect. Test ride welcome.',
         condition: 'good',
         category_id: 'other',
         is_featured: true,
+        is_official: true,
         is_demo: true,
         views_count: 231,
         created_at: daysAgo(1),

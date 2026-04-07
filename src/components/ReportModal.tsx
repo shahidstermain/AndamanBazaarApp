@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { addDoc, collection } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { getCurrentUserId } from '../lib/auth';
+import { db } from '../lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from './Toast';
 
 interface ReportModalProps {
@@ -9,6 +10,8 @@ interface ReportModalProps {
   onClose: () => void;
   listingId: string;
   listingTitle: string;
+  reportedUserId?: string;
+  reportedItemId?: string;
 }
 
 const reasons = [
@@ -20,7 +23,14 @@ const reasons = [
   "Other"
 ];
 
-export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, listingId, listingTitle }) => {
+export const ReportModal: React.FC<ReportModalProps> = ({
+  isOpen,
+  onClose,
+  listingId,
+  listingTitle,
+  reportedUserId,
+  reportedItemId,
+}) => {
   const [selectedReason, setSelectedReason] = useState('');
   const [details, setDetails] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,15 +44,16 @@ export const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, listi
     setIsSubmitting(true);
 
     try {
-      const user = auth.currentUser;
+      const userId = await getCurrentUserId();
 
       await addDoc(collection(db, 'reports'), {
-        reporter_id: user?.uid,
-        listing_id: listingId,
+        reporterId: userId || null,
+        listingId: reportedItemId || listingId,
+        reportedUserId: reportedUserId || null,
         reason: selectedReason,
-        details: details,
+        details,
         status: 'pending',
-        created_at: new Date().toISOString()
+        createdAt: serverTimestamp(),
       });
       setIsSuccess(true);
       setTimeout(() => {
