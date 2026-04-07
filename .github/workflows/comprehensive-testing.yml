@@ -60,11 +60,13 @@ jobs:
       - name: Run security tests
         run: npm run test:security
 
-      - name: CodeQL Analysis
-        uses: github/codeql-action/analyze@v2
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
         with:
           languages: javascript
 
+      - name: CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
   # Unit tests with coverage
   unit-tests:
     name: Unit Tests
