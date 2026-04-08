@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
 
@@ -14,6 +13,11 @@ if (!supabaseUrl || !supabaseServiceKey) {
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+/**
+ * Ensures a private "kyc_documents" Supabase Storage bucket exists; if absent, creates it with allowed MIME types `image/jpeg`, `image/png`, and `application/pdf`, and a 5MB file size limit.
+ *
+ * Logs an error and returns early if listing buckets fails; logs creation success or creation errors.
+ */
 async function setupStorage() {
   const { data: buckets, error: listError } = await supabase.storage.listBuckets();
   if (listError) {

@@ -1,5 +1,17 @@
 import * as admin from "firebase-admin";
 
+/**
+ * Builds an HTML email body for an invoice payment confirmation.
+ *
+ * @param invoice - Invoice data used to populate the template:
+ *   - `invoice_number`: Invoice identifier shown in the email
+ *   - `customer_name`: Recipient name used in the greeting
+ *   - `item_description`: Short description of the purchased item or service
+ *   - `amount_total`: Numeric total displayed (formatted as currency in the template)
+ *   - `paid_at`: ISO date/time string used to render the paid date
+ *   - `invoice_pdf_url`: Optional URL for a "View Full Invoice" CTA; when present the CTA is included
+ * @returns The complete HTML string for the payment confirmation email, populated with the provided invoice data.
+ */
 export function generateEmailHtml(invoice: {
   invoice_number: string;
   customer_name: string;
@@ -113,6 +125,16 @@ export function generateEmailHtml(invoice: {
 </html>`;
 }
 
+/**
+ * Sends an invoice email for the given invoice document and records audit logs.
+ *
+ * Generates the email HTML from the invoice data, sends it via Resend when configured (or logs and marks the invoice sent when no API key is present), updates the invoice document to mark the email as sent, and writes a corresponding entry to the payment audit log.
+ *
+ * @param invoice_id - Firestore document ID of the invoice to email
+ * @returns An object with `success` and `message`; includes `to` when the email was only logged, and `resend_id` when the email was sent successfully
+ * @throws Error when the invoice document does not exist
+ * @throws Error when the Resend API responds with a non-OK status (failure is also recorded in the audit log)
+ */
 export async function processSendInvoiceEmail(invoice_id: string) {
   const db = admin.firestore();
   

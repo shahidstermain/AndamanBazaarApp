@@ -8,6 +8,25 @@ const TIERS = {
     boost: { label: "Boost", emoji: "🚀" },
     power: { label: "Power", emoji: "💎" },
 };
+/**
+ * Builds a complete HTML invoice document for a paid invoice.
+ *
+ * The generated HTML includes billed-to details, order line item, totals, payment
+ * information, and formats the payment date/time to India Standard Time (Asia/Kolkata).
+ *
+ * @param {Object} invoice - Invoice data used to populate the document.
+ * @param {string} invoice.invoice_number - Human-readable invoice identifier.
+ * @param {string} invoice.customer_name - Customer display name.
+ * @param {string} invoice.customer_email - Customer email address.
+ * @param {string} [invoice.customer_phone] - Customer phone number (optional).
+ * @param {number} invoice.amount_total - Total amount in INR.
+ * @param {string} [invoice.payment_method] - Payment method identifier (e.g., "upi").
+ * @param {string} [invoice.cashfree_order_id] - Payment/order reference ID.
+ * @param {string} invoice.duration_days - Duration text used in the item description.
+ * @param {string} invoice.listing_title - Title of the associated listing.
+ * @param {string} invoice.paid_at - ISO timestamp or date string representing payment time.
+ * @param {string} invoice.tier - Tier key (e.g., "spark", "boost", "power") used to display label/emoji.
+ * @returns {string} A complete HTML document string containing the rendered invoice.
 async function generateInvoiceHtml(invoice) {
     const tierInfo = TIERS[invoice.tier] || { label: invoice.tier, emoji: "📦" };
     const paidDateObj = new Date(invoice.paid_at);
@@ -160,6 +179,18 @@ async function generateInvoiceHtml(invoice) {
 </body>
 </html>`;
 }
+/**
+ * Generate and persist an invoice for a listing boost, upload the invoice HTML to Cloud Storage, and record an audit log.
+ *
+ * @param {string} boost_id - The Firestore document ID of the listing boost to generate an invoice for.
+ * @returns {{ success: true, invoice_id: string, invoice_number: string, invoice_url: string, already_existed?: true }} An object containing the created (or existing) invoice metadata:
+ *  - `success`: `true` when the operation completed.
+ *  - `invoice_id`: Firestore document ID of the invoice.
+ *  - `invoice_number`: Generated invoice number.
+ *  - `invoice_url`: Public URL of the uploaded HTML invoice (empty string if not available for existing invoices).
+ *  - `already_existed` (optional): present and `true` when an invoice for the given boost already existed.
+ * @throws {Error} If the boost record does not exist.
+ */
 async function processInvoiceGeneration(boost_id) {
     const db = admin.firestore();
     // 0. Idempotency
