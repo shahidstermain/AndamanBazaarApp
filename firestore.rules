@@ -376,5 +376,18 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow delete: if request.auth != null && request.auth.uid == userId;
     }
+
+    // operator_verifications collection — operator KYC/verification submissions
+    // Authenticated users may create their own verification document.
+    // Only admins may read, update, or delete.
+    match /operator_verifications/{docId} {
+      allow create: if isAuthenticated() &&
+                    isActiveUser(request.auth.uid) &&
+                    isNotBanned(request.auth.uid) &&
+                    request.resource.data.user_id == request.auth.uid;
+      allow read: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
   }
 }

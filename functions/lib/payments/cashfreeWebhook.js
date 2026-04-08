@@ -178,14 +178,24 @@ async function processWebhookEvent(event, eventId) {
         v2_1.logger.error('Webhook event missing orderId', { eventId, event });
         throw new Error('Missing orderId in webhook event');
     }
-    // Get the payment order from Firestore
+    // First check the payments collection
     const paymentDoc = await admin_1.admin.firestore().collection('payments').doc(orderId).get();
     if (!paymentDoc.exists) {
-        v2_1.logger.warn(`Payment order not found for webhook: ${orderId}`, {
+        // Fallback: check if this is a boost order
+        const boostSnap = await admin_1.admin.firestore()
+            .collection('listingBoosts')
+            .where('orderId', '==', orderId)
+            .limit(1)
+            .get();
+        if (!boostSnap.empty) {
+            await processBoostWebhookEvent(event, boostSnap.docs[0], eventId);
+            return;
+        }
+        v2_1.logger.warn(`Order not found in payments or listingBoosts for webhook: ${orderId}`, {
             eventId,
             orderStatus: event.orderStatus,
         });
-        throw new Error(`Payment order not found: ${orderId}`);
+        throw new Error(`Order not found: ${orderId}`);
     }
     const payment = paymentDoc.data();
     const batch = admin_1.admin.firestore().batch();
@@ -359,4 +369,79 @@ exports.webhookHealthCheck = paymentsRuntime.https.onRequest(async (req, res) =>
         });
     }
 });
+/**
+ * Processes webhook events for boost orders (listingBoosts collection).
+ * Activates boost on payment success, marks failed on failure.
+ */
+async function processBoostWebhookEvent(event, boostDoc, eventId) {
+    const boost = boostDoc.data();
+    const boostId = boostDoc.id;
+    const updateData = {
+        updatedAt: admin_1.admin.firestore.Timestamp.now(),
+        cashfreeResponse: event,
+    };
+    switch (event.type) {
+        case 'PAYMENT_SUCCESS_WEBHOOK':
+        case 'PAYMENT_SUCCESS':
+        case 'ORDER_PAID': {
+            updateData.status = 'paid';
+            updateData.paymentId = event.paymentId;
+            updateData.paymentMethod = 'cashfree';
+            // Set boost activation window
+            const now = new Date();
+            const expiresAt = new Date(now.getTime() + boost.durationDays * 24 * 60 * 60 * 1000);
+            updateData.boostStartsAt = admin_1.admin.firestore.Timestamp.fromDate(now);
+            updateData.boostExpiresAt = admin_1.admin.firestore.Timestamp.fromDate(expiresAt);
+            // Activate boost on the listing
+            await admin_1.admin.firestore().collection('listings').doc(boost.listingId).update({
+                isBoosted: true,
+                boostTier: boost.tier,
+                boostExpiresAt: admin_1.admin.firestore.Timestamp.fromDate(expiresAt),
+                updatedAt: admin_1.admin.firestore.Timestamp.now(),
+            });
+            v2_1.logger.info('Boost activated via webhook', { boostId, listingId: boost.listingId, tier: boost.tier });
+            break;
+        }
+        case 'PAYMENT_FAILED_WEBHOOK':
+        case 'PAYMENT_FAILED':
+        case 'ORDER_FAILED':
+            updateData.status = 'failed';
+            updateData.failureReason = event.paymentStatus || 'Payment failed at gateway';
+            break;
+        case 'PAYMENT_USER_DROPPED_WEBHOOK':
+        case 'PAYMENT_CANCELLED':
+        case 'ORDER_CANCELLED':
+            updateData.status = 'failed';
+            updateData.failureReason = 'Payment cancelled by user';
+            break;
+        case 'ORDER_EXPIRED':
+            updateData.status = 'expired';
+            updateData.failureReason = 'Payment session expired';
+            break;
+        default:
+            v2_1.logger.info(`Unhandled boost webhook event type: ${event.type}`, { boostId, eventId });
+            return;
+    }
+    // Update boost document
+    await admin_1.admin.firestore().collection('listingBoosts').doc(boostId).update(updateData);
+    // Audit log
+    await admin_1.admin.firestore().collection('paymentAuditLog').add({
+        type: `BOOST_WEBHOOK_${updateData.status?.toUpperCase() || 'UNKNOWN'}`,
+        orderId: boost.orderId,
+        boostId,
+        listingId: boost.listingId,
+        userId: boost.userId,
+        tier: boost.tier,
+        amount: boost.amount,
+        previousStatus: boost.status,
+        newStatus: updateData.status,
+        source: 'webhook',
+        timestamp: admin_1.admin.firestore.Timestamp.now(),
+    });
+    v2_1.logger.info(`Boost webhook processed: ${boostId}`, {
+        eventId,
+        previousStatus: boost.status,
+        newStatus: updateData.status,
+    });
+}
 //# sourceMappingURL=cashfreeWebhook.js.map
