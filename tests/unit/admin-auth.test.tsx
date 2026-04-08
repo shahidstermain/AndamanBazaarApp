@@ -33,7 +33,7 @@ describe('Admin Page — Authorization', () => {
   })
 
   it('redirects unauthenticated user to /auth', async () => {
-    ;(auth as any).currentUser = null
+    (auth as any).currentUser = null
 
     renderAdmin()
 
@@ -43,7 +43,7 @@ describe('Admin Page — Authorization', () => {
   })
 
   it('redirects non-admin user to / with toast', async () => {
-    ;(auth as any).currentUser = { uid: 'regular-user' }
+    (auth as any).currentUser = { uid: 'regular-user' }
 
     // Mock empty roles check
     vi.mocked(getDocs).mockResolvedValueOnce({
@@ -60,7 +60,7 @@ describe('Admin Page — Authorization', () => {
   })
 
   it('shows dashboard when user has admin role', async () => {
-    ;(auth as any).currentUser = { uid: 'admin-user' }
+    (auth as any).currentUser = { uid: 'admin-user' }
 
     // Mock getDocs to return different data based on the collection being queried
     const createMockSnap = (size: number, data = {}) => ({
@@ -91,7 +91,7 @@ describe('Admin Page — Authorization', () => {
       return createMockSnap(0);
     });
 
-    let i = 0; // for reports toggling if needed
+    const i = 0; // for reports toggling if needed
     
     renderAdmin()
 
@@ -109,7 +109,7 @@ describe('Admin Page — Authorization', () => {
   })
 
   it('shows verifying access state initially', () => {
-    ;(auth as any).currentUser = { uid: 'some-user' }
+    (auth as any).currentUser = { uid: 'some-user' }
     // Never resolve the role check
     vi.mocked(getDocs).mockReturnValueOnce(new Promise(() => {}))
 

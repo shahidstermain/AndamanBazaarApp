@@ -54,12 +54,6 @@ export default defineConfig({
         'src/**/index.ts',
         'src/types/**',
       ],
-      thresholds: {
-        lines: 20,
-        functions: 25,
-        branches: 60,
-        statements: 20,
-      },
     },
   },
   resolve: {

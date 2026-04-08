@@ -13,7 +13,7 @@ describe('CreateListing View', () => {
         vi.clearAllMocks();
 
         // Default mock user
-        ;(auth as any).currentUser = { uid: 'user-123' };
+        (auth as any).currentUser = { uid: 'user-123' };
 
         // Mock profile for location verification
         vi.mocked(getDoc).mockImplementation(async (docRef: any) => {

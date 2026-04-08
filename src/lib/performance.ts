@@ -335,7 +335,7 @@ export const reportPerformanceMetrics = async (): Promise<void> => {
   try {
     const metrics = await measurePerformance()
     if (typeof window !== 'undefined' && (window as any).gtag) {
-      ;(window as any).gtag('event', 'web_vitals', {
+      (window as any).gtag('event', 'web_vitals', {
         lcp: metrics.lcp,
         fid: metrics.fid,
         cls: metrics.cls,

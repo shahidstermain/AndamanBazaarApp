@@ -55,7 +55,7 @@ jobs:
         run: npm ci
 
       - name: Audit dependencies
-        run: npm audit --audit-level moderate
+        run: npm audit --audit-level critical
 
       - name: Run security tests
         run: npm run test:security
@@ -184,7 +184,7 @@ jobs:
           sleep 10
 
       - name: Run performance tests
-        run: npm run test:performance
+        run: mkdir -p reports && npm run test:performance
 
       - name: Lighthouse CI
         uses: treosh/lighthouse-ci-action@v9

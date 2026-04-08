@@ -14,7 +14,7 @@ describe('Listings View', () => {
     vi.clearAllMocks();
     
     // Default mock user (not logged in)
-    ;(auth as any).currentUser = null;
+    (auth as any).currentUser = null;
 
     // Default mock implementation for getDocs (empty)
     vi.mocked(getDocs).mockImplementation(async (q: any) => {

@@ -13,7 +13,7 @@ describe('Profile View', () => {
         vi.clearAllMocks();
 
         // Default mock user
-        ;(auth as any).currentUser = { uid: 'user-123', email: 'test@example.com' };
+        (auth as any).currentUser = { uid: 'user-123', email: 'test@example.com' };
         
         // Mock getDoc for profile
         vi.mocked(getDoc).mockImplementation(async (docRef: any) => {

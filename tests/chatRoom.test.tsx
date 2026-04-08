@@ -14,7 +14,7 @@ describe('ChatRoom View', () => {
         vi.clearAllMocks();
         
         // Default mock user
-        ;(auth as any).currentUser = { uid: 'user-123' };
+        (auth as any).currentUser = { uid: 'user-123' };
 
         // Mock onSnapshot to call callback immediately with empty docs by default
         vi.mocked(onSnapshot).mockImplementation((q: any, cb: any) => {

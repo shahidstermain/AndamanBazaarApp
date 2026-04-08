@@ -22,7 +22,7 @@ describe('Auth Utilities', () => {
 
   describe('logout()', () => {
     it('signs out successfully and returns success', async () => {
-      ;(auth as any).currentUser = { uid: 'user-1', email: 'test@test.com' }
+      (auth as any).currentUser = { uid: 'user-1', email: 'test@test.com' }
       
       const result = await logout()
       expect(result.success).toBe(true)
@@ -31,7 +31,7 @@ describe('Auth Utilities', () => {
     })
 
     it('returns error when signOut fails', async () => {
-      ;(auth as any).currentUser = { uid: 'user-1' }
+      (auth as any).currentUser = { uid: 'user-1' }
       vi.mocked(signOut).mockRejectedValueOnce(new Error('Network error'))
 
       const result = await logout()
@@ -42,24 +42,24 @@ describe('Auth Utilities', () => {
 
   describe('isAuthenticated()', () => {
     it('returns true when user exists', async () => {
-      ;(auth as any).currentUser = { uid: 'user-1' }
+      (auth as any).currentUser = { uid: 'user-1' }
       expect(await isAuthenticated()).toBe(true)
     })
 
     it('returns false when no user', async () => {
-      ;(auth as any).currentUser = null
+      (auth as any).currentUser = null
       expect(await isAuthenticated()).toBe(false)
     })
   })
 
   describe('getCurrentUserId()', () => {
     it('returns user ID when authenticated', async () => {
-      ;(auth as any).currentUser = { uid: 'user-abc' }
+      (auth as any).currentUser = { uid: 'user-abc' }
       expect(await getCurrentUserId()).toBe('user-abc')
     })
 
     it('returns null when unauthenticated', async () => {
-      ;(auth as any).currentUser = null
+      (auth as any).currentUser = null
       expect(await getCurrentUserId()).toBeNull()
     })
   })

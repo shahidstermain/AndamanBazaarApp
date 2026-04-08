@@ -74,7 +74,7 @@ describe('BoostListingModal Component', () => {
     });
 
     it('should show an error toast and abort if the user is not signed in', async () => {
-        ;(auth as any).currentUser = null;
+        (auth as any).currentUser = null;
         render(<BoostListingModal {...defaultProps} />);
 
         const payButton = screen.getByText(/Pay ₹99 Securely/i);
@@ -91,7 +91,7 @@ describe('BoostListingModal Component', () => {
             uid: 'user-123',
             getIdToken: vi.fn().mockResolvedValue('mock-id-token')
         };
-        ;(auth as any).currentUser = mockUser;
+        (auth as any).currentUser = mockUser;
 
         // Mock fetch response returning a cashfree payment link
         vi.mocked(fetch).mockResolvedValueOnce({
