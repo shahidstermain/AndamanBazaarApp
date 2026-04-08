@@ -177,7 +177,6 @@ async function processInvoiceGeneration(boost_id) {
             success: true,
             invoice_id: existingInvoicesSnapshot.docs[0].id,
             invoice_number: existingInvoice.invoice_number,
-            invoice_url: existingInvoice.invoice_pdf_url,
             invoice_url: existingInvoice.invoice_pdf_url || "",
             already_existed: true,
         };

@@ -111,15 +111,15 @@ exports.cashfreeWebhook = (0, https_1.onRequest)(async (req, res) => {
                 const boost = boostDoc.data();
                 // 6. Prevent double-processing (idempotency)
                 if (boost.status === "paid") {
-                                    if (boost.listing_id) {
-                                        await db.collection("listings").doc(boost.listing_id).set({
-                                            is_featured: true,
-                                            featured_until: boost.featured_until || null,
-                                            featured_tier: boost.tier,
-                                            updated_at: new Date().toISOString(),
-                                        }, { merge: true });
-                                    }
-                                    console.log("Boost already marked as paid, reconciled listing state:", boostDoc.id);
+                    if (boost.listing_id) {
+                        await db.collection("listings").doc(boost.listing_id).set({
+                            is_featured: true,
+                            featured_until: boost.featured_until || null,
+                            featured_tier: boost.tier,
+                            updated_at: new Date().toISOString(),
+                        }, { merge: true });
+                    }
+                    console.log("Boost already marked as paid, reconciled listing state:", boostDoc.id);
                     res.status(200).json({ message: "Already processed" });
                     return;
                 }
