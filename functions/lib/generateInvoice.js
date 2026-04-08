@@ -169,11 +169,15 @@ async function processInvoiceGeneration(boost_id) {
         .get();
     if (!existingInvoicesSnapshot.empty) {
         const existingInvoice = existingInvoicesSnapshot.docs[0].data();
+        if (!existingInvoice.invoice_pdf_url) {
+            throw new Error(`Existing invoice ${existingInvoice.invoice_number} has no invoice URL`);
+        }
         console.log(`Invoice already exists for boost ${boost_id}: ${existingInvoice.invoice_number}`);
         return {
             success: true,
             invoice_id: existingInvoicesSnapshot.docs[0].id,
             invoice_number: existingInvoice.invoice_number,
+            invoice_url: existingInvoice.invoice_pdf_url,
             invoice_url: existingInvoice.invoice_pdf_url || "",
             already_existed: true,
         };
