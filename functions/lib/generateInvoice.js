@@ -256,7 +256,13 @@ async function processInvoiceGeneration(boost_id) {
         paid_at: boost.featured_from || new Date().toISOString(),
         created_at: admin.firestore.FieldValue.serverTimestamp()
     };
-    const invoiceRef = await db.collection("invoices").add(invoiceData);
+    const invoiceRef = db.collection("invoices").doc(boost_id);
+    await invoiceRef.create(invoiceData).catch(async (error) => {
+        if (error?.code === 6 || error?.code === "already-exists") {
+            return;
+        }
+        throw error;
+    });
     // 6. Generate HTML invoice
     const invoiceHtml = await generateInvoiceHtml({
         ...invoiceData,
