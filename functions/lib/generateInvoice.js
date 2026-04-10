@@ -225,7 +225,13 @@ async function processInvoiceGeneration(boost_id) {
     const listingDoc = await db.collection("listings").doc(boost.listing_id).get();
     const listing = listingDoc.data();
     // 4. Fetch user email from auth
-    const authUser = await admin.auth().getUser(boost.user_id);
+    let authUser = null;
+    try {
+        authUser = await admin.auth().getUser(boost.user_id);
+    }
+    catch (error) {
+        console.warn(`Auth user not found for boost ${boost_id}, using profile fallback`);
+    }
     const customerName = profile?.name || authUser?.displayName || "AndamanBazaar User";
     const customerEmail = authUser?.email || profile?.email || "user@andamanbazaar.in";
     const customerPhone = authUser?.phoneNumber || profile?.phone_number || "";
