@@ -190,6 +190,27 @@ export const profileUpdateSchema = z.object({
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 
 /**
+ * Operator verification validation schema
+ */
+export const operatorVerificationSchema = z.object({
+    full_name: z.string().min(3, 'Full name must be at least 3 characters').max(100),
+    phone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian phone number'),
+    business_name: z.string().max(100).optional().nullable(),
+    id_type: z.enum(['Aadhaar', 'PAN', 'Driving License']),
+    id_number: z.string().min(5, 'Invalid ID number').max(50),
+    address: z
+        .string()
+        .min(10, 'Business address must be at least 10 characters')
+        .max(500, 'Address too long')
+        .refine(
+            (val) => !detectPromptInjection(val),
+            'Address contains suspicious content'
+        ),
+});
+
+export type OperatorVerificationInput = z.infer<typeof operatorVerificationSchema>;
+
+/**
  * Search query validation
  */
 export const searchQuerySchema = z.object({

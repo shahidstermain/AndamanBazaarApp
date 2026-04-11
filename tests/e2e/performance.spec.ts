@@ -10,7 +10,7 @@ test.describe('E2E Performance Tests', () => {
     // Enable performance monitoring
     await page.addInitScript(() => {
       // Override performance.now() for consistent timing
-      let startTime = Date.now()
+      const startTime = Date.now()
       const originalPerformanceNow = performance.now
       
       performance.now = () => Date.now() - startTime

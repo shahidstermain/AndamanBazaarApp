@@ -39,10 +39,11 @@ service cloud.firestore {
     
     // users collection
     match /users/{userId} {
+      // Any authenticated, active, non-banned user may read a profile (e.g. buyers
+      // viewing a seller's public profile on the listing detail page).
       allow read: if isAuthenticated() && 
                    isActiveUser(userId) && 
-                   isNotBanned(userId) &&
-                   (isOwner(userId) || isModerator());
+                   isNotBanned(userId);
       
       allow update: if isOwner(userId) && 
                     isActiveUser(userId) && 
@@ -70,8 +71,10 @@ service cloud.firestore {
     
     // listings collection
     match /listings/{listingId} {
-      allow read: if resource.data.isActive == true &&
-                   resource.data.status in ['active', 'sold'] &&
+      // Public read: status is the authoritative visibility gate.
+      // isActive is not required here because new listings created by the app
+      // may not have that field set yet; status == 'active'|'sold' is sufficient.
+      allow read: if resource.data.status in ['active', 'sold'] &&
                    resource.data.status != 'deleted';
       
       allow read: if isOwner(resource.data.userId);
@@ -90,11 +93,14 @@ service cloud.firestore {
                     isValidTimestamp(request.resource.data.createdAt) &&
                     isValidTimestamp(request.resource.data.updatedAt);
       
+      // Owner may update their listing, including soft-deleting it (status='deleted')
+      // or marking it sold (status='sold'). Restrict to valid enum values so owners
+      // cannot set arbitrary statuses; privileged fields (isFeatured) are immutable.
       allow update: if isOwner(resource.data.userId) && 
                     isActiveUser(request.auth.uid) && 
                     isNotBanned(request.auth.uid) &&
                     request.resource.data.userId == resource.data.userId &&
-                    request.resource.data.status != 'deleted' &&
+                    request.resource.data.status in ['active', 'draft', 'sold', 'deleted'] &&
                     request.resource.data.isFeatured == resource.data.isFeatured &&
                     request.resource.data.featuredUntil == resource.data.featuredUntil;
       

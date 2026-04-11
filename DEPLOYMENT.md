@@ -379,8 +379,8 @@ jobs:
 
 2. **Update DNS records**:
    ```
-   A record: @ → 192.168.0.1 (Firebase IP)
-   CNAME record: www → andamanbazaar.firebaseapp.com
+   A record: @ → 199.36.158.100 (Firebase Hosting IP)
+   CNAME record: www → ghs.googlehosted.com
    ```
 
 3. **Verify domain**:
@@ -447,7 +447,7 @@ export const measurePageLoad = () => {
 
 ---
 
-## � Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 

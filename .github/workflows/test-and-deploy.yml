@@ -45,10 +45,11 @@ jobs:
             --coverage.reporter=text \
             --coverage.reporter=json-summary \
             --coverage.reporter=html \
-            --maxWorkers=1
+            --poolOptions.threads.minThreads=1 \
+            --poolOptions.threads.maxThreads=1
 
       - name: Run security audit suites (blocking)
-        run: npx vitest run tests/security/webhook-security.test.ts tests/security/security-audit.test.ts
+        run: npx vitest run tests/webhook-signature.test.ts tests/security/comprehensive-security.test.tsx tests/security/payment-security.test.ts
 
       - name: Upload coverage artifact
         if: always()

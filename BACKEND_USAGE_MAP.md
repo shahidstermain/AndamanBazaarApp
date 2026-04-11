@@ -59,17 +59,17 @@ Serverless functions for business logic and third-party integrations.
 
 ## 🏗️ Architecture Summary
 
-The application has been successfully migrated from Supabase to Firebase. All core functionality now utilizes Firebase services through the abstraction layer in `src/lib/`.
+The application's core frontend backend flows now use Firebase through the abstraction layer in `src/lib/`. Firebase is the active runtime backend for all features listed above.
 
 - **Client-Side**: React with TypeScript
-- **Database**: Cloud Firestore
-- **Authentication**: Firebase Auth
-- **Storage**: Cloud Storage for Firebase
-- **Compute**: Cloud Functions for Firebase
+- **Primary Database**: Cloud Firestore
+- **Primary Authentication**: Firebase Auth
+- **Primary Storage**: Cloud Storage for Firebase
+- **Primary Compute**: Cloud Functions for Firebase
 - **Hosting**: Firebase App Hosting
 
 ---
 
-## 🗑️ Legacy (Supabase)
+## 🗑️ Legacy / Transitional (Supabase)
 
-Supabase has been completely removed from the application. No `@supabase/supabase-js` dependencies remain in the codebase.
+Supabase is no longer the primary application backend. However, some repository-level Supabase references (e.g. environment samples, CI workflow mock values, legacy test scaffolding) may still exist while migration cleanup is in progress. Treat Firebase as the active runtime and verify any remaining `VITE_SUPABASE_*` configuration before removing it from operational environments.

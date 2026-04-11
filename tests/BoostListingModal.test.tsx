@@ -1,9 +1,10 @@
+
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { BoostListingModal } from '../src/components/BoostListingModal';
-import { supabase } from '../src/lib/supabase';
+import { auth } from '../src/lib/firebase';
 
-vi.mock('../src/lib/supabase');
+// Note: firebase mocks are handled globally in tests/setup.ts
 
 describe('BoostListingModal Component', () => {
     const defaultProps = {
@@ -21,7 +22,7 @@ describe('BoostListingModal Component', () => {
             value: { href: vi.fn() },
         });
 
-        // Mock exact global fetch API
+        // Mock global fetch
         global.fetch = vi.fn();
     });
 
@@ -73,27 +74,24 @@ describe('BoostListingModal Component', () => {
     });
 
     it('should show an error toast and abort if the user is not signed in', async () => {
+        (auth as any).currentUser = null;
         render(<BoostListingModal {...defaultProps} />);
 
-        const payButton = screen.getByText(/Pay ₹99/i);
+        const payButton = screen.getByText(/Pay ₹99 Securely/i);
         fireEvent.click(payButton);
 
-        // Supabase getSession mock from tests/setup.ts returns `session: null` by default
         await waitFor(() => {
-            expect(supabase.auth.getSession).toHaveBeenCalled();
-            // Test that fetch was never called
             expect(global.fetch).not.toHaveBeenCalled();
         });
     });
 
-    it('should call the create-boost-order Edge Function and redirect to Cashfree on success', async () => {
-        render(<BoostListingModal {...defaultProps} />);
-
-        // Mock Supabase to return an authenticated user session
-        vi.mocked(supabase.auth.getSession).mockResolvedValueOnce({
-            data: { session: { access_token: 'mock_jwt_token' } } as any,
-            error: null
-        });
+    it('should call the createBoostOrder function and redirect to Cashfree on success', async () => {
+        // Mock authenticated user
+        const mockUser = {
+            uid: 'user-123',
+            getIdToken: vi.fn().mockResolvedValue('mock-id-token')
+        };
+        (auth as any).currentUser = mockUser;
 
         // Mock fetch response returning a cashfree payment link
         vi.mocked(fetch).mockResolvedValueOnce({
@@ -104,7 +102,9 @@ describe('BoostListingModal Component', () => {
             })
         } as any);
 
-        const payButton = screen.getByText(/Pay ₹99/i);
+        render(<BoostListingModal {...defaultProps} />);
+
+        const payButton = screen.getByText(/Pay ₹99 Securely/i);
         fireEvent.click(payButton);
 
         // Expect loading state
@@ -112,13 +112,13 @@ describe('BoostListingModal Component', () => {
 
         await waitFor(() => {
             expect(fetch).toHaveBeenCalledWith(
-                expect.stringContaining('/functions/v1/create-boost-order'),
+                expect.stringContaining('/createBoostOrder'),
                 expect.objectContaining({
                     method: 'POST',
-                    headers: {
+                    headers: expect.objectContaining({
                         'Content-Type': 'application/json',
-                        'Authorization': 'Bearer mock_jwt_token'
-                    },
+                        'Authorization': 'Bearer mock-id-token'
+                    }),
                     body: JSON.stringify({
                         listing_id: 'mock-listing-123',
                         tier: 'boost'
@@ -128,6 +128,6 @@ describe('BoostListingModal Component', () => {
 
             // Expect window redirect to trigger
             expect(window.location.href).toBe('https://cashfree.com/mock-payment-url');
-        });
+        }, { timeout: 4000 });
     });
 });

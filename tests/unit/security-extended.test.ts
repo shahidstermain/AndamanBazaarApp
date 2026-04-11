@@ -164,17 +164,17 @@ describe('secureStorage', () => {
   })
 
   it('gets value from localStorage', () => {
-    ;(localStorage.getItem as any).mockReturnValue('{"key":"val"}')
+    (localStorage.getItem as any).mockReturnValue('{"key":"val"}')
     expect(secureStorage.get('test', null)).toEqual({ key: 'val' })
   })
 
   it('returns fallback when key missing', () => {
-    ;(localStorage.getItem as any).mockReturnValue(null)
+    (localStorage.getItem as any).mockReturnValue(null)
     expect(secureStorage.get('missing', 'default')).toBe('default')
   })
 
   it('returns fallback on parse error', () => {
-    ;(localStorage.getItem as any).mockReturnValue('not-json')
+    (localStorage.getItem as any).mockReturnValue('not-json')
     expect(secureStorage.get('bad', [])).toEqual([])
   })
 

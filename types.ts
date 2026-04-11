@@ -20,6 +20,10 @@ export interface Profile {
   response_rate?: number;
   avg_response_hours?: number;
   created_at: string;
+  // Operator verification fields
+  operator_business_address?: string;
+  operator_verification_status?: 'pending' | 'verified' | 'rejected';
+  operator_id_document_url?: string;
 }
 
 export interface Category {
@@ -235,4 +239,72 @@ export interface ListingBoost {
   featured_until?: string;
   created_at: string;
   updated_at: string;
+}
+
+// ===== Activities Marketplace Types =====
+
+export type Island = 'Port Blair' | 'Havelock' | 'Neil Island' | 'Baratang' | 'Diglipur' | 'Long Island';
+export type ActivityType = 'Scuba Diving' | 'Snorkeling' | 'Trekking' | 'History' | 'Leisure' | 'Water Sports' | 'Beaches';
+
+export interface Activity {
+  id: string;
+  title: string;
+  type: ActivityType;
+  island: Island;
+  price: number;
+  durationMinutes: number;
+  rating: number;
+  reviewCount: number;
+  difficulty: 'Easy' | 'Moderate' | 'Hard';
+  familyFriendly: boolean;
+  requiresSwimming: boolean;
+  trustScore?: number;
+  trustBadge?: 'Low' | 'Good' | 'Trusted' | 'Premium';
+  season: string[];
+  location: { lat: number; lng: number };
+  operatorId?: string;
+  description?: string;
+  matchScore?: number;
+  matchReasons?: string[];
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ActivityFilterParams {
+  islands?: Island[];
+  types?: ActivityType[];
+  budgetRange: [number, number];
+  durationRange: [number, number];
+  familyFriendly?: boolean;
+  requiresSwimming?: boolean;
+  minRating: number;
+}
+
+export interface UserPreferences {
+  budget: number;
+  interests: ActivityType[];
+  persona: 'Adventure' | 'Relaxation' | 'Culture' | 'Luxury';
+  groupType: 'solo' | 'couple' | 'family' | 'group';
+}
+
+export interface ReviewRatings {
+  safety: number;
+  value: number;
+  fun: number;
+  communication: number;
+  accuracy: number;
+}
+
+export interface Review {
+  id: string;
+  activityId: string;
+  bookingId: string;
+  userId?: string;
+  ratings: ReviewRatings;
+  avgRating: number;
+  comment: string;
+  mediaUrls?: string[];
+  createdAt: string;
+  isVerified?: boolean;
 }

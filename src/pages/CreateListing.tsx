@@ -370,6 +370,7 @@ export const CreateListing: React.FC = () => {
         itemAge,
         accessories,
         status: 'active',
+        isActive: true,
         isNegotiable: isNegotiable,
         is_urgent: isUrgent,
         minPrice: minPrice ? parseFloat(minPrice) : null,

@@ -9,10 +9,11 @@
 - **Host**: ftp.shahidster.site
 - **Port**: 21
 - **Username**: shahidster.site
-- **Password**: 17Day11month!
+- **Password**: `<store-in-github-secrets-or-password-manager>`
 - **Local Path**: ./dist
 - **Remote Path**: /public_html
 
+> **Security note:** Do not commit real credentials to this repository. Rotate any previously exposed FTP password immediately and store deployment credentials in GitHub Secrets or a password manager.
 ## Deployment Options
 
 ### Option 1: Fix FTP Access

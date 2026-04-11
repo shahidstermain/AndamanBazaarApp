@@ -101,7 +101,7 @@ export const createMockStorageRef = (path: string) => ({
 })
 
 // Network utilities
-export const createMockResponse = <T>(data: T, status = 200) => ({
+export const createMockResponse = <T,>(data: T, status = 200) => ({
   data,
   status,
   statusText: 'OK',

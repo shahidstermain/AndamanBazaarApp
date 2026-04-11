@@ -39,6 +39,7 @@
     "vitest.config.ts"
   ],
   "exclude": [
-    "tests"
+    "tests",
+    "functions"
   ]
 }

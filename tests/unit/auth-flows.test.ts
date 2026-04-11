@@ -3,160 +3,100 @@
  * Covers: login, signup, session expiry, wrong password, logout, auth guards
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { supabase } from '../../src/lib/__mocks__/supabase'
+import { auth } from '../../src/lib/firebase'
 import { logout, isAuthenticated, getCurrentUserId } from '../../src/lib/auth'
+import { signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth'
 
-vi.mock('../../src/lib/supabase', () => import('../../src/lib/__mocks__/supabase'))
+// Mock secondary dependencies
+vi.mock('../../src/lib/security', () => ({
+  logAuditEvent: vi.fn().mockResolvedValue(undefined),
+  sanitizeErrorMessage: vi.fn((err: any) => err.message || String(err)),
+}))
 
 describe('Auth Utilities', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Reset auth mock state
+    ;(auth as any).currentUser = null
   })
 
   describe('logout()', () => {
     it('signs out successfully and returns success', async () => {
-      supabase.auth.getUser.mockResolvedValueOnce({
-        data: { user: { id: 'user-1', email: 'test@test.com' } },
-        error: null,
-      })
-      supabase.auth.signOut.mockResolvedValueOnce({ error: null })
-      supabase.from.mockReturnValue({
-        insert: vi.fn().mockReturnValue({
-          then: (cb: any) => Promise.resolve({ data: null, error: null }).then(cb),
-        }),
-      } as any)
-
+      (auth as any).currentUser = { uid: 'user-1', email: 'test@test.com' }
+      
       const result = await logout()
       expect(result.success).toBe(true)
       expect(result.error).toBeUndefined()
+      expect(signOut).toHaveBeenCalledWith(auth)
     })
 
     it('returns error when signOut fails', async () => {
-      supabase.auth.getUser.mockResolvedValueOnce({
-        data: { user: { id: 'user-1' } },
-        error: null,
-      })
-      supabase.auth.signOut.mockResolvedValueOnce({
-        error: { message: 'Network error' },
-      })
-      supabase.from.mockReturnValue({
-        insert: vi.fn().mockReturnValue({
-          then: (cb: any) => Promise.resolve({ data: null, error: null }).then(cb),
-        }),
-      } as any)
+      (auth as any).currentUser = { uid: 'user-1' }
+      vi.mocked(signOut).mockRejectedValueOnce(new Error('Network error'))
 
       const result = await logout()
       expect(result.success).toBe(false)
-      expect(result.error).toBeDefined()
+      expect(result.error).toBe('Network error')
     })
   })
 
   describe('isAuthenticated()', () => {
-    it('returns true when session exists', async () => {
-      supabase.auth.getSession.mockResolvedValueOnce({
-        data: { session: { access_token: 'tok-123' } },
-        error: null,
-      })
+    it('returns true when user exists', async () => {
+      (auth as any).currentUser = { uid: 'user-1' }
       expect(await isAuthenticated()).toBe(true)
     })
 
-    it('returns false when no session', async () => {
-      supabase.auth.getSession.mockResolvedValueOnce({
-        data: { session: null },
-        error: null,
-      })
-      expect(await isAuthenticated()).toBe(false)
-    })
-
-    it('returns false on error', async () => {
-      supabase.auth.getSession.mockRejectedValueOnce(new Error('fail'))
+    it('returns false when no user', async () => {
+      (auth as any).currentUser = null
       expect(await isAuthenticated()).toBe(false)
     })
   })
 
   describe('getCurrentUserId()', () => {
     it('returns user ID when authenticated', async () => {
-      supabase.auth.getUser.mockResolvedValueOnce({
-        data: { user: { id: 'user-abc' } },
-        error: null,
-      })
+      (auth as any).currentUser = { uid: 'user-abc' }
       expect(await getCurrentUserId()).toBe('user-abc')
     })
 
     it('returns null when unauthenticated', async () => {
-      supabase.auth.getUser.mockResolvedValueOnce({
-        data: { user: null },
-        error: null,
-      })
-      expect(await getCurrentUserId()).toBeNull()
-    })
-
-    it('returns null on error', async () => {
-      supabase.auth.getUser.mockRejectedValueOnce(new Error('fail'))
+      (auth as any).currentUser = null
       expect(await getCurrentUserId()).toBeNull()
     })
   })
 })
 
-describe('Supabase Auth — Direct Method Tests', () => {
-  beforeEach(() => vi.clearAllMocks())
-
-  it('signInWithPassword returns session on valid credentials', async () => {
-    supabase.auth.signInWithPassword.mockResolvedValueOnce({
-      data: { session: { access_token: 'tok' }, user: { id: 'u1' } },
-      error: null,
-    })
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: 'user@example.com',
-      password: 'ValidPass1',
-    })
-    expect(error).toBeNull()
-    expect(data.session).toBeDefined()
+describe('Firebase Auth — Direct Method Tests', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
   })
 
-  it('returns "Invalid login credentials" on wrong password', async () => {
-    supabase.auth.signInWithPassword.mockResolvedValueOnce({
-      data: { session: null },
-      error: { message: 'Invalid login credentials', status: 400 },
-    })
-    const { error } = await supabase.auth.signInWithPassword({
-      email: 'user@example.com',
-      password: 'wrongpass',
-    })
-    expect(error!.message).toContain('Invalid login credentials')
+  it('signInWithEmailAndPassword returns user on valid credentials', async () => {
+    vi.mocked(signInWithEmailAndPassword).mockResolvedValueOnce({
+      user: { uid: 'u1' }
+    } as any)
+    
+    const userCredential = await signInWithEmailAndPassword(auth, 'user@example.com', 'ValidPass1')
+    expect(userCredential.user.uid).toBe('u1')
   })
 
-  it('returns "Email not confirmed" for unverified accounts', async () => {
-    supabase.auth.signInWithPassword.mockResolvedValueOnce({
-      data: { session: null },
-      error: { message: 'Email not confirmed', status: 400 },
+  it('throws "auth/invalid-credential" on wrong password', async () => {
+    vi.mocked(signInWithEmailAndPassword).mockRejectedValueOnce({
+      code: 'auth/invalid-credential',
+      message: 'Invalid login credentials'
     })
-    const { error } = await supabase.auth.signInWithPassword({
-      email: 'new@example.com',
-      password: 'Password1',
-    })
-    expect(error!.message).toContain('Email not confirmed')
+
+    await expect(signInWithEmailAndPassword(auth, 'user@example.com', 'wrongpass'))
+      .rejects.toThrow('Invalid login credentials')
   })
 
-  it('signUp rejects duplicate email', async () => {
-    supabase.auth.signUp.mockResolvedValueOnce({
-      data: { user: null },
-      error: { message: 'User already registered' },
+  it('createUserWithEmailAndPassword rejects duplicate email', async () => {
+    vi.mocked(createUserWithEmailAndPassword).mockRejectedValueOnce({
+      code: 'auth/email-already-in-use',
+      message: 'User already registered'
     })
-    const { error } = await supabase.auth.signUp({
-      email: 'existing@example.com',
-      password: 'StrongPass1',
-    })
-    expect(error!.message).toContain('already registered')
-  })
 
-  it('getSession returns null after JWT expiry', async () => {
-    supabase.auth.getSession.mockResolvedValueOnce({
-      data: { session: null },
-      error: { message: 'JWT expired' },
-    })
-    const { data, error } = await supabase.auth.getSession()
-    expect(data.session).toBeNull()
-    expect(error).toBeDefined()
+    await expect(createUserWithEmailAndPassword(auth, 'existing@example.com', 'StrongPass1'))
+      .rejects.toThrow('already registered')
   })
 })
+

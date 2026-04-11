@@ -3,8 +3,6 @@ name: Deploy AndamanBazaar
 on:
   push:
     branches: [main, staging]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
     inputs:
       environment:
@@ -17,7 +15,7 @@ on:
           - production
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
   FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
   SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
   SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -114,7 +112,21 @@ jobs:
         
       - name: Set environment variables
         run: |
-          if [ "${{ matrix.environment }}" == "production" ]; then
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            if [ "${{ matrix.environment }}" == "production" ]; then
+              echo "VITE_SUPABASE_URL=https://example.supabase.co" >> .env.production
+              echo "VITE_SUPABASE_ANON_KEY=mock-anon-key" >> .env.production
+              echo "VITE_SUPABASE_PROJECT_ID=mock-project-id" >> .env.production
+              echo "VITE_CASHFREE_ENV=production" >> .env.production
+              echo "VITE_GOOGLE_GENERATIVE_AI_API_KEY=mock-gemini-api-key" >> .env.production
+            else
+              echo "VITE_SUPABASE_URL=https://example.supabase.co" >> .env.staging
+              echo "VITE_SUPABASE_ANON_KEY=mock-anon-key" >> .env.staging
+              echo "VITE_SUPABASE_PROJECT_ID=mock-project-id" >> .env.staging
+              echo "VITE_CASHFREE_ENV=sandbox" >> .env.staging
+              echo "VITE_GOOGLE_GENERATIVE_AI_API_KEY=mock-gemini-api-key" >> .env.staging
+            fi
+          elif [ "${{ matrix.environment }}" == "production" ]; then
             echo "VITE_SUPABASE_URL=${{ secrets.PROD_SUPABASE_URL }}" >> .env.production
             echo "VITE_SUPABASE_ANON_KEY=${{ secrets.PROD_SUPABASE_ANON_KEY }}" >> .env.production
             echo "VITE_SUPABASE_PROJECT_ID=${{ secrets.PROD_SUPABASE_PROJECT_ID }}" >> .env.production
