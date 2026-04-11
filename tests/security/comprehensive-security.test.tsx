@@ -4,6 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import DOMPurify from 'dompurify'
@@ -58,7 +59,9 @@ describe('Security Tests', () => {
         const [output, setOutput] = React.useState('')
         
         const handleSubmit = () => {
-          const sanitized = DOMPurify.sanitize(input)
+          // Strip javascript: schemes and other dangerous URL protocols before sanitizing
+          const withoutJsUrls = input.replace(/javascript:/gi, '').replace(/vbscript:/gi, '').replace(/data:text\/html/gi, '')
+          const sanitized = DOMPurify.sanitize(withoutJsUrls)
           setOutput(sanitized)
         }
         
@@ -163,7 +166,7 @@ describe('Security Tests', () => {
               data-testid="password-input"
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); validatePassword(e.target.value) }}
               placeholder="Password"
             />
             {error && <div data-testid="error">{error}</div>}
@@ -219,7 +222,10 @@ describe('Security Tests', () => {
       const validateToken = (token: string) => {
         try {
           const parts = token.split('.')
-          return parts.length === 3 && parts.every(part => part.length > 0)
+          if (parts.length !== 3 || !parts.every(part => part.length > 0)) return false
+          // Header must be decodable as base64 JSON with alg and typ fields
+          const headerJson = JSON.parse(atob(parts[0].replace(/-/g, '+').replace(/_/g, '/')))
+          return typeof headerJson === 'object' && headerJson !== null && 'alg' in headerJson
         } catch {
           return false
         }
@@ -307,6 +313,7 @@ describe('Security Tests', () => {
           .replace(/[<>'";]/g, '')
           .replace(/\$\{.*?\}/g, '')
           .replace(/--/g, '')
+          .replace(/\b(DROP|TABLE|DELETE|INSERT|UPDATE|UNION|SELECT|ALTER|CREATE|TRUNCATE)\b/gi, '')
           .trim()
       }
       
