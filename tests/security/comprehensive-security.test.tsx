@@ -228,9 +228,10 @@ describe('Security Tests', () => {
         try {
           const parts = token.split('.')
           if (parts.length !== 3 || !parts.every(part => part.length > 0)) return false
-          // Header must be decodable as base64 JSON with alg and typ fields
+          // Header must be decodable as base64 JSON with a non-"none" alg field.
+          // Explicitly rejecting alg:"none" prevents signature-bypass attacks.
           const headerJson = JSON.parse(atob(parts[0].replace(/-/g, '+').replace(/_/g, '/')))
-          return typeof headerJson === 'object' && headerJson !== null && 'alg' in headerJson
+          return typeof headerJson === 'object' && headerJson !== null && 'alg' in headerJson && headerJson.alg !== 'none'
         } catch {
           return false
         }
