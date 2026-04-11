@@ -1,8 +1,31 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createReview = void 0;
 const https_1 = require("firebase-functions/v2/https");
-const admin = require("firebase-admin");
+const admin = __importStar(require("firebase-admin"));
 if (!admin.apps.length) {
     admin.initializeApp();
 }
@@ -36,18 +59,20 @@ exports.createReview = (0, https_1.onCall)(async (request) => {
         if (bookingData.booking_status !== 'completed' && bookingData.booking_status !== 'paid') {
             throw new https_1.HttpsError('failed-precondition', 'You can only review completed or paid experiences.');
         }
-        // Check if review already exists for this booking
-        const existingReview = await db.collection('reviews').where('bookingId', '==', bookingId).get();
-        if (!existingReview.empty) {
-            throw new https_1.HttpsError('already-exists', 'A review for this booking already exists.');
-        }
         // 2. Calculate average rating
         const vals = Object.values(ratings);
         const avgRating = vals.reduce((a, b) => a + b, 0) / vals.length;
         // 3. Batch Write: Create Review + Update Activity Stats
-        const reviewRef = db.collection('reviews').doc();
+        // Use a deterministic document ID based on bookingId to prevent duplicate reviews
+        // transactionally (concurrent requests will hit an already-exists conflict on set).
+        const reviewRef = db.collection('reviews').doc(`review_${bookingId}`);
         const activityRef = db.collection('activities').doc(activityId);
         await db.runTransaction(async (transaction) => {
+            // Check for duplicate review using transaction.get() on the deterministic ref
+            const existingReviewDoc = await transaction.get(reviewRef);
+            if (existingReviewDoc.exists) {
+                throw new https_1.HttpsError('already-exists', 'A review for this booking already exists.');
+            }
             const activityDoc = await transaction.get(activityRef);
             if (!activityDoc.exists) {
                 throw new https_1.HttpsError('not-found', 'Activity not found.');

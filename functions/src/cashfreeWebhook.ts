@@ -198,12 +198,13 @@ export const cashfreeWebhook = onRequest(async (req, res) => {
          const bookingDoc = bookingQuery!.docs[0];
          const booking = bookingDoc.data();
          
-         if (booking.status === "confirmed") {
+         if (booking.booking_status === "confirmed") {
             res.status(200).json({ message: "Already processed" });
             return;
          }
          
          await bookingDoc.ref.update({
+            booking_status: "confirmed",
             status: "confirmed",
             payment_status: "paid",
             cashfree_payment_id: paymentData?.cf_payment_id?.toString() || null,
@@ -215,7 +216,7 @@ export const cashfreeWebhook = onRequest(async (req, res) => {
            booking_id: bookingDoc.id,
            event_type: "booking_payment_confirmed",
            cashfree_order_id: orderId,
-           raw_payload: { amount: booking.totalAmount, listing_id: booking.listingId },
+           raw_payload: { amount: booking.total_amount, listing_id: booking.listing_id },
            created_at: admin.firestore.FieldValue.serverTimestamp()
          });
          
@@ -239,9 +240,9 @@ export const cashfreeWebhook = onRequest(async (req, res) => {
         }
         
         // Find booking and update
-        const bookingQuery = await db.collection("bookings").where("cashfree_order_id", "==", orderId).where("status", "==", "pending").limit(1).get();
+        const bookingQuery = await db.collection("bookings").where("cashfree_order_id", "==", orderId).where("booking_status", "==", "pending").limit(1).get();
         if (!bookingQuery.empty) {
-          await bookingQuery.docs[0].ref.update({ status: "failed", payment_status: "failed", updated_at: new Date().toISOString() });
+          await bookingQuery.docs[0].ref.update({ booking_status: "failed", status: "failed", payment_status: "failed", updated_at: new Date().toISOString() });
         }
         
         console.log(`❌ Payment failed for order: ${orderId}`);

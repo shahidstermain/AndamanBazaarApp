@@ -23,7 +23,7 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendAbandonedChatReminders = exports.sendListingExpiryReminders = exports.cleanupOldData = exports.calculateResponseRates = exports.markInactiveListings = exports.updateListingFreshness = exports.sendWeeklyTrendingEmails = exports.sendEmail = exports.handleWebhook = exports.healthCheck = exports.verifyBoostPayment = exports.createBoostOrder = exports.verifyOrderStatus = exports.getOrderPayments = exports.processSeamlessPayment = exports.createSeamlessOrder = exports.getPaymentDetails = exports.getPaymentHistoryNew = exports.checkPaymentStatus = exports.webhookHealthCheck = exports.cashfreeWebhookV2 = exports.cleanupExpiredReservations = exports.createOrder = exports.getModerationStats = exports.getModerationHistory = exports.batchModerateContent = exports.moderateContent = exports.getNearbyListings = exports.getLocationHistory = exports.verifyLocation = exports.getPaymentHistory = exports.refundPayment = exports.cashfreeWebhook = exports.verifyPayment = exports.createPayment = void 0;
+exports.sendAbandonedChatReminders = exports.sendListingExpiryReminders = exports.cleanupOldData = exports.generateItinerary = exports.calculateResponseRates = exports.markInactiveListings = exports.updateListingFreshness = exports.sendWeeklyTrendingEmails = exports.sendEmail = exports.handleWebhook = exports.healthCheck = exports.expireBoosts = exports.verifyBoostPayment = exports.createBoostOrder = exports.verifyOrderStatus = exports.getOrderPayments = exports.processSeamlessPayment = exports.createSeamlessOrder = exports.getPaymentDetails = exports.getPaymentHistoryNew = exports.checkPaymentStatus = exports.webhookHealthCheck = exports.cashfreeWebhookV2 = exports.cleanupExpiredReservations = exports.createOrder = exports.getModerationStats = exports.getModerationHistory = exports.batchModerateContent = exports.moderateContent = exports.getNearbyListings = exports.getLocationHistory = exports.verifyLocation = exports.getPaymentHistory = exports.refundPayment = exports.cashfreeWebhook = exports.verifyPayment = exports.createPayment = void 0;
 const functions = __importStar(require("firebase-functions"));
 const v2_1 = require("firebase-functions/v2");
 const admin = __importStar(require("firebase-admin"));
@@ -51,6 +51,8 @@ const freshness_1 = require("./freshness");
 Object.defineProperty(exports, "updateListingFreshness", { enumerable: true, get: function () { return freshness_1.updateListingFreshness; } });
 Object.defineProperty(exports, "markInactiveListings", { enumerable: true, get: function () { return freshness_1.markInactiveListings; } });
 Object.defineProperty(exports, "calculateResponseRates", { enumerable: true, get: function () { return freshness_1.calculateResponseRates; } });
+const itinerary_1 = require("./itinerary");
+Object.defineProperty(exports, "generateItinerary", { enumerable: true, get: function () { return itinerary_1.generateItinerary; } });
 // Import new payment functions
 const createOrder_1 = require("./payments/createOrder");
 Object.defineProperty(exports, "createOrder", { enumerable: true, get: function () { return createOrder_1.createOrder; } });
@@ -71,6 +73,8 @@ const createBoostOrder_1 = require("./payments/createBoostOrder");
 Object.defineProperty(exports, "createBoostOrder", { enumerable: true, get: function () { return createBoostOrder_1.createBoostOrder; } });
 const verifyBoostPayment_1 = require("./payments/verifyBoostPayment");
 Object.defineProperty(exports, "verifyBoostPayment", { enumerable: true, get: function () { return verifyBoostPayment_1.verifyBoostPayment; } });
+const expireBoosts_1 = require("./payments/expireBoosts");
+Object.defineProperty(exports, "expireBoosts", { enumerable: true, get: function () { return expireBoosts_1.expireBoosts; } });
 // Health check function
 exports.healthCheck = functions.https.onRequest(async (req, res) => {
     res.status(200).json({

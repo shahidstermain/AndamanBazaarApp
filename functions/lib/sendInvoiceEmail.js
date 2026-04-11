@@ -1,24 +1,30 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateEmailHtml = generateEmailHtml;
-exports.processSendInvoiceEmail = processSendInvoiceEmail;
-const admin = require("firebase-admin");
-/**
- * Build a complete HTML email for an invoice/payment confirmation.
- *
- * The returned HTML includes a customer greeting, invoice number, amount (formatted to two decimals),
- * item description, a localized paid date, a "Paid" status badge, and an optional "View Full Invoice"
- * CTA when `invoice.invoice_pdf_url` is provided.
- *
- * @param {Object} invoice - Invoice data used to populate the template.
- * @param {string} invoice.invoice_number - The invoice identifier shown in the email.
- * @param {string} invoice.customer_name - Recipient's name used in the greeting.
- * @param {string} invoice.item_description - Short description of the purchased item or service.
- * @param {number} invoice.amount_total - Total amount charged; displayed with two decimal places.
- * @param {string|Date} invoice.paid_at - Payment timestamp (ISO string or Date) used to render the paid date.
- * @param {string} [invoice.invoice_pdf_url] - Optional URL to the full invoice PDF; when present a CTA button is included.
- * @returns {string} The full HTML document string for the invoice email.
- */
+exports.processSendInvoiceEmail = exports.generateEmailHtml = void 0;
+const admin = __importStar(require("firebase-admin"));
 function generateEmailHtml(invoice) {
     const paidDate = new Date(invoice.paid_at).toLocaleDateString("en-IN", {
         year: "numeric",
@@ -123,16 +129,7 @@ function generateEmailHtml(invoice) {
 </body>
 </html>`;
 }
-/**
- * Send an invoice email for the given Firestore invoice document.
- *
- * Generates an HTML invoice, sends it via Resend when configured (or logs and marks the invoice sent when no API key is present), updates the invoice document to mark the email as sent, and records an audit log entry.
- *
- * @param {string} invoice_id - Firestore document ID of the invoice to send.
- * @returns {Object} An object with `success: true` and a `message` string. Includes `to` when the email was only logged (no API key configured), or `resend_id` when the email was sent via Resend.
- * @throws {Error} If the invoice document does not exist (`"Invoice not found"`).
- * @throws {Error} If the Resend API responds with a non-OK status (`"Failed to send email: <payload>"`).
- */
+exports.generateEmailHtml = generateEmailHtml;
 async function processSendInvoiceEmail(invoice_id) {
     const db = admin.firestore();
     // 1. Fetch invoice
@@ -222,4 +219,5 @@ async function processSendInvoiceEmail(invoice_id) {
         resend_id: emailResult.id,
     };
 }
+exports.processSendInvoiceEmail = processSendInvoiceEmail;
 //# sourceMappingURL=sendInvoiceEmail.js.map

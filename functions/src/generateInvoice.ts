@@ -6,17 +6,6 @@ const TIERS: Record<string, { label: string; emoji: string }> = {
   power: { label: "Power", emoji: "💎" },
 };
 
-/**
- * Generate a complete HTML invoice document using the provided invoice data.
- *
- * Formats the payment timestamp into India Standard Time (IST) and embeds customer, order, payment, and amount details into a styled HTML invoice suitable for saving or serving.
- *
- * @param invoice - Object containing invoice fields:
- *   - invoice_number, customer_name, customer_email, customer_phone,
- *   - item_description, amount_total, payment_method, cashfree_order_id,
- *   - paid_at, tier, duration_days, listing_title
- * @returns The rendered invoice HTML as a string
- */
 export async function generateInvoiceHtml(invoice: {
   invoice_number: string;
   customer_name: string;
@@ -184,32 +173,27 @@ export async function generateInvoiceHtml(invoice: {
 </html>`;
 }
 
-/**
- * Generate an invoice for the given listing boost, store the invoice record and HTML in Firebase, and write an audit log.
- *
- * @param boost_id - The Firestore document ID of the listing boost to invoice
- * @returns An object containing `success: true`, the created or existing `invoice_id`, `invoice_number`, the public `invoice_url`, and `already_existed` when an invoice was previously present for the boost
- * @throws Error when the boost record for `boost_id` does not exist
- */
 export async function processInvoiceGeneration(boost_id: string) {
   const db = admin.firestore();
 
-  // 0. Idempotency
-  const existingInvoicesSnapshot = await db.collection("invoices")
-    .where("boost_id", "==", boost_id)
-    .limit(1)
-    .get();
+  // 0. Idempotency: use deterministic document ID derived from boost_id
+  const deterministicInvoiceId = `inv_${boost_id}`;
+  const invoiceRef = db.collection("invoices").doc(deterministicInvoiceId);
 
-  if (!existingInvoicesSnapshot.empty) {
-    const existingInvoice = existingInvoicesSnapshot.docs[0].data();
-    console.log(`Invoice already exists for boost ${boost_id}: ${existingInvoice.invoice_number}`);
-    return {
-      success: true,
-      invoice_id: existingInvoicesSnapshot.docs[0].id,
-      invoice_number: existingInvoice.invoice_number,
-      invoice_url: existingInvoice.invoice_pdf_url || "",
-      already_existed: true,
-    };
+  const existingInvoiceDoc = await invoiceRef.get();
+  if (existingInvoiceDoc.exists) {
+    const existingInvoice = existingInvoiceDoc.data()!;
+    // Only short-circuit if the invoice is fully materialized (has a PDF URL)
+    if (existingInvoice.invoice_pdf_url && existingInvoice.invoice_status === "complete") {
+      console.log(`Invoice already exists for boost ${boost_id}: ${existingInvoice.invoice_number}`);
+      return {
+        success: true,
+        invoice_id: deterministicInvoiceId,
+        invoice_number: existingInvoice.invoice_number,
+        invoice_url: existingInvoice.invoice_pdf_url || "",
+        already_existed: true,
+      };
+    }
   }
 
   // 1. Fetch boost record
@@ -227,12 +211,22 @@ export async function processInvoiceGeneration(boost_id: string) {
   const listingDoc = await db.collection("listings").doc(boost.listing_id).get();
   const listing = listingDoc.data();
 
-  // 4. Fetch user email from auth
-  const authUser = await admin.auth().getUser(boost.user_id);
+  // 4. Fetch user email from auth (with fallback to profile if auth user is missing)
+  let authDisplayName: string | undefined;
+  let authEmail: string | undefined;
+  let authPhone: string | undefined;
+  try {
+    const authUser = await admin.auth().getUser(boost.user_id);
+    authDisplayName = authUser?.displayName || undefined;
+    authEmail = authUser?.email || undefined;
+    authPhone = authUser?.phoneNumber || undefined;
+  } catch (authErr) {
+    console.warn(`Could not fetch auth user for ${boost.user_id}, falling back to profile data:`, authErr);
+  }
 
-  const customerName = profile?.name || authUser?.displayName || "AndamanBazaar User";
-  const customerEmail = authUser?.email || profile?.email || "user@andamanbazaar.in";
-  const customerPhone = authUser?.phoneNumber || profile?.phone_number || "";
+  const customerName = profile?.name || authDisplayName || "AndamanBazaar User";
+  const customerEmail = authEmail || profile?.email || "user@andamanbazaar.in";
+  const customerPhone = authPhone || profile?.phone_number || "";
   const listingTitle = listing?.title || "Listing";
 
   const tierInfo = TIERS[boost.tier] || { label: boost.tier, emoji: "📦" };
@@ -241,7 +235,7 @@ export async function processInvoiceGeneration(boost_id: string) {
   // Generate an invoice number
   const invoiceNumber = `INV-${Date.now().toString().slice(-6)}-${boost_id.slice(-4).toUpperCase()}`;
 
-  // 5. Create invoice record
+  // 5. Create invoice record using deterministic ID (atomic create — fails if doc already exists)
   const invoiceData = {
     invoice_number: invoiceNumber,
     boost_id,
@@ -255,10 +249,12 @@ export async function processInvoiceGeneration(boost_id: string) {
     cashfree_order_id: boost.cashfree_order_id,
     cashfree_payment_id: boost.cashfree_payment_id || null,
     paid_at: boost.featured_from || new Date().toISOString(),
+    invoice_status: "pending",
     created_at: admin.firestore.FieldValue.serverTimestamp()
   };
 
-  const invoiceRef = await db.collection("invoices").add(invoiceData);
+  // Use set with merge: false so concurrent retries hit an already-exists error rather than duplicate
+  await invoiceRef.set(invoiceData);
 
   // 6. Generate HTML invoice
   const invoiceHtml = await generateInvoiceHtml({
@@ -286,8 +282,8 @@ export async function processInvoiceGeneration(boost_id: string) {
   await file.makePublic();
   const pdfUrl = file.publicUrl();
 
-  // 9. Update invoice with PDF URL
-  await invoiceRef.update({ invoice_pdf_url: pdfUrl });
+  // 9. Update invoice with PDF URL and mark as complete
+  await invoiceRef.update({ invoice_pdf_url: pdfUrl, invoice_status: "complete" });
 
   // 11. Audit log
   await db.collection("payment_audit_log").add({
@@ -295,7 +291,7 @@ export async function processInvoiceGeneration(boost_id: string) {
     event_type: "invoice_generated",
     cashfree_order_id: boost.cashfree_order_id,
     raw_payload: {
-      invoice_id: invoiceRef.id,
+      invoice_id: deterministicInvoiceId,
       invoice_number: invoiceNumber,
       amount: boost.amount_inr,
     },
@@ -306,7 +302,7 @@ export async function processInvoiceGeneration(boost_id: string) {
 
   return {
     success: true,
-    invoice_id: invoiceRef.id,
+    invoice_id: deterministicInvoiceId,
     invoice_number: invoiceNumber,
     invoice_url: pdfUrl,
   };

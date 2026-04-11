@@ -1,8 +1,31 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.cashfreeWebhook = void 0;
 const https_1 = require("firebase-functions/v2/https");
-const admin = require("firebase-admin");
+const admin = __importStar(require("firebase-admin"));
 const cashfree_pg_1 = require("cashfree-pg");
 const generateInvoice_1 = require("./generateInvoice");
 const sendInvoiceEmail_1 = require("./sendInvoiceEmail");
@@ -111,15 +134,7 @@ exports.cashfreeWebhook = (0, https_1.onRequest)(async (req, res) => {
                 const boost = boostDoc.data();
                 // 6. Prevent double-processing (idempotency)
                 if (boost.status === "paid") {
-                    if (boost.listing_id) {
-                        await db.collection("listings").doc(boost.listing_id).set({
-                            is_featured: true,
-                            featured_until: boost.featured_until || null,
-                            featured_tier: boost.tier,
-                            updated_at: new Date().toISOString(),
-                        }, { merge: true });
-                    }
-                    console.log("Boost already marked as paid, reconciled listing state:", boostDoc.id);
+                    console.log("Boost already marked as paid, skipping:", boostDoc.id);
                     res.status(200).json({ message: "Already processed" });
                     return;
                 }
@@ -177,11 +192,12 @@ exports.cashfreeWebhook = (0, https_1.onRequest)(async (req, res) => {
                 // Need to handle booking (create-booking-order processing)
                 const bookingDoc = bookingQuery.docs[0];
                 const booking = bookingDoc.data();
-                if (booking.status === "confirmed") {
+                if (booking.booking_status === "confirmed") {
                     res.status(200).json({ message: "Already processed" });
                     return;
                 }
                 await bookingDoc.ref.update({
+                    booking_status: "confirmed",
                     status: "confirmed",
                     payment_status: "paid",
                     cashfree_payment_id: paymentData?.cf_payment_id?.toString() || null,
@@ -192,7 +208,7 @@ exports.cashfreeWebhook = (0, https_1.onRequest)(async (req, res) => {
                     booking_id: bookingDoc.id,
                     event_type: "booking_payment_confirmed",
                     cashfree_order_id: orderId,
-                    raw_payload: { amount: booking.totalAmount, listing_id: booking.listingId },
+                    raw_payload: { amount: booking.total_amount, listing_id: booking.listing_id },
                     created_at: admin.firestore.FieldValue.serverTimestamp()
                 });
                 console.log(`✅ Booking confirmed: ${bookingDoc.id}`);
@@ -211,9 +227,9 @@ exports.cashfreeWebhook = (0, https_1.onRequest)(async (req, res) => {
                     await boostsQuery.docs[0].ref.update({ status: "failed", updated_at: new Date().toISOString() });
                 }
                 // Find booking and update
-                const bookingQuery = await db.collection("bookings").where("cashfree_order_id", "==", orderId).where("status", "==", "pending").limit(1).get();
+                const bookingQuery = await db.collection("bookings").where("cashfree_order_id", "==", orderId).where("booking_status", "==", "pending").limit(1).get();
                 if (!bookingQuery.empty) {
-                    await bookingQuery.docs[0].ref.update({ status: "failed", payment_status: "failed", updated_at: new Date().toISOString() });
+                    await bookingQuery.docs[0].ref.update({ booking_status: "failed", status: "failed", payment_status: "failed", updated_at: new Date().toISOString() });
                 }
                 console.log(`❌ Payment failed for order: ${orderId}`);
             }

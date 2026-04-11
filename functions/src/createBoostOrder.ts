@@ -19,16 +19,20 @@ export const createBoostOrder = onCall(async (request: CallableRequest) => {
   }
 
   const uid = request.auth.uid;
+  // Validate that request.data is a non-null object before destructuring
+  if (!request.data || typeof request.data !== "object") {
+    throw new HttpsError("invalid-argument", "Invalid request payload.");
+  }
   const { listing_id, tier: tierKey } = request.data;
 
   if (!listing_id || !tierKey) {
     throw new HttpsError("invalid-argument", "listing_id and tier are required.");
   }
 
-  const tier = TIERS[tierKey];
-  if (!tier) {
+  if (!Object.prototype.hasOwnProperty.call(TIERS, tierKey)) {
     throw new HttpsError("invalid-argument", "Invalid tier. Choose: spark, boost, or power.");
   }
+  const tier = TIERS[tierKey];
 
   const db = admin.firestore();
 
@@ -49,39 +53,47 @@ export const createBoostOrder = onCall(async (request: CallableRequest) => {
     throw new HttpsError("failed-precondition", "Only active listings can be boosted.");
   }
 
-  // 2. Check for existing pending boost
+  // 2. Check for existing pending boost and atomically create new one
   const userDoc = await db.collection("profiles").doc(uid).get();
   const user = userDoc.data();
-
-  const existingBoostsSnapshot = await db.collection("listing_boosts")
-    .where("listing_id", "==", listing_id)
-    .where("status", "==", "pending")
-    .limit(1)
-    .get();
-
-  if (!existingBoostsSnapshot.empty) {
-    // Expire old ones to avoid duplicates or issues
-    const oldBoost = existingBoostsSnapshot.docs[0];
-    await oldBoost.ref.update({ status: "failed", updated_at: new Date().toISOString() });
-  }
 
   // 3. Generate a unique order ID
   const orderId = `AB_BOOST_${listing_id.substring(0, 8)}_${Date.now()}`;
 
-  // 4. Create listing_boosts record
-  const boostData = {
-    listing_id,
-    user_id: uid,
-    tier: tierKey,
-    amount_inr: tier.amount_inr,
-    duration_days: tier.duration_days,
-    status: "pending",
-    cashfree_order_id: orderId,
-    payment_method: "upi",
-    created_at: new Date().toISOString()
-  };
+  let boostDocRef!: admin.firestore.DocumentReference;
 
-  const boostDocRef = await db.collection("listing_boosts").add(boostData);
+  await db.runTransaction(async (transaction) => {
+    const existingBoostsSnapshot = await db.collection("listing_boosts")
+      .where("listing_id", "==", listing_id)
+      .where("status", "==", "pending")
+      .limit(1)
+      .get();
+
+    if (!existingBoostsSnapshot.empty) {
+      // Expire old pending boost to avoid duplicates
+      transaction.update(existingBoostsSnapshot.docs[0].ref, {
+        status: "failed",
+        updated_at: new Date().toISOString()
+      });
+    }
+
+    // 4. Create listing_boosts record
+    const newBoostRef = db.collection("listing_boosts").doc();
+    boostDocRef = newBoostRef;
+
+    const boostData = {
+      listing_id,
+      user_id: uid,
+      tier: tierKey,
+      amount_inr: tier.amount_inr,
+      duration_days: tier.duration_days,
+      status: "pending",
+      cashfree_order_id: orderId,
+      payment_method: "upi",
+      created_at: new Date().toISOString()
+    };
+    transaction.set(newBoostRef, boostData);
+  });
 
   // 5. Initialize Cashfree
   (Cashfree as any).XClientId = process.env.CASHFREE_APP_ID || "";
@@ -132,9 +144,10 @@ export const createBoostOrder = onCall(async (request: CallableRequest) => {
     throw new HttpsError("internal", "Payment gateway error. Please try again.");
   }
 
-  // 8. Update boost record with payment session ID
+  // 8. Update boost record with payment session ID (keep cf_order_id separate from cashfree_payment_id)
   await boostDocRef.update({
-    cashfree_payment_id: cashfreeData.cf_order_id?.toString(),
+    cashfree_order_token: cashfreeData.cf_order_id?.toString(),
+    payment_session_id: cashfreeData.payment_session_id?.toString(),
     updated_at: new Date().toISOString(),
   });
 

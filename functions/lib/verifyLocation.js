@@ -1,8 +1,31 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.verifyLocation = void 0;
 const https_1 = require("firebase-functions/v2/https");
-const admin = require("firebase-admin");
+const admin = __importStar(require("firebase-admin"));
 // Ensure Firebase is initialized
 if (!admin.apps.length) {
     admin.initializeApp();
@@ -22,28 +45,18 @@ const RATE_LIMIT_CONFIG = {
 };
 // Verification expiration (90 days in milliseconds)
 const VERIFICATION_EXPIRATION_DAYS = 90;
-/**
- * Determine whether a latitude/longitude pair falls inside the Andaman & Nicobar Islands bounding box.
- * @returns {boolean} `true` if both coordinates are within the inclusive Andaman bounds, `false` otherwise.
- */
 function isWithinAndamanBounds(lat, lng) {
     return (lat >= ANDAMAN_BOUNDS.minLat &&
         lat <= ANDAMAN_BOUNDS.maxLat &&
         lng >= ANDAMAN_BOUNDS.minLng &&
         lng <= ANDAMAN_BOUNDS.maxLng);
 }
-/**
- * Fetches geolocation data for an IP address using ip-api.com, or returns null when unavailable or inapplicable.
- *
- * @param {string} ip - The client's IP address; local/private addresses (e.g., "127.*", "192.168.*", "10.*") or falsy/"unknown" values are treated as inapplicable and return `null`.
- * @returns {Object|null} The geolocation payload from ip-api.com when successful (includes `status`, `country`, `countryCode`, `lat`, `lon`, `isp`), or `null` if the lookup fails, is timed out, or the IP is inapplicable.
- */
 async function getIpGeolocation(ip) {
     if (!ip || ip === "unknown" || ip.startsWith("127.") || ip.startsWith("192.168.") || ip.startsWith("10.")) {
         return null;
     }
     try {
-        const response = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,lat,lon,isp`, { signal: AbortSignal.timeout(5000) });
+        const response = await fetch(`https://ip-api.com/json/${ip}?fields=status,country,countryCode,lat,lon,isp`, { signal: AbortSignal.timeout(5000) });
         if (!response.ok) {
             console.warn("IP geolocation request failed:", response.status);
             return null;
