@@ -13,7 +13,8 @@ if (!admin.apps.length) {
 // to ensure environment variables are available when it runs.
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": process.env.FRONTEND_ORIGIN || "https://www.andamanbazaar.in",
+  "Access-Control-Allow-Origin":
+    process.env.FRONTEND_ORIGIN || "https://www.andamanbazaar.in",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-webhook-signature, x-webhook-timestamp, x-webhook-id",
 };
@@ -38,9 +39,10 @@ export const cashfreeWebhook = onRequest(async (req, res) => {
   const db = admin.firestore();
 
   // Ensure Cashfree environment is fresh
-  (Cashfree as any).XClientId = process.env.CASHFREE_APP_ID || '';
-  (Cashfree as any).XClientSecret = process.env.CASHFREE_SECRET_KEY || '';
-  (Cashfree as any).XEnvironment = process.env.CASHFREE_ENV === "production"
+  (Cashfree as any).XClientId = process.env.CASHFREE_APP_ID || "";
+  (Cashfree as any).XClientSecret = process.env.CASHFREE_SECRET_KEY || "";
+  (Cashfree as any).XEnvironment =
+    process.env.CASHFREE_ENV === "production"
       ? (Cashfree as any).Environment.PRODUCTION
       : (Cashfree as any).Environment.SANDBOX;
 
@@ -60,7 +62,7 @@ export const cashfreeWebhook = onRequest(async (req, res) => {
       await db.collection("payment_audit_log").add({
         event_type: "webhook_signature_invalid",
         raw_payload: { body: rawBody.substring(0, 500), timestamp },
-        created_at: admin.firestore.FieldValue.serverTimestamp()
+        created_at: admin.firestore.FieldValue.serverTimestamp(),
       });
 
       res.status(401).json({ error: "Invalid signature" });
@@ -83,11 +85,14 @@ export const cashfreeWebhook = onRequest(async (req, res) => {
       event_type: `webhook_${eventType}`,
       cashfree_order_id: orderData?.order_id || null,
       raw_payload: payload,
-      created_at: admin.firestore.FieldValue.serverTimestamp()
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
     });
 
     // 4. Only process PAYMENT_SUCCESS_WEBHOOK
-    if (eventType === "PAYMENT_SUCCESS_WEBHOOK" && orderData?.order_status === "PAID") {
+    if (
+      eventType === "PAYMENT_SUCCESS_WEBHOOK" &&
+      orderData?.order_status === "PAID"
+    ) {
       const orderId = orderData.order_id;
 
       if (!orderId) {
@@ -98,7 +103,8 @@ export const cashfreeWebhook = onRequest(async (req, res) => {
 
       // 5. Find the boost record (Assume "listing_boosts" has been ported to Firestore)
       // We will query listing_boosts by cashfree_order_id
-      const boostsQuery = await db.collection("listing_boosts")
+      const boostsQuery = await db
+        .collection("listing_boosts")
         .where("cashfree_order_id", "==", orderId)
         .limit(1)
         .get();
@@ -107,17 +113,18 @@ export const cashfreeWebhook = onRequest(async (req, res) => {
       // Supabase Edge Function previously only updated "listing_boosts".
       // We'll mimic the exact behavior first, or check both collections.
       // Let's assume orderId prefix tells us if it's booking vs boost, or check both.
-      
+
       const isBoost = !boostsQuery.empty;
-      
+
       let bookingQuery;
       let isBooking = false;
       if (!isBoost) {
-         bookingQuery = await db.collection("bookings")
-            .where("cashfree_order_id", "==", orderId)
-            .limit(1)
-            .get();
-         isBooking = !bookingQuery.empty;
+        bookingQuery = await db
+          .collection("bookings")
+          .where("cashfree_order_id", "==", orderId)
+          .limit(1)
+          .get();
+        isBooking = !bookingQuery.empty;
       }
 
       if (!isBoost && !isBooking) {
@@ -129,7 +136,7 @@ export const cashfreeWebhook = onRequest(async (req, res) => {
       if (isBoost) {
         const boostDoc = boostsQuery.docs[0];
         const boost = boostDoc.data();
-        
+
         // 6. Prevent double-processing (idempotency)
         if (boost.status === "paid") {
           console.log("Boost already marked as paid, skipping:", boostDoc.id);
@@ -139,7 +146,9 @@ export const cashfreeWebhook = onRequest(async (req, res) => {
 
         // 7. Calculate featured dates
         const now = new Date();
-        const featuredUntil = new Date(now.getTime() + (boost.duration_days || 0) * 24 * 60 * 60 * 1000);
+        const featuredUntil = new Date(
+          now.getTime() + (boost.duration_days || 0) * 24 * 60 * 60 * 1000,
+        );
 
         // 8. Update listing_boosts: mark as paid
         await boostDoc.ref.update({
@@ -152,12 +161,12 @@ export const cashfreeWebhook = onRequest(async (req, res) => {
 
         // 9. Update listing: set is_featured, featured_until, and featured_tier
         if (boost.listing_id) {
-           await db.collection("listings").doc(boost.listing_id).update({
-             is_featured: true,
-             featured_until: featuredUntil.toISOString(),
-             featured_tier: boost.tier,
-             updated_at: now.toISOString(),
-           });
+          await db.collection("listings").doc(boost.listing_id).update({
+            is_featured: true,
+            featured_until: featuredUntil.toISOString(),
+            featured_tier: boost.tier,
+            updated_at: now.toISOString(),
+          });
         }
 
         // 10. Audit log: payment confirmed
@@ -173,12 +182,14 @@ export const cashfreeWebhook = onRequest(async (req, res) => {
             featured_until: featuredUntil.toISOString(),
             payment_method: paymentData?.payment_group || "upi",
           },
-          created_at: admin.firestore.FieldValue.serverTimestamp()
+          created_at: admin.firestore.FieldValue.serverTimestamp(),
         });
 
-        console.log(`✅ Boost activated: listing ${boost.listing_id}, tier ${boost.tier}, until ${featuredUntil.toISOString()}`);
+        console.log(
+          `✅ Boost activated: listing ${boost.listing_id}, tier ${boost.tier}, until ${featuredUntil.toISOString()}`,
+        );
 
-        // 11. Generate invoice and send email 
+        // 11. Generate invoice and send email
         try {
           const invoiceResult = await processInvoiceGeneration(boostDoc.id);
           if (invoiceResult.success && invoiceResult.invoice_id) {
@@ -192,59 +203,81 @@ export const cashfreeWebhook = onRequest(async (req, res) => {
         res.status(200).json({ success: true, message: "Boost activated" });
         return;
       }
-      
+
       if (isBooking) {
-         // Need to handle booking (create-booking-order processing)
-         const bookingDoc = bookingQuery!.docs[0];
-         const booking = bookingDoc.data();
-         
-         if (booking.booking_status === "confirmed") {
-            res.status(200).json({ message: "Already processed" });
-            return;
-         }
-         
-         await bookingDoc.ref.update({
-            booking_status: "confirmed",
-            status: "confirmed",
-            payment_status: "paid",
-            cashfree_payment_id: paymentData?.cf_payment_id?.toString() || null,
-            updated_at: new Date().toISOString()
-         });
-         
-         // Audit log
-         await db.collection("payment_audit_log").add({
-           booking_id: bookingDoc.id,
-           event_type: "booking_payment_confirmed",
-           cashfree_order_id: orderId,
-           raw_payload: { amount: booking.total_amount, listing_id: booking.listing_id },
-           created_at: admin.firestore.FieldValue.serverTimestamp()
-         });
-         
-         console.log(`✅ Booking confirmed: ${bookingDoc.id}`);
-         res.status(200).json({ success: true, message: "Booking confirmed" });
-         return;
+        // Need to handle booking (create-booking-order processing)
+        const bookingDoc = bookingQuery!.docs[0];
+        const booking = bookingDoc.data();
+
+        if (booking.booking_status === "confirmed") {
+          res.status(200).json({ message: "Already processed" });
+          return;
+        }
+
+        await bookingDoc.ref.update({
+          booking_status: "confirmed",
+          status: "confirmed",
+          payment_status: "paid",
+          cashfree_payment_id: paymentData?.cf_payment_id?.toString() || null,
+          updated_at: new Date().toISOString(),
+        });
+
+        // Audit log
+        await db.collection("payment_audit_log").add({
+          booking_id: bookingDoc.id,
+          event_type: "booking_payment_confirmed",
+          cashfree_order_id: orderId,
+          raw_payload: {
+            amount: booking.total_amount,
+            listing_id: booking.listing_id,
+          },
+          created_at: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        console.log(`✅ Booking confirmed: ${bookingDoc.id}`);
+        res.status(200).json({ success: true, message: "Booking confirmed" });
+        return;
       }
     }
 
     // 5b. Handle PAYMENT_FAILED_WEBHOOK
     if (
       eventType === "PAYMENT_FAILED_WEBHOOK" ||
-      (eventType === "PAYMENT_SUCCESS_WEBHOOK" && orderData?.order_status !== "PAID")
+      (eventType === "PAYMENT_SUCCESS_WEBHOOK" &&
+        orderData?.order_status !== "PAID")
     ) {
       const orderId = orderData?.order_id;
       if (orderId) {
         // Find boost and update
-        const boostsQuery = await db.collection("listing_boosts").where("cashfree_order_id", "==", orderId).where("status", "==", "pending").limit(1).get();
+        const boostsQuery = await db
+          .collection("listing_boosts")
+          .where("cashfree_order_id", "==", orderId)
+          .where("status", "==", "pending")
+          .limit(1)
+          .get();
         if (!boostsQuery.empty) {
-          await boostsQuery.docs[0].ref.update({ status: "failed", updated_at: new Date().toISOString() });
+          await boostsQuery.docs[0].ref.update({
+            status: "failed",
+            updated_at: new Date().toISOString(),
+          });
         }
-        
+
         // Find booking and update
-        const bookingQuery = await db.collection("bookings").where("cashfree_order_id", "==", orderId).where("booking_status", "==", "pending").limit(1).get();
+        const bookingQuery = await db
+          .collection("bookings")
+          .where("cashfree_order_id", "==", orderId)
+          .where("booking_status", "==", "pending")
+          .limit(1)
+          .get();
         if (!bookingQuery.empty) {
-          await bookingQuery.docs[0].ref.update({ booking_status: "failed", status: "failed", payment_status: "failed", updated_at: new Date().toISOString() });
+          await bookingQuery.docs[0].ref.update({
+            booking_status: "failed",
+            status: "failed",
+            payment_status: "failed",
+            updated_at: new Date().toISOString(),
+          });
         }
-        
+
         console.log(`❌ Payment failed for order: ${orderId}`);
       }
 
@@ -256,7 +289,6 @@ export const cashfreeWebhook = onRequest(async (req, res) => {
     console.log(`Unhandled webhook event type: ${eventType}`);
     res.status(200).json({ message: "Event acknowledged" });
     return;
-
   } catch (err) {
     console.error("Webhook processing error:", err);
     res.status(500).json({ error: "Internal server error" });

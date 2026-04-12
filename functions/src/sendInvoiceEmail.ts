@@ -9,9 +9,9 @@ export function generateEmailHtml(invoice: {
   invoice_pdf_url: string;
 }): string {
   const paidDate = new Date(invoice.paid_at).toLocaleDateString("en-IN", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   });
 
   return `<!DOCTYPE html>
@@ -80,7 +80,9 @@ export function generateEmailHtml(invoice: {
                           </table>
 
                           <!-- CTA Button -->
-                          ${invoice.invoice_pdf_url ? `
+                          ${
+                            invoice.invoice_pdf_url
+                              ? `
                           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
                               <tr>
                                   <td align="center">
@@ -90,7 +92,9 @@ export function generateEmailHtml(invoice: {
                                       </a>
                                   </td>
                               </tr>
-                          </table>` : ""}
+                          </table>`
+                              : ""
+                          }
 
                           <p style="font-size:13px;color:#888;line-height:1.6;margin:0;">
                               Your boost is now live! Buyers across the Andaman Islands will see your listing with priority placement.
@@ -115,7 +119,7 @@ export function generateEmailHtml(invoice: {
 
 export async function processSendInvoiceEmail(invoice_id: string) {
   const db = admin.firestore();
-  
+
   // 1. Fetch invoice
   const invoiceDoc = await db.collection("invoices").doc(invoice_id).get();
   if (!invoiceDoc.exists) {
@@ -141,16 +145,18 @@ export async function processSendInvoiceEmail(invoice_id: string) {
 
   // 4. Send email via Resend
   const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
-  
+
   if (!RESEND_API_KEY) {
     console.warn("RESEND_API_KEY not set — logging email instead of sending");
     console.log(`📧 Would send to: ${invoice.customer_email}`);
-    console.log(`📧 Subject: Your AndamanBazaar Invoice #${invoice.invoice_number}`);
+    console.log(
+      `📧 Subject: Your AndamanBazaar Invoice #${invoice.invoice_number}`,
+    );
 
     // Mark as sent (dev mode)
-    await invoiceDoc.ref.update({ 
-      email_sent: true, 
-      email_sent_at: new Date().toISOString() 
+    await invoiceDoc.ref.update({
+      email_sent: true,
+      email_sent_at: new Date().toISOString(),
     });
 
     return {
@@ -185,16 +191,16 @@ export async function processSendInvoiceEmail(invoice_id: string) {
       event_type: "email_failed",
       cashfree_order_id: invoice.cashfree_order_id,
       raw_payload: emailResult,
-      created_at: admin.firestore.FieldValue.serverTimestamp()
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
     });
 
     throw new Error(`Failed to send email: ${JSON.stringify(emailResult)}`);
   }
 
   // 5. Update invoice
-  await invoiceDoc.ref.update({ 
-    email_sent: true, 
-    email_sent_at: new Date().toISOString() 
+  await invoiceDoc.ref.update({
+    email_sent: true,
+    email_sent_at: new Date().toISOString(),
   });
 
   // 6. Audit log
@@ -207,10 +213,12 @@ export async function processSendInvoiceEmail(invoice_id: string) {
       to: invoice.customer_email,
       resend_id: emailResult.id,
     },
-    created_at: admin.firestore.FieldValue.serverTimestamp()
+    created_at: admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  console.log(`📧 Invoice email sent: ${invoice.invoice_number} → ${invoice.customer_email}`);
+  console.log(
+    `📧 Invoice email sent: ${invoice.invoice_number} → ${invoice.customer_email}`,
+  );
 
   return {
     success: true,

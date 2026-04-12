@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
-import { 
-  measurePerformance, 
-  getMemoryUsage, 
-  checkPerformanceBudget, 
+import { useState, useEffect, useCallback } from "react";
+import {
+  measurePerformance,
+  getMemoryUsage,
+  checkPerformanceBudget,
   reportPerformanceMetrics,
   PerformanceMetrics,
-  debounce
-} from '@/lib/performance';
+  debounce,
+} from "@/lib/performance";
 
 export interface PerformanceMonitoringState {
   metrics: PerformanceMetrics | null;
@@ -28,7 +28,7 @@ export function usePerformanceMonitoring(enabled: boolean = true) {
   const startMonitoring = useCallback(async () => {
     if (!enabled || state.isMonitoring) return;
 
-    setState(prev => ({ ...prev, isMonitoring: true }));
+    setState((prev) => ({ ...prev, isMonitoring: true }));
 
     try {
       // Measure performance metrics
@@ -47,8 +47,8 @@ export function usePerformanceMonitoring(enabled: boolean = true) {
       // Report metrics to analytics
       await reportPerformanceMetrics();
     } catch (error) {
-      console.error('Performance monitoring failed:', error);
-      setState(prev => ({ ...prev, isMonitoring: false }));
+      console.error("Performance monitoring failed:", error);
+      setState((prev) => ({ ...prev, isMonitoring: false }));
     }
   }, [enabled, state.isMonitoring]);
 
@@ -73,8 +73,8 @@ export function usePerformanceMonitoring(enabled: boolean = true) {
     };
 
     // Listen for navigation events
-    window.addEventListener('popstate', handleRouteChange);
-    return () => window.removeEventListener('popstate', handleRouteChange);
+    window.addEventListener("popstate", handleRouteChange);
+    return () => window.removeEventListener("popstate", handleRouteChange);
   }, [enabled, startMonitoring]);
 
   return {
@@ -94,18 +94,18 @@ export function usePerformanceBudget() {
       setViolations(result.violations);
       setPassed(result.passed);
     } catch (error) {
-      console.error('Budget check failed:', error);
+      console.error("Budget check failed:", error);
     }
   }, []);
 
   useEffect(() => {
     checkBudget();
-    
+
     // Re-check on window resize (affects image loading)
     const handleResize = debounce(checkBudget, 1000);
-    window.addEventListener('resize', handleResize);
-    
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
   }, [checkBudget]);
 
   return {
@@ -124,17 +124,22 @@ export function useComponentPerformance(componentName: string) {
     return performance.now();
   }, []);
 
-  const endRender = useCallback((startTime: number) => {
-    const endTime = performance.now();
-    const duration = endTime - startTime;
-    setRenderTime(duration);
-    setRenderCount(prev => prev + 1);
+  const endRender = useCallback(
+    (startTime: number) => {
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+      setRenderTime(duration);
+      setRenderCount((prev) => prev + 1);
 
-    // Log slow renders
-    if (duration > 100) {
-      console.warn(`Slow render detected in ${componentName}: ${duration.toFixed(2)}ms`);
-    }
-  }, [componentName]);
+      // Log slow renders
+      if (duration > 100) {
+        console.warn(
+          `Slow render detected in ${componentName}: ${duration.toFixed(2)}ms`,
+        );
+      }
+    },
+    [componentName],
+  );
 
   return {
     renderTime,

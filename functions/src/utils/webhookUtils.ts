@@ -3,7 +3,7 @@
  * This allows them to be easily tested in frontend environments.
  */
 
-import crypto from 'node:crypto';
+import crypto from "node:crypto";
 
 /**
  * Interface for Cashfree webhook events (v2025-01-01)
@@ -71,7 +71,7 @@ export const verifyWebhookSignature = (
     const clientSecret = secretKey || process.env.CASHFREE_SECRET_KEY;
 
     if (!clientSecret) {
-      console.error('CASHFREE_SECRET_KEY not found for webhook verification');
+      console.error("CASHFREE_SECRET_KEY not found for webhook verification");
       return false;
     }
 
@@ -79,13 +79,13 @@ export const verifyWebhookSignature = (
     const signatureData = timestamp ? `${timestamp}${payload}` : payload;
 
     const expectedSignature = crypto
-      .createHmac('sha256', clientSecret)
+      .createHmac("sha256", clientSecret)
       .update(signatureData)
-      .digest('base64');
+      .digest("base64");
 
     return signature === expectedSignature;
   } catch (error) {
-    console.error('Webhook signature verification failed', error);
+    console.error("Webhook signature verification failed", error);
     return false;
   }
 };
@@ -95,19 +95,21 @@ export const verifyWebhookSignature = (
  */
 export const parseWebhookEvent = (payload: string): CashfreeWebhookEvent => {
   try {
-    if (!payload || typeof payload !== 'string' || payload.trim() === '') {
-      throw new Error('Empty payload');
+    if (!payload || typeof payload !== "string" || payload.trim() === "") {
+      throw new Error("Empty payload");
     }
     const event = JSON.parse(payload);
-    if (!event || typeof event !== 'object' || Array.isArray(event)) {
-      throw new Error('Payload must be a JSON object');
+    if (!event || typeof event !== "object" || Array.isArray(event)) {
+      throw new Error("Payload must be a JSON object");
     }
 
     // Normalize v2025-01-01 format to include legacy fields for backward compatibility
     const normalizedEvent = normalizeWebhookEvent(event);
     return normalizedEvent as CashfreeWebhookEvent;
   } catch (error) {
-    throw new Error(`Webhook event parsing failed: ${error instanceof Error ? error.message : 'Invalid JSON'}`);
+    throw new Error(
+      `Webhook event parsing failed: ${error instanceof Error ? error.message : "Invalid JSON"}`,
+    );
   }
 };
 
@@ -128,7 +130,10 @@ const normalizeWebhookEvent = (event: any): any => {
       orderId: event.data.order.order_id,
       orderAmount: event.data.order.order_amount,
       orderCurrency: event.data.order.order_currency,
-      orderStatus: deriveOrderStatus(event.type, event.data.payment?.payment_status),
+      orderStatus: deriveOrderStatus(
+        event.type,
+        event.data.payment?.payment_status,
+      ),
     };
 
     // Add payment fields if present
@@ -150,15 +155,18 @@ const normalizeWebhookEvent = (event: any): any => {
 /**
  * Derive order status from event type and payment status
  */
-const deriveOrderStatus = (eventType: string, paymentStatus?: string): string => {
-  if (eventType === 'PAYMENT_SUCCESS_WEBHOOK' || paymentStatus === 'SUCCESS') {
-    return 'PAID';
+const deriveOrderStatus = (
+  eventType: string,
+  paymentStatus?: string,
+): string => {
+  if (eventType === "PAYMENT_SUCCESS_WEBHOOK" || paymentStatus === "SUCCESS") {
+    return "PAID";
   }
-  if (eventType === 'PAYMENT_FAILED_WEBHOOK' || paymentStatus === 'FAILED') {
-    return 'ACTIVE';
+  if (eventType === "PAYMENT_FAILED_WEBHOOK" || paymentStatus === "FAILED") {
+    return "ACTIVE";
   }
-  if (eventType === 'PAYMENT_USER_DROPPED_WEBHOOK') {
-    return 'ACTIVE';
+  if (eventType === "PAYMENT_USER_DROPPED_WEBHOOK") {
+    return "ACTIVE";
   }
-  return 'ACTIVE';
+  return "ACTIVE";
 };

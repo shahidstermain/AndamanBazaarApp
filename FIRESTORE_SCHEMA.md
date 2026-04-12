@@ -32,12 +32,12 @@ Replaces: `profiles`, `user_roles` tables
 ```typescript
 interface UserDocument {
   // Core profile fields
-  id: string;                    // Firebase Auth UID
+  id: string; // Firebase Auth UID
   email: string;
   phone?: string;
   name: string;
-  avatar?: string;               // Firebase Storage URL
-  
+  avatar?: string; // Firebase Storage URL
+
   // Location verification
   locationVerified: boolean;
   locationVerifiedAt?: Timestamp;
@@ -46,26 +46,26 @@ interface UserDocument {
   verificationIp?: string;
   verificationAttempts: number;
   verificationBlockedUntil?: Timestamp;
-  
+
   // User preferences
   contactPreferences: {
     whatsapp: boolean;
     phone: boolean;
     chat: boolean;
   };
-  
+
   // Role and permissions
-  role: 'user' | 'moderator' | 'admin';
+  role: "user" | "moderator" | "admin";
   isActive: boolean;
   isBanned: boolean;
   bannedUntil?: Timestamp;
   banReason?: string;
-  
+
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
   lastActiveAt: Timestamp;
-  
+
   // Stats (denormalized for performance)
   stats: {
     listingCount: number;
@@ -79,6 +79,7 @@ interface UserDocument {
 ```
 
 **Indexes**:
+
 - `email` (unique)
 - `phone` (unique)
 - `role`
@@ -95,58 +96,58 @@ Replaces: `listings` table
 
 ```typescript
 interface ListingDocument {
-  id: string;                    // Auto-generated UUID
-  
+  id: string; // Auto-generated UUID
+
   // Basic info
   title: string;
   description: string;
   price: number;
   isNegotiable: boolean;
   minPrice?: number;
-  condition: 'new' | 'like_new' | 'good' | 'fair';
-  
+  condition: "new" | "like_new" | "good" | "fair";
+
   // Category and location
-  category: string;              // Category ID
+  category: string; // Category ID
   subcategory?: string;
   city: string;
   area?: string;
   latitude?: number;
   longitude?: number;
-  
+
   // Media
-  images: ListingImage[];        // Array of image objects
+  images: ListingImage[]; // Array of image objects
   videoUrl?: string;
-  
+
   // Item details
   itemAge?: string;
   hasWarranty: boolean;
   warrantyExpiry?: Timestamp;
   hasInvoice: boolean;
   accessories?: string;
-  
+
   // Status and visibility
-  status: 'draft' | 'active' | 'sold' | 'deleted' | 'expired';
+  status: "draft" | "active" | "sold" | "deleted" | "expired";
   isActive: boolean;
   isFeatured: boolean;
-  featuredTier?: 'basic' | 'premium' | 'premium_plus';
+  featuredTier?: "basic" | "premium" | "premium_plus";
   featuredUntil?: Timestamp;
-  
+
   // Interaction data
   viewCount: number;
   favoriteCount: number;
   chatCount: number;
   bumpCount: number;
   lastBumpedAt?: Timestamp;
-  
+
   // Ownership
-  userId: string;                // User ID of seller
-  
+  userId: string; // User ID of seller
+
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
   expiresAt?: Timestamp;
   deletedAt?: Timestamp;
-  
+
   // AI metadata
   aiMetadata?: {
     suggestedTitle?: string;
@@ -155,13 +156,13 @@ interface ListingDocument {
     suggestedCondition?: string;
     confidence: number;
   };
-  
+
   // Moderation
-  moderationStatus: 'pending' | 'approved' | 'rejected';
+  moderationStatus: "pending" | "approved" | "rejected";
   moderationNotes?: string;
   moderatedAt?: Timestamp;
   moderatedBy?: string;
-  
+
   // Draft support
   draftStep?: number;
   idempotencyKey?: string;
@@ -169,7 +170,7 @@ interface ListingDocument {
 
 interface ListingImage {
   id: string;
-  url: string;                   // Firebase Storage URL
+  url: string; // Firebase Storage URL
   order: number;
   caption?: string;
   uploadedAt: Timestamp;
@@ -177,6 +178,7 @@ interface ListingImage {
 ```
 
 **Indexes**:
+
 - `userId`
 - `status`
 - `isActive`
@@ -200,41 +202,42 @@ Replaces: `chats` table
 
 ```typescript
 interface ChatDocument {
-  id: string;                    // Auto-generated UUID
-  
+  id: string; // Auto-generated UUID
+
   // Participants
   buyerId: string;
   sellerId: string;
   listingId: string;
-  
+
   // Chat state
   isActive: boolean;
   isArchived: boolean;
-  archivedBy?: string;           // 'buyer' | 'seller'
+  archivedBy?: string; // 'buyer' | 'seller'
   archivedAt?: Timestamp;
-  
+
   // Message tracking
   lastMessageId?: string;
   lastMessageAt?: Timestamp;
   buyerUnreadCount: number;
   sellerUnreadCount: number;
-  
+
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
   lastActiveAt: Timestamp;
-  
+
   // Listing snapshot (denormalized for performance)
   listingSnapshot: {
     title: string;
     price: number;
     status: string;
-    images: string[];            // First image URL
+    images: string[]; // First image URL
   };
 }
 ```
 
 **Indexes**:
+
 - `buyerId`
 - `sellerId`
 - `listingId`
@@ -253,17 +256,17 @@ Replaces: `messages` table
 
 ```typescript
 interface MessageDocument {
-  id: string;                    // Auto-generated within chat
-  
+  id: string; // Auto-generated within chat
+
   // Content
   content: string;
-  type: 'text' | 'image' | 'location' | 'system';
-  imageUrl?: string;             // Firebase Storage URL
-  
+  type: "text" | "image" | "location" | "system";
+  imageUrl?: string; // Firebase Storage URL
+
   // Sender
   senderId: string;
-  senderRole: 'buyer' | 'seller';
-  
+  senderRole: "buyer" | "seller";
+
   // Status
   isDelivered: boolean;
   deliveredAt?: Timestamp;
@@ -273,10 +276,10 @@ interface MessageDocument {
   editedAt?: Timestamp;
   isDeleted: boolean;
   deletedAt?: Timestamp;
-  
+
   // Reactions
   reactions: MessageReaction[];
-  
+
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -290,6 +293,7 @@ interface MessageReaction {
 ```
 
 **Indexes**:
+
 - `senderId`
 - `isRead`
 - `isDelivered`
@@ -304,11 +308,11 @@ Replaces: `favorites` table
 
 ```typescript
 interface FavoriteDocument {
-  id: string;                    // Composite: `${userId}_${listingId}`
-  
+  id: string; // Composite: `${userId}_${listingId}`
+
   userId: string;
   listingId: string;
-  
+
   // Listing snapshot (denormalized)
   listingSnapshot: {
     title: string;
@@ -317,12 +321,13 @@ interface FavoriteDocument {
     status: string;
     sellerId: string;
   };
-  
+
   createdAt: Timestamp;
 }
 ```
 
 **Indexes**:
+
 - `userId`
 - `listingId`
 - `createdAt`
@@ -336,40 +341,41 @@ Replaces: `reports` table
 
 ```typescript
 interface ReportDocument {
-  id: string;                    // Auto-generated UUID
-  
+  id: string; // Auto-generated UUID
+
   // Report details
-  type: 'listing' | 'user' | 'message';
-  targetId: string;              // ID of reported item
+  type: "listing" | "user" | "message";
+  targetId: string; // ID of reported item
   reason: string;
   description: string;
-  
+
   // Reporter
   reporterId: string;
   reporterInfo: {
     name: string;
     email: string;
   };
-  
+
   // Status
-  status: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
-  priority: 'low' | 'medium' | 'high';
-  
+  status: "pending" | "reviewing" | "resolved" | "dismissed";
+  priority: "low" | "medium" | "high";
+
   // Resolution
   resolution?: string;
   resolvedBy?: string;
   resolvedAt?: Timestamp;
-  
+
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  
+
   // Target snapshot (denormalized)
-  targetSnapshot?: any;          // Varies by report type
+  targetSnapshot?: any; // Varies by report type
 }
 ```
 
 **Indexes**:
+
 - `type`
 - `status`
 - `priority`
@@ -387,29 +393,29 @@ Replaces: `listing_boosts` table
 
 ```typescript
 interface ListingBoostDocument {
-  id: string;                    // Auto-generated UUID
-  
+  id: string; // Auto-generated UUID
+
   // Boost details
   listingId: string;
-  userId: string;                // Purchaser
-  tier: 'basic' | 'premium' | 'premium_plus';
-  amount: number;                // INR
-  duration: number;              // Days
-  
+  userId: string; // Purchaser
+  tier: "basic" | "premium" | "premium_plus";
+  amount: number; // INR
+  duration: number; // Days
+
   // Payment info
-  paymentId: string;             // Cashfree payment ID
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+  paymentId: string; // Cashfree payment ID
+  paymentStatus: "pending" | "paid" | "failed" | "refunded";
   paidAt?: Timestamp;
-  
+
   // Status
-  status: 'active' | 'expired' | 'cancelled';
+  status: "active" | "expired" | "cancelled";
   startedAt?: Timestamp;
   expiresAt?: Timestamp;
-  
+
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  
+
   // Cashfree details
   cfOrderId?: string;
   cfPaymentToken?: string;
@@ -418,6 +424,7 @@ interface ListingBoostDocument {
 ```
 
 **Indexes**:
+
 - `listingId`
 - `userId`
 - `status`
@@ -434,12 +441,12 @@ Replaces: `invoices` table
 
 ```typescript
 interface InvoiceDocument {
-  id: string;                    // Auto-generated UUID
-  
+  id: string; // Auto-generated UUID
+
   // Invoice details
-  invoiceNumber: string;         // Format: AB-INV-YYYYMM-NNNNN
-  type: 'boost' | 'featured' | 'other';
-  
+  invoiceNumber: string; // Format: AB-INV-YYYYMM-NNNNN
+  type: "boost" | "featured" | "other";
+
   // Customer
   userId: string;
   customerInfo: {
@@ -447,27 +454,27 @@ interface InvoiceDocument {
     email: string;
     phone?: string;
   };
-  
+
   // Items
   items: InvoiceItem[];
-  
+
   // Amounts
   subtotal: number;
   tax: number;
   total: number;
   currency: string;
-  
+
   // Status
-  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled';
+  status: "draft" | "sent" | "paid" | "overdue" | "cancelled";
   paidAt?: Timestamp;
-  
+
   // Payment
   paymentId?: string;
   paymentMethod?: string;
-  
+
   // File
-  pdfUrl?: string;               // Firebase Storage URL
-  
+  pdfUrl?: string; // Firebase Storage URL
+
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -483,6 +490,7 @@ interface InvoiceItem {
 ```
 
 **Indexes**:
+
 - `invoiceNumber` (unique)
 - `userId`
 - `status`
@@ -499,29 +507,35 @@ Replaces: `payment_audit_log` table
 
 ```typescript
 interface PaymentAuditLogDocument {
-  id: string;                    // Auto-generated UUID
-  
+  id: string; // Auto-generated UUID
+
   // Event details
-  eventType: 'order_created' | 'payment_initiated' | 'payment_success' | 
-           'payment_failed' | 'refund_initiated' | 'refund_success' | 'webhook_received';
-  
+  eventType:
+    | "order_created"
+    | "payment_initiated"
+    | "payment_success"
+    | "payment_failed"
+    | "refund_initiated"
+    | "refund_success"
+    | "webhook_received";
+
   // Payment info
   paymentId: string;
   orderId?: string;
   amount?: number;
   currency?: string;
-  
+
   // User
   userId?: string;
-  
+
   // Provider details
-  provider: 'cashfree';
+  provider: "cashfree";
   providerEventId?: string;
   providerData?: any;
-  
+
   // Status
-  status: 'success' | 'failed' | 'pending';
-  
+  status: "success" | "failed" | "pending";
+
   // Metadata
   createdAt: Timestamp;
   ipAddress?: string;
@@ -530,6 +544,7 @@ interface PaymentAuditLogDocument {
 ```
 
 **Indexes**:
+
 - `paymentId`
 - `eventType`
 - `userId`
@@ -547,32 +562,33 @@ Replaces: `audit_logs` table
 
 ```typescript
 interface AuditLogDocument {
-  id: string;                    // Auto-generated UUID
-  
+  id: string; // Auto-generated UUID
+
   // Event details
-  action: string;                // 'listing_created', 'profile_updated', 'login', etc.
+  action: string; // 'listing_created', 'profile_updated', 'login', etc.
   resourceType: string;
   resourceId?: string;
-  
+
   // User
   userId?: string;
   userRole?: string;
-  
+
   // Details
   details?: any;
   oldValues?: any;
   newValues?: any;
-  
+
   // Context
   ipAddress?: string;
   userAgent?: string;
-  
+
   // Metadata
   createdAt: Timestamp;
 }
 ```
 
 **Indexes**:
+
 - `userId`
 - `action`
 - `resourceType`
@@ -587,35 +603,40 @@ Replaces: `security_events` table
 
 ```typescript
 interface SecurityEventDocument {
-  id: string;                    // Auto-generated UUID
-  
+  id: string; // Auto-generated UUID
+
   // Event details
-  eventType: 'login_failed' | 'rate_limit_exceeded' | 'suspicious_activity' | 
-            'banned_user_attempt' | 'payment_fraud_detected';
-  
+  eventType:
+    | "login_failed"
+    | "rate_limit_exceeded"
+    | "suspicious_activity"
+    | "banned_user_attempt"
+    | "payment_fraud_detected";
+
   // User
   userId?: string;
   email?: string;
   ipAddress?: string;
-  
+
   // Severity
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  
+  severity: "low" | "medium" | "high" | "critical";
+
   // Details
   details?: any;
-  
+
   // Resolution
   resolved: boolean;
   resolvedBy?: string;
   resolvedAt?: Timestamp;
   resolution?: string;
-  
+
   // Metadata
   createdAt: Timestamp;
 }
 ```
 
 **Indexes**:
+
 - `eventType`
 - `severity`
 - `userId`
@@ -632,21 +653,21 @@ Replaces: `listing_views` table
 
 ```typescript
 interface ListingViewDocument {
-  id: string;                    // Composite: `${listingId}_${userId}_${date}`
-  
+  id: string; // Composite: `${listingId}_${userId}_${date}`
+
   listingId: string;
-  userId?: string;               // null for anonymous views
+  userId?: string; // null for anonymous views
   ipAddress?: string;
   userAgent?: string;
-  
+
   // Date (YYYY-MM-DD format for partitioning)
   date: string;
-  
+
   // View details
-  viewCount: number;             // Increment for each view
+  viewCount: number; // Increment for each view
   firstViewAt: Timestamp;
   lastViewAt: Timestamp;
-  
+
   // Location (if available)
   country?: string;
   city?: string;
@@ -654,6 +675,7 @@ interface ListingViewDocument {
 ```
 
 **Indexes**:
+
 - `listingId`
 - `userId`
 - `date`
@@ -670,24 +692,25 @@ Replaces: `user_interactions` table
 
 ```typescript
 interface UserInteractionDocument {
-  id: string;                    // Composite: `${userId}_${listingId}_${type}`
-  
+  id: string; // Composite: `${userId}_${listingId}_${type}`
+
   userId: string;
   listingId: string;
-  type: 'view' | 'favorite' | 'share' | 'contact';
-  
+  type: "view" | "favorite" | "share" | "contact";
+
   // Interaction data
   count: number;
   firstAt: Timestamp;
   lastAt: Timestamp;
-  
+
   // Context
-  source?: string;               // 'search', 'recommendation', 'direct', etc.
+  source?: string; // 'search', 'recommendation', 'direct', etc.
   metadata?: any;
 }
 ```
 
 **Indexes**:
+
 - `userId`
 - `listingId`
 - `type`
@@ -702,28 +725,29 @@ Replaces: `recommendations_cache` table
 
 ```typescript
 interface RecommendationDocument {
-  id: string;                    // Composite: `${userId}_${type}`
-  
+  id: string; // Composite: `${userId}_${type}`
+
   userId: string;
-  type: 'similar_listings' | 'trending' | 'new_in_area' | 'based_on_views';
-  
+  type: "similar_listings" | "trending" | "new_in_area" | "based_on_views";
+
   // Recommendations
   listingIds: string[];
   generatedAt: Timestamp;
   expiresAt: Timestamp;
-  
+
   // Algorithm info
   algorithm: string;
   version: string;
   confidence: number;
-  
+
   // Performance tracking
-  clicked?: string[];            // Listing IDs that were clicked
-  viewed?: string[];             // Listing IDs that were viewed
+  clicked?: string[]; // Listing IDs that were clicked
+  viewed?: string[]; // Listing IDs that were viewed
 }
 ```
 
 **Indexes**:
+
 - `userId`
 - `type`
 - `expiresAt`
@@ -738,21 +762,21 @@ Replaces: `trending_listings` table
 
 ```typescript
 interface TrendingDocument {
-  id: string;                    // Composite: `${category}_${city}_${date}`
-  
+  id: string; // Composite: `${category}_${city}_${date}`
+
   category?: string;
   city?: string;
-  date: string;                  // YYYY-MM-DD
-  
+  date: string; // YYYY-MM-DD
+
   // Trending listings
   listingIds: string[];
-  scores: number[];              // Parallel array with scores
-  
+  scores: number[]; // Parallel array with scores
+
   // Metrics
   totalViews: number;
   totalFavorites: number;
   totalContacts: number;
-  
+
   // Generation info
   generatedAt: Timestamp;
   algorithm: string;
@@ -760,6 +784,7 @@ interface TrendingDocument {
 ```
 
 **Indexes**:
+
 - `category`
 - `city`
 - `date`
@@ -776,16 +801,16 @@ Replaces: `rate_limits` table
 
 ```typescript
 interface RateLimitDocument {
-  id: string;                    // Composite: `${key}_${window}`
-  
-  key: string;                   // Format: `uuid:action` or `ip:action`
+  id: string; // Composite: `${key}_${window}`
+
+  key: string; // Format: `uuid:action` or `ip:action`
   action: string;
-  
+
   // Rate limiting
   count: number;
   windowStart: Timestamp;
   windowEnd: Timestamp;
-  
+
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -793,6 +818,7 @@ interface RateLimitDocument {
 ```
 
 **Indexes**:
+
 - `key`
 - `action`
 - `windowEnd`
@@ -806,17 +832,18 @@ Replaces: `chat_typing_events` table
 
 ```typescript
 interface ChatTypingEventDocument {
-  id: string;                    // Auto-generated within chat
-  
+  id: string; // Auto-generated within chat
+
   userId: string;
   isTyping: boolean;
-  expiresAt: Timestamp;         // Auto-expire after 10 seconds
-  
+  expiresAt: Timestamp; // Auto-expire after 10 seconds
+
   createdAt: Timestamp;
 }
 ```
 
 **Indexes**:
+
 - `userId`
 - `isTyping`
 - `expiresAt`
@@ -830,22 +857,22 @@ Static collection for marketplace categories
 
 ```typescript
 interface CategoryDocument {
-  id: string;                    // Category ID (e.g., 'mobiles', 'vehicles')
-  
+  id: string; // Category ID (e.g., 'mobiles', 'vehicles')
+
   name: string;
   displayName: string;
   description?: string;
   icon?: string;
-  
+
   // Hierarchy
   parentId?: string;
   level: number;
   order: number;
-  
+
   // Settings
   isActive: boolean;
   requiresApproval: boolean;
-  
+
   // Metadata
   createdAt: Timestamp;
   updatedAt: Timestamp;
@@ -853,6 +880,7 @@ interface CategoryDocument {
 ```
 
 **Indexes**:
+
 - `parentId`
 - `level`
 - `order`
@@ -866,13 +894,13 @@ Application configuration
 
 ```typescript
 interface AppConfigDocument {
-  id: string;                    // Fixed ID: 'global'
-  
+  id: string; // Fixed ID: 'global'
+
   // App settings
   version: string;
   maintenance: boolean;
   maintenanceMessage?: string;
-  
+
   // Feature flags
   features: {
     locationVerification: boolean;
@@ -880,15 +908,15 @@ interface AppConfigDocument {
     trendingEnabled: boolean;
     recommendationsEnabled: boolean;
   };
-  
+
   // Rate limits
   rateLimits: {
-    defaultWindow: number;       // seconds
+    defaultWindow: number; // seconds
     defaultMax: number;
     locationVerificationWindow: number;
     locationVerificationMax: number;
   };
-  
+
   // Payment settings
   payment: {
     cashfreeEnabled: boolean;
@@ -899,14 +927,14 @@ interface AppConfigDocument {
       premiumPlus: { price: number; duration: number };
     };
   };
-  
+
   // Storage settings
   storage: {
     maxImagesPerListing: number;
-    maxImageSize: number;        // MB
+    maxImageSize: number; // MB
     allowedFormats: string[];
   };
-  
+
   // Metadata
   updatedAt: Timestamp;
   updatedBy: string;

@@ -5,12 +5,14 @@
 Based on the comprehensive audit, **Firebase usage in AndamanBazaar is minimal and limited to static hosting and basic analytics**. This retirement plan outlines a safe, phased approach to completely migrate away from Firebase while maintaining 100% service continuity.
 
 ### Current Firebase Dependencies
+
 - **Static Hosting**: Firebase Hosting (andamanbazaar.in)
 - **Analytics**: Firebase Analytics (Google Analytics 4)
 - **Site Verification**: Google Search Console verification
 - **Environment Variables**: Firebase configuration in `.env`
 
 ### Retirement Complexity: **LOW**
+
 - No data migration required
 - No user authentication dependencies
 - No database dependencies
@@ -22,6 +24,7 @@ Based on the comprehensive audit, **Firebase usage in AndamanBazaar is minimal a
 ## 📋 Retirement Scope
 
 ### ✅ **KEEP (No Firebase Dependency)**
+
 - All authentication (Supabase native)
 - All database operations (Supabase PostgreSQL)
 - All file storage (Supabase Storage)
@@ -30,6 +33,7 @@ Based on the comprehensive audit, **Firebase usage in AndamanBazaar is minimal a
 - All payment processing (Supabase + Cashfree)
 
 ### 🔄 **RETIRE (Firebase Dependencies)**
+
 - Firebase Hosting → Supabase Edge Network
 - Firebase Analytics → Supabase Analytics
 - Firebase Environment Variables → Supabase Secrets
@@ -40,6 +44,7 @@ Based on the comprehensive audit, **Firebase usage in AndamanBazaar is minimal a
 ## 🏗️ Retirement Architecture
 
 ### **Before Retirement**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    ANDAMANBAZAAR.IN                        │
@@ -53,6 +58,7 @@ Based on the comprehensive audit, **Firebase usage in AndamanBazaar is minimal a
 ```
 
 ### **After Retirement**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    ANDAMANBAZAAR.IN                        │
@@ -72,6 +78,7 @@ Based on the comprehensive audit, **Firebase usage in AndamanBazaar is minimal a
 ### **Current Firebase Usage Audit**
 
 #### **1. Firebase Hosting** 🔴 **RETIRE REQUIRED**
+
 ```bash
 # Current Configuration
 firebase.json
@@ -89,6 +96,7 @@ andamanbazaar.in → Firebase Hosting CDN
 **Downtime**: <5 minutes (DNS propagation)
 
 #### **2. Firebase Analytics** 🟡 **MIGRATE REQUIRED**
+
 ```bash
 # Current Implementation
 index.html
@@ -107,6 +115,7 @@ index.html
 **Impact**: Better privacy, more detailed metrics
 
 #### **3. Firebase Environment Variables** 🟡 **CLEANUP REQUIRED**
+
 ```bash
 # Current .env Variables (TO BE REMOVED)
 VITE_FIREBASE_API_KEY=AIzaSyClP_DWVESxywrzRD10DF-y2vGnPtRtnFU
@@ -123,6 +132,7 @@ VITE_FIREBASE_MEASUREMENT_ID=G-GCVKW44FNZ
 **Impact**: Cleaner configuration
 
 #### **4. Firebase Configuration Files** 🟡 **REMOVE REQUIRED**
+
 ```bash
 # Files to Remove
 firebase.json          # Firebase hosting configuration
@@ -139,7 +149,9 @@ apphosting.yaml       # Firebase App Hosting config
 ## 🚀 Retirement Implementation Plan
 
 ### **Phase 1: Preparation (Week 1)**
+
 #### **1.1 Supabase Domain Setup**
+
 ```bash
 # Actions Required
 1. Add custom domain to Supabase project
@@ -154,6 +166,7 @@ supabase domains verify andamanbazaar.in
 ```
 
 #### **1.2 Analytics Migration**
+
 ```bash
 # Actions Required
 1. Deploy Supabase Analytics functions
@@ -169,6 +182,7 @@ SupabaseAnalytics.init();
 ```
 
 #### **1.3 Environment Cleanup**
+
 ```bash
 # Actions Required
 1. Remove Firebase environment variables
@@ -179,7 +193,9 @@ SupabaseAnalytics.init();
 ```
 
 ### **Phase 2: Migration (Week 2)**
+
 #### **2.1 DNS Migration**
+
 ```bash
 # Pre-Migration Checklist
 □ Supabase domain fully configured
@@ -197,6 +213,7 @@ SupabaseAnalytics.init();
 ```
 
 #### **2.2 Configuration Updates**
+
 ```bash
 # Files to Update
 1. vite.config.ts - Remove Firebase references
@@ -207,6 +224,7 @@ SupabaseAnalytics.init();
 ```
 
 #### **2.3 Testing & Validation**
+
 ```bash
 # Test Categories
 □ Website accessibility
@@ -221,7 +239,9 @@ SupabaseAnalytics.init();
 ```
 
 ### **Phase 3: Cleanup (Week 3)**
+
 #### **3.1 Firebase Project Removal**
+
 ```bash
 # Firebase Cleanup Steps
 1. Verify all data migrated
@@ -238,6 +258,7 @@ firebase projects:delete andamanbazaarfirebase
 ```
 
 #### **3.2 Repository Cleanup**
+
 ```bash
 # Files to Remove
 rm firebase.json
@@ -252,6 +273,7 @@ rm apphosting.yaml
 ```
 
 #### **3.3 Final Validation**
+
 ```bash
 # Production Validation Checklist
 □ Website fully functional
@@ -271,6 +293,7 @@ rm apphosting.yaml
 ## 🔒 Security Considerations
 
 ### **Domain Migration Security**
+
 ```bash
 # SSL Certificate Management
 1. Supabase automatically manages SSL certificates
@@ -289,6 +312,7 @@ Content-Security-Policy: enhanced
 ```
 
 ### **Analytics Privacy**
+
 ```bash
 # Privacy Improvements
 1. No Google tracking cookies
@@ -305,6 +329,7 @@ Content-Security-Policy: enhanced
 ```
 
 ### **Access Control**
+
 ```bash
 # Enhanced Security
 1. No third-party authentication dependencies
@@ -319,6 +344,7 @@ Content-Security-Policy: enhanced
 ## 📈 Performance Impact Analysis
 
 ### **Before Migration (Firebase Hosting)**
+
 ```bash
 # Current Performance Metrics
 - Page Load Time: ~2.5 seconds
@@ -335,6 +361,7 @@ Content-Security-Policy: enhanced
 ```
 
 ### **After Migration (Supabase Edge Network)**
+
 ```bash
 # Expected Performance Metrics
 - Page Load Time: ~1.5 seconds (40% improvement)
@@ -352,23 +379,28 @@ Content-Security-Policy: enhanced
 ```
 
 ### **Performance Monitoring**
+
 ```typescript
 // Enhanced Performance Tracking
 class PerformanceMonitor {
   static trackPageLoad() {
-    const navigation = performance.getEntriesByType('navigation')[0];
-    SupabaseAnalytics.trackPerformance('page_load', navigation.loadEventEnd, 'ms');
+    const navigation = performance.getEntriesByType("navigation")[0];
+    SupabaseAnalytics.trackPerformance(
+      "page_load",
+      navigation.loadEventEnd,
+      "ms",
+    );
   }
 
   static trackAPIResponse(endpoint: string, duration: number) {
-    SupabaseAnalytics.trackPerformance('api_response', duration, 'ms', {
-      endpoint
+    SupabaseAnalytics.trackPerformance("api_response", duration, "ms", {
+      endpoint,
     });
   }
 
   static trackUserInteraction(action: string, duration: number) {
-    SupabaseAnalytics.trackPerformance('user_interaction', duration, 'ms', {
-      action
+    SupabaseAnalytics.trackPerformance("user_interaction", duration, "ms", {
+      action,
     });
   }
 }
@@ -379,6 +411,7 @@ class PerformanceMonitor {
 ## 💰 Cost Analysis
 
 ### **Current Firebase Costs**
+
 ```bash
 # Firebase Hosting (Spark Plan)
 - Cost: $0/month (free tier)
@@ -394,6 +427,7 @@ class PerformanceMonitor {
 ```
 
 ### **Post-Migration Supabase Costs**
+
 ```bash
 # Supabase Pro Plan
 - Cost: $25/month
@@ -409,6 +443,7 @@ class PerformanceMonitor {
 ```
 
 ### **Cost-Benefit Analysis**
+
 ```bash
 # Additional Cost: $30-40/month
 # Benefits:
@@ -429,6 +464,7 @@ class PerformanceMonitor {
 ### **Migration Risks & Mitigations**
 
 #### **Risk 1: DNS Downtime**
+
 ```bash
 # Risk: 5-30 minutes DNS propagation downtime
 # Impact: Users cannot access website
@@ -441,6 +477,7 @@ class PerformanceMonitor {
 ```
 
 #### **Risk 2: Analytics Data Loss**
+
 ```bash
 # Risk: Historical analytics data lost
 # Impact: No historical comparison
@@ -453,6 +490,7 @@ class PerformanceMonitor {
 ```
 
 #### **Risk 3: Performance Degradation**
+
 ```bash
 # Risk: Slower performance after migration
 # Impact: Poor user experience
@@ -465,6 +503,7 @@ class PerformanceMonitor {
 ```
 
 #### **Risk 4: SSL Certificate Issues**
+
 ```bash
 # Risk: SSL certificate problems
 # Impact: Security warnings, blocked access
@@ -477,6 +516,7 @@ class PerformanceMonitor {
 ```
 
 ### **Rollback Plan**
+
 ```bash
 # If Migration Fails:
 1. Update DNS back to Firebase
@@ -492,6 +532,7 @@ class PerformanceMonitor {
 ## 📊 Success Metrics
 
 ### **Technical Success Metrics**
+
 ```bash
 # Performance Metrics
 □ Page load time < 2 seconds
@@ -510,6 +551,7 @@ class PerformanceMonitor {
 ```
 
 ### **Business Success Metrics**
+
 ```bash
 # User Experience
 □ Zero user complaints
@@ -527,6 +569,7 @@ class PerformanceMonitor {
 ```
 
 ### **Security Success Metrics**
+
 ```bash
 # Security Metrics
 □ No security incidents
@@ -542,6 +585,7 @@ class PerformanceMonitor {
 ## 📋 Post-Retirement Checklist
 
 ### **Immediate Actions (Day 1)**
+
 ```bash
 □ Verify DNS propagation complete
 □ Test all website functionality
@@ -556,6 +600,7 @@ class PerformanceMonitor {
 ```
 
 ### **Week 1 Actions**
+
 ```bash
 □ Monitor user feedback
 □ Analyze performance trends
@@ -570,6 +615,7 @@ class PerformanceMonitor {
 ```
 
 ### **Month 1 Actions**
+
 ```bash
 □ Analyze monthly performance
 □ Review cost optimization
@@ -588,21 +634,25 @@ class PerformanceMonitor {
 ## 🎯 Retirement Timeline
 
 ### **Week 1: Preparation**
+
 - **Day 1-2**: Supabase domain setup
 - **Day 3-4**: Analytics migration
 - **Day 5-7**: Environment cleanup
 
 ### **Week 2: Migration**
+
 - **Day 8-9**: DNS migration
 - **Day 10-11**: Configuration updates
 - **Day 12-14**: Testing & validation
 
 ### **Week 3: Cleanup**
+
 - **Day 15-16**: Firebase project removal
 - **Day 17-18**: Repository cleanup
 - **Day 19-21**: Final validation
 
 ### **Week 4: Optimization**
+
 - **Day 22-24**: Performance optimization
 - **Day 25-26**: Security hardening
 - **Day 27-28**: Documentation updates
@@ -612,6 +662,7 @@ class PerformanceMonitor {
 ## 🔄 Communication Plan
 
 ### **Internal Communication**
+
 ```bash
 # Team Updates
 1. Week 1: Migration plan overview
@@ -627,6 +678,7 @@ class PerformanceMonitor {
 ```
 
 ### **External Communication**
+
 ```bash
 # User Communication
 1. Pre-migration: Maintenance notice (if needed)
@@ -644,6 +696,7 @@ class PerformanceMonitor {
 ## 📚 Documentation Updates
 
 ### **Technical Documentation**
+
 ```bash
 # Update Required
 □ DEPLOYMENT.md - Remove Firebase, add Supabase
@@ -654,6 +707,7 @@ class PerformanceMonitor {
 ```
 
 ### **User Documentation**
+
 ```bash
 # Update Required
 □ README.md - Update setup instructions

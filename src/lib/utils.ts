@@ -1,21 +1,34 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
-export function getThumbnailUrl(url: string, width = 400, height = 400): string {
+export function getThumbnailUrl(
+  url: string,
+  width = 400,
+  height = 400,
+): string {
   if (!url) return url;
-  if (url.includes('/storage/v1/object/public/')) {
-    return url.replace('/storage/v1/object/public/', `/storage/v1/render/image/public/`) + `?width=${width}&height=${height}&resize=cover`;
+  if (url.includes("/storage/v1/object/public/")) {
+    return (
+      url.replace(
+        "/storage/v1/object/public/",
+        `/storage/v1/render/image/public/`,
+      ) + `?width=${width}&height=${height}&resize=cover`
+    );
   }
   return url;
 }
 
-export async function compressImage(file: File, maxWidth = 1200, quality = 0.8): Promise<File> {
+export async function compressImage(
+  file: File,
+  maxWidth = 1200,
+  quality = 0.8,
+): Promise<File> {
   return new Promise((resolve) => {
-    if (!file.type.startsWith('image/') || file.size < 100 * 1024) {
+    if (!file.type.startsWith("image/") || file.size < 100 * 1024) {
       resolve(file);
       return;
     }
@@ -24,7 +37,7 @@ export async function compressImage(file: File, maxWidth = 1200, quality = 0.8):
     const url = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(url);
-      const canvas = document.createElement('canvas');
+      const canvas = document.createElement("canvas");
       let { width, height } = img;
 
       if (width > maxWidth) {
@@ -34,22 +47,25 @@ export async function compressImage(file: File, maxWidth = 1200, quality = 0.8):
 
       canvas.width = width;
       canvas.height = height;
-      const ctx = canvas.getContext('2d')!;
+      const ctx = canvas.getContext("2d")!;
       ctx.drawImage(img, 0, 0, width, height);
 
       canvas.toBlob(
         (blob) => {
           if (blob && blob.size < file.size) {
-            resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+            resolve(new File([blob], file.name, { type: "image/jpeg" }));
           } else {
             resolve(file);
           }
         },
-        'image/jpeg',
-        quality
+        "image/jpeg",
+        quality,
       );
     };
-    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(file);
+    };
     img.src = url;
   });
 }

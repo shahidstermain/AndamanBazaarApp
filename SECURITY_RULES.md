@@ -23,39 +23,39 @@ service cloud.firestore {
     function isAuthenticated() {
       return request.auth != null && request.auth.uid != null;
     }
-    
+
     function isAdmin() {
-      return isAuthenticated() && 
+      return isAuthenticated() &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
-    
+
     function isModerator() {
-      return isAuthenticated() && 
+      return isAuthenticated() &&
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['moderator', 'admin'];
     }
-    
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
-    
+
     function isActiveUser(userId) {
       return get(/databases/$(database)/documents/users/$(userId)).data.isActive == true;
     }
-    
+
     function isNotBanned(userId) {
       return get(/databases/$(database)/documents/users/$(userId)).data.isBanned != true;
     }
-    
+
     function canAccessListing(listingId) {
-      return isAuthenticated() && 
+      return isAuthenticated() &&
              isOwner(get(/databases/$(database)/documents/listings/$(listingId).data.userId)) ||
              get(/databases/$(database)/documents/listings/$(listingId).data.isActive == true);
     }
-    
+
     function isValidTimestamp(timestamp) {
       return timestamp is timestamp;
     }
-    
+
     // Deny all by default
     match /{document=**} {
       allow read, write: if false;
@@ -70,26 +70,26 @@ service cloud.firestore {
     // users collection
     match /users/{userId} {
       // Public read access to basic profile info
-      allow read: if isAuthenticated() && 
-                   isActiveUser(userId) && 
+      allow read: if isAuthenticated() &&
+                   isActiveUser(userId) &&
                    isNotBanned(userId) &&
                    (isOwner(userId) || isModerator());
-      
+
       // Users can update their own profile (except role and ban status)
-      allow update: if isOwner(userId) && 
-                    isActiveUser(userId) && 
+      allow update: if isOwner(userId) &&
+                    isActiveUser(userId) &&
                     isNotBanned(userId) &&
                     request.resource.data.keys().hasAll(['name', 'phone', 'avatar', 'contactPreferences']) &&
                     request.resource.data.role == resource.data.role &&
                     request.resource.data.isBanned == resource.data.isBanned &&
                     request.resource.data.isActive == resource.data.isActive;
-      
+
       // Only admins can create users (handled by auth triggers)
       allow create: if isAdmin();
-      
+
       // Only admins can delete users (soft delete via isActive)
       allow delete: if false; // Use soft delete instead
-      
+
       // No one can change role except admins
       // No one can change ban status except admins/moderators
     }
@@ -106,30 +106,30 @@ service cloud.firestore {
       allow read: if resource.data.isActive == true &&
                    resource.data.status in ['active', 'sold'] &&
                    resource.data.status != 'deleted';
-      
+
       // Owners can read their own listings (including drafts)
       allow read: if isOwner(resource.data.userId);
-      
+
       // Admins/moderators can read all listings
       allow read: if isModerator();
-      
+
       // Users can create listings (must be active and not banned)
-      allow create: if isAuthenticated() && 
-                    isActiveUser(request.auth.uid) && 
+      allow create: if isAuthenticated() &&
+                    isActiveUser(request.auth.uid) &&
                     isNotBanned(request.auth.uid) &&
                     isOwner(request.resource.data.userId) &&
                     request.resource.data.keys().hasAll([
-                      'title', 'description', 'price', 'category', 'city', 
+                      'title', 'description', 'price', 'category', 'city',
                       'status', 'userId', 'createdAt', 'updatedAt'
                     ]) &&
                     request.resource.data.status in ['draft', 'active'] &&
                     request.resource.data.userId == request.auth.uid &&
                     isValidTimestamp(request.resource.data.createdAt) &&
                     isValidTimestamp(request.resource.data.updatedAt);
-      
+
       // Owners can update their listings
-      allow update: if isOwner(resource.data.userId) && 
-                    isActiveUser(resource.auth.uid) && 
+      allow update: if isOwner(resource.data.userId) &&
+                    isActiveUser(resource.auth.uid) &&
                     isNotBanned(request.auth.uid) &&
                     // Cannot change ownership
                     request.resource.data.userId == resource.data.userId &&
@@ -138,11 +138,11 @@ service cloud.firestore {
                     // Featured status can only be changed by admins
                     request.resource.data.isFeatured == resource.data.isFeatured &&
                     request.resource.data.featuredUntil == resource.data.featuredUntil;
-      
+
       // Admins can update any listing
       allow update: if isModerator() &&
                     isValidTimestamp(request.resource.data.updatedAt);
-      
+
       // No direct delete - use soft delete
       allow delete: if false;
     }
@@ -156,19 +156,19 @@ service cloud.firestore {
     // chats collection
     match /chats/{chatId} {
       // Participants can read their chats
-      allow read: if (isOwner(resource.data.buyerId) || 
+      allow read: if (isOwner(resource.data.buyerId) ||
                     isOwner(resource.data.sellerId)) &&
                     isActiveUser(resource.data.buyerId) &&
                     isActiveUser(resource.data.sellerId) &&
                     isNotBanned(resource.data.buyerId) &&
                     isNotBanned(resource.data.sellerId);
-      
+
       // Admins/moderators can read all chats
       allow read: if isModerator();
-      
+
       // Users can create chats (buyer initiates)
-      allow create: if isAuthenticated() && 
-                    isActiveUser(request.auth.uid) && 
+      allow create: if isAuthenticated() &&
+                    isActiveUser(request.auth.uid) &&
                     isNotBanned(request.auth.uid) &&
                     isOwner(request.resource.data.buyerId) &&
                     // Verify listing exists and belongs to seller
@@ -181,9 +181,9 @@ service cloud.firestore {
                     ]) &&
                     isValidTimestamp(request.resource.data.createdAt) &&
                     isValidTimestamp(request.resource.data.updatedAt);
-      
+
       // Participants can update chat status (archive, read counts)
-      allow update: if (isOwner(resource.data.buyerId) || 
+      allow update: if (isOwner(resource.data.buyerId) ||
                     isOwner(resource.data.sellerId)) &&
                     isActiveUser(resource.data.buyerId) &&
                     isActiveUser(resource.data.sellerId) &&
@@ -194,7 +194,7 @@ service cloud.firestore {
                     request.resource.data.sellerId == resource.data.sellerId &&
                     request.resource.data.listingId == resource.data.listingId &&
                     isValidTimestamp(request.resource.data.updatedAt);
-      
+
       // No delete - use soft delete via isActive
       allow delete: if false;
     }
@@ -208,21 +208,21 @@ service cloud.firestore {
       // messages subcollection of chats
       match /messages/{messageId} {
         // Chat participants can read messages
-        allow read: if (isOwner(/databases/$(database)/documents/chats/$(chatId).data.buyerId) || 
+        allow read: if (isOwner(/databases/$(database)/documents/chats/$(chatId).data.buyerId) ||
                       isOwner(/databases/$(database)/documents/chats/$(chatId).data.sellerId)) &&
                       isActiveUser(/databases/$(database)/documents/chats/$(chatId).data.buyerId) &&
                       isActiveUser(/databases/$(database)/documents/chats/$(chatId).data.sellerId) &&
                       isNotBanned(/databases/$(database)/documents/chats/$(chatId).data.buyerId) &&
                       isNotBanned(/databases/$(database)/documents/chats/$(chatId).data.sellerId);
-        
+
         // Admins/moderators can read all messages
         allow read: if isModerator();
-        
+
         // Chat participants can create messages
-        allow create: if isAuthenticated() && 
-                      isActiveUser(request.auth.uid) && 
+        allow create: if isAuthenticated() &&
+                      isActiveUser(request.auth.uid) &&
                       isNotBanned(request.auth.uid) &&
-                      (isOwner(/databases/$(database)/documents/chats/$(chatId).data.buyerId) || 
+                      (isOwner(/databases/$(database)/documents/chats/$(chatId).data.buyerId) ||
                        isOwner(/databases/$(database)/documents/chats/$(chatId).data.sellerId)) &&
                       // Sender must be a participant
                       (request.resource.data.senderId == /databases/$(database)/documents/chats/$(chatId).data.buyerId ||
@@ -232,16 +232,16 @@ service cloud.firestore {
                         'content', 'type', 'senderId', 'senderRole', 'createdAt'
                       ]) &&
                       isValidTimestamp(request.resource.data.createdAt);
-        
+
         // Senders can update their own messages (edit, read status)
         allow update: if isOwner(resource.data.senderId) &&
-                      isActiveUser(request.auth.uid) && 
+                      isActiveUser(request.auth.uid) &&
                       isNotBanned(request.auth.uid) &&
                       // Cannot change sender or content type
                       request.resource.data.senderId == resource.data.senderId &&
                       request.resource.data.type == resource.data.type &&
                       isValidTimestamp(request.resource.data.updatedAt);
-        
+
         // No delete - use soft delete
         allow delete: if false;
       }
@@ -256,17 +256,17 @@ service cloud.firestore {
     match /favorites/{favoriteId} {
       // Users can read their own favorites
       allow read: if isOwner(resource.data.userId) &&
-                    isActiveUser(resource.auth.uid) && 
+                    isActiveUser(resource.auth.uid) &&
                     isNotBanned(request.auth.uid);
-      
+
       // Listing owners can see who favorited their listings
       allow read: if isOwner(get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.userId) &&
                     isActiveUser(get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.userId) &&
                     isNotBanned(get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.userId);
-      
+
       // Users can create favorites
-      allow create: if isAuthenticated() && 
-                    isActiveUser(request.auth.uid) && 
+      allow create: if isAuthenticated() &&
+                    isActiveUser(request.auth.uid) &&
                     isNotBanned(request.auth.uid) &&
                     isOwner(request.resource.data.userId) &&
                     request.resource.data.userId == request.auth.uid &&
@@ -278,12 +278,12 @@ service cloud.firestore {
                       'userId', 'listingId', 'createdAt'
                     ]) &&
                     isValidTimestamp(request.resource.data.createdAt);
-      
+
       // Users can delete their own favorites
       allow delete: if isOwner(resource.data.userId) &&
-                    isActiveUser(request.auth.uid) && 
+                    isActiveUser(request.auth.uid) &&
                     isNotBanned(request.auth.uid);
-      
+
       // No updates - favorites are immutable
       allow update: if false;
     }
@@ -298,15 +298,15 @@ service cloud.firestore {
     match /reports/{reportId} {
       // Reporters can read their own reports
       allow read: if isOwner(resource.data.reporterId) &&
-                    isActiveUser(request.auth.uid) && 
+                    isActiveUser(request.auth.uid) &&
                     isNotBanned(request.auth.uid);
-      
+
       // Admins/moderators can read all reports
       allow read: if isModerator();
-      
+
       // Users can create reports
-      allow create: if isAuthenticated() && 
-                    isActiveUser(request.auth.uid) && 
+      allow create: if isAuthenticated() &&
+                    isActiveUser(request.auth.uid) &&
                     isNotBanned(request.auth.uid) &&
                     isOwner(request.resource.data.reporterId) &&
                     request.resource.data.reporterId == request.auth.uid &&
@@ -315,11 +315,11 @@ service cloud.firestore {
                     ]) &&
                     request.resource.data.type in ['listing', 'user', 'message'] &&
                     isValidTimestamp(request.resource.data.createdAt);
-      
+
       // Admins/moderators can update reports
       allow update: if isModerator() &&
                     isValidTimestamp(request.resource.data.updatedAt);
-      
+
       // No delete - reports are permanent
       allow delete: if false;
     }
@@ -336,23 +336,23 @@ service cloud.firestore {
     match /listingBoosts/{boostId} {
       // Users can read their own boosts
       allow read: if isOwner(resource.data.userId) &&
-                    isActiveUser(request.auth.uid) && 
+                    isActiveUser(request.auth.uid) &&
                     isNotBanned(request.auth.uid);
-      
+
       // Listing owners can see boosts on their listings
       allow read: if isOwner(get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.userId) &&
                     isActiveUser(get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.userId) &&
                     isNotBanned(get(/databases/$(database)/documents/listings/$(resource.data.listingId)).data.userId);
-      
+
       // Admins can read all boosts
       allow read: if isAdmin();
-      
+
       // Only Cloud Functions can create boosts (server-side)
       allow create: if false; // Created by Cloud Functions only
-      
+
       // Only Cloud Functions can update boosts (payment status)
       allow update: if false; // Updated by Cloud Functions only
-      
+
       // No delete - boosts are permanent
       allow delete: if false;
     }
@@ -365,18 +365,18 @@ service cloud.firestore {
     match /invoices/{invoiceId} {
       // Users can read their own invoices
       allow read: if isOwner(resource.data.userId) &&
-                    isActiveUser(request.auth.uid) && 
+                    isActiveUser(request.auth.uid) &&
                     isNotBanned(request.auth.uid);
-      
+
       // Admins can read all invoices
       allow read: if isAdmin();
-      
+
       // Only Cloud Functions can create invoices
       allow create: if false;
-      
+
       // Only Cloud Functions can update invoices
       allow update: if false;
-      
+
       // No delete - invoices are permanent
       allow delete: if false;
     }
@@ -389,10 +389,10 @@ service cloud.firestore {
     match /paymentAuditLog/{logId} {
       // Only admins can read payment audit logs
       allow read: if isAdmin();
-      
+
       // Only Cloud Functions can create audit logs
       allow create: if false;
-      
+
       // No updates or deletes - audit logs are immutable
       allow update, delete: if false;
     }
@@ -409,15 +409,15 @@ service cloud.firestore {
     match /auditLogs/{logId} {
       // Users can read their own audit logs
       allow read: if isOwner(resource.data.userId) &&
-                    isActiveUser(request.auth.uid) && 
+                    isActiveUser(request.auth.uid) &&
                     isNotBanned(request.auth.uid);
-      
+
       // Admins can read all audit logs
       allow read: if isAdmin();
-      
+
       // Only Cloud Functions can create audit logs
       allow create: if false;
-      
+
       // No updates or deletes - audit logs are immutable
       allow update, delete: if false;
     }
@@ -430,16 +430,16 @@ service cloud.firestore {
     match /securityEvents/{eventId} {
       // Only admins can read security events
       allow read: if isAdmin();
-      
+
       // Only Cloud Functions can create security events
       allow create: if false;
-      
+
       // Admins can resolve events
       allow update: if isAdmin() &&
                     request.resource.data.resolved == true &&
                     request.resource.data.resolvedBy == request.auth.uid &&
                     isValidTimestamp(request.resource.data.resolvedAt);
-      
+
       // No delete - security events are permanent
       allow delete: if false;
     }
@@ -452,7 +452,7 @@ service cloud.firestore {
     match /listingViews/{viewId} {
       // Anyone can increment view count (via Cloud Function)
       allow read: if false; // Not directly readable
-      
+
       // Only Cloud Functions can create/update view records
       allow create, update: if false;
     }
@@ -479,13 +479,13 @@ service cloud.firestore {
     match /categories/{categoryId} {
       // Public read access to active categories
       allow read: if resource.data.isActive == true;
-      
+
       // Admins can read all categories
       allow read: if isAdmin();
-      
+
       // Only admins can create/update categories
       allow create, update: if isAdmin();
-      
+
       // No delete - deactivate instead
       allow delete: if false;
     }
@@ -508,25 +508,25 @@ service cloud.firestore {
     match /recommendations/{recId} {
       // Users can read their own recommendations
       allow read: if isOwner(resource.data.userId) &&
-                    isActiveUser(request.auth.uid) && 
+                    isActiveUser(request.auth.uid) &&
                     isNotBanned(request.auth.uid) &&
                     resource.data.expiresAt > timestamp.now();
-      
+
       // Only Cloud Functions can create/update recommendations
       allow create, update: if false;
-      
+
       // No delete - let them expire
       allow delete: if false;
     }
-    
+
     // trending collection
     match /trending/{trendingId} {
       // Public read access to trending data
       allow read: if resource.data.date == timestamp.now().formatDate('yyyy-MM-dd');
-      
+
       // Only Cloud Functions can create/update trending data
       allow create, update: if false;
-      
+
       // No delete - keep historical data
       allow delete: if false;
     }
@@ -544,35 +544,35 @@ service firebase.storage {
     match /avatars/{userId}/{allPaths=**} {
       // Public read access to avatars
       allow read: if true;
-      
+
       // Users can upload to their own avatar folder
-      allow write: if isAuthenticated() && 
+      allow write: if isAuthenticated() &&
                     request.auth.uid == userId &&
                     resource.size < 5 * 1024 * 1024 && // 5MB limit
                     resource.contentType.matches('image/.*');
     }
-    
+
     // Listing images
     match /listing-images/{listingId}/{allPaths=**} {
       // Public read access to listing images
       allow read: if true;
-      
+
       // Listing owners can upload images
       allow write: if isAuthenticated() &&
                     get(/databases/$(database)/documents/listings/$(listingId)).data.userId == request.auth.uid &&
                     resource.size < 10 * 1024 * 1024 && // 10MB limit
                     resource.contentType.matches('image/.*');
     }
-    
+
     // Invoice PDFs
     match /invoices/{invoiceId}/{allPaths=**} {
       // Users can read their own invoices
       allow read: if isAuthenticated() &&
                     get(/databases/$(database)/documents/invoices/$(invoiceId)).data.userId == request.auth.uid;
-      
+
       // Admins can read all invoices
       allow read: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      
+
       // Only Cloud Functions can upload invoices
       allow write: if false; // Created by Cloud Functions only
     }

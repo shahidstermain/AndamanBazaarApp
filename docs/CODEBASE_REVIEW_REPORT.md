@@ -14,6 +14,7 @@ AndamanBazaar is a **production-ready hyperlocal marketplace** for the Andaman &
 ### Overall Health Score: **8.5/10**
 
 **Strengths:**
+
 - ✅ Robust security implementation (Firestore rules, Storage rules, server-side validation)
 - ✅ Comprehensive payment integration (Cashfree v2023-08-01 with seamless flow)
 - ✅ Extensive documentation (50+ markdown files covering architecture, deployment, testing)
@@ -22,6 +23,7 @@ AndamanBazaar is a **production-ready hyperlocal marketplace** for the Andaman &
 - ✅ Well-structured Cloud Functions with proper error handling
 
 **Areas for Improvement:**
+
 - ⚠️ Excessive console.log statements (128 instances) - needs production logging strategy
 - ⚠️ Development artifacts (Todos page, SeasonalBooking) still in codebase
 - ⚠️ Missing environment variable validation on startup
@@ -53,6 +55,7 @@ AndamanBazaarApp/
 ```
 
 **Assessment:** ✅ **Excellent**
+
 - Clear separation of concerns
 - Modular component architecture
 - Well-organized Cloud Functions
@@ -60,19 +63,19 @@ AndamanBazaarApp/
 
 ### 1.2 Technology Stack
 
-| Layer | Technology | Version | Status |
-|-------|-----------|---------|--------|
-| **Frontend** | React | 18.3.1 | ✅ Latest stable |
-| **Build Tool** | Vite | 7.3.1 | ✅ Latest |
-| **Language** | TypeScript | 5.5.4 | ✅ Latest |
-| **Styling** | Tailwind CSS | 3.4.10 | ✅ Latest |
-| **Backend** | Firebase Functions | Latest | ✅ Production-ready |
-| **Database** | Firestore | Latest | ✅ Production-ready |
-| **Storage** | Firebase Storage | Latest | ✅ Production-ready |
-| **Auth** | Firebase Auth | Latest | ✅ Production-ready |
-| **Payments** | Cashfree PG | v2023-08-01 | ✅ Latest API |
-| **AI** | Google Gemini | 0.24.1 | ✅ Latest SDK |
-| **Testing** | Vitest + Playwright | Latest | ✅ Modern stack |
+| Layer          | Technology          | Version     | Status              |
+| -------------- | ------------------- | ----------- | ------------------- |
+| **Frontend**   | React               | 18.3.1      | ✅ Latest stable    |
+| **Build Tool** | Vite                | 7.3.1       | ✅ Latest           |
+| **Language**   | TypeScript          | 5.5.4       | ✅ Latest           |
+| **Styling**    | Tailwind CSS        | 3.4.10      | ✅ Latest           |
+| **Backend**    | Firebase Functions  | Latest      | ✅ Production-ready |
+| **Database**   | Firestore           | Latest      | ✅ Production-ready |
+| **Storage**    | Firebase Storage    | Latest      | ✅ Production-ready |
+| **Auth**       | Firebase Auth       | Latest      | ✅ Production-ready |
+| **Payments**   | Cashfree PG         | v2023-08-01 | ✅ Latest API       |
+| **AI**         | Google Gemini       | 0.24.1      | ✅ Latest SDK       |
+| **Testing**    | Vitest + Playwright | Latest      | ✅ Modern stack     |
 
 **Assessment:** ✅ **Excellent** - All dependencies are up-to-date and production-ready.
 
@@ -86,25 +89,26 @@ AndamanBazaarApp/
 
 All 15 collections have explicit security rules:
 
-| Collection | Read | Write | Delete | Assessment |
-|-----------|------|-------|--------|------------|
-| `users` | Owner/Moderator | Owner (restricted) | ❌ Disabled | ✅ Secure |
-| `listings` | Public/Owner | Owner (validated) | ❌ Soft-delete | ✅ Secure |
-| `chats` | Participants | Participants | ❌ Disabled | ✅ Secure |
-| `messages` | Participants | Sender only | ❌ Disabled | ✅ Secure |
-| `favorites` | Owner | Owner | Owner | ✅ Secure |
-| `reports` | Owner/Moderator | Owner | ❌ Disabled | ✅ Secure |
-| `listingBoosts` | Owner/Admin | ❌ Server-only | ❌ Disabled | ✅ Secure |
-| `invoices` | Owner/Admin | ❌ Server-only | ❌ Disabled | ✅ Secure |
-| `paymentAuditLog` | Admin only | ❌ Server-only | ❌ Disabled | ✅ Secure |
-| `auditLogs` | Owner/Admin | ❌ Server-only | ❌ Disabled | ✅ Secure |
-| `securityEvents` | Admin only | ❌ Server-only | Admin update | ✅ Secure |
-| `rateLimits` | ❌ Denied | ❌ Denied | ❌ Denied | ✅ Secure |
-| `categories` | Public | Admin only | ❌ Disabled | ✅ Secure |
-| `trending` | Public | ❌ Server-only | ❌ Disabled | ✅ Secure |
-| `fcmTokens` | Owner | Owner | Owner | ✅ Secure |
+| Collection        | Read            | Write              | Delete         | Assessment |
+| ----------------- | --------------- | ------------------ | -------------- | ---------- |
+| `users`           | Owner/Moderator | Owner (restricted) | ❌ Disabled    | ✅ Secure  |
+| `listings`        | Public/Owner    | Owner (validated)  | ❌ Soft-delete | ✅ Secure  |
+| `chats`           | Participants    | Participants       | ❌ Disabled    | ✅ Secure  |
+| `messages`        | Participants    | Sender only        | ❌ Disabled    | ✅ Secure  |
+| `favorites`       | Owner           | Owner              | Owner          | ✅ Secure  |
+| `reports`         | Owner/Moderator | Owner              | ❌ Disabled    | ✅ Secure  |
+| `listingBoosts`   | Owner/Admin     | ❌ Server-only     | ❌ Disabled    | ✅ Secure  |
+| `invoices`        | Owner/Admin     | ❌ Server-only     | ❌ Disabled    | ✅ Secure  |
+| `paymentAuditLog` | Admin only      | ❌ Server-only     | ❌ Disabled    | ✅ Secure  |
+| `auditLogs`       | Owner/Admin     | ❌ Server-only     | ❌ Disabled    | ✅ Secure  |
+| `securityEvents`  | Admin only      | ❌ Server-only     | Admin update   | ✅ Secure  |
+| `rateLimits`      | ❌ Denied       | ❌ Denied          | ❌ Denied      | ✅ Secure  |
+| `categories`      | Public          | Admin only         | ❌ Disabled    | ✅ Secure  |
+| `trending`        | Public          | ❌ Server-only     | ❌ Disabled    | ✅ Secure  |
+| `fcmTokens`       | Owner           | Owner              | Owner          | ✅ Secure  |
 
 **Key Security Features:**
+
 - ✅ All rules use `request.auth.uid` for authentication
 - ✅ Ownership validation on all user-owned resources
 - ✅ Active user and ban status checks
@@ -120,14 +124,15 @@ All 15 collections have explicit security rules:
 
 **Coverage:** ✅ **Comprehensive**
 
-| Bucket | Read | Write | Max Size | Type Check |
-|--------|------|-------|----------|------------|
-| `avatars/{userId}` | Public | Owner only | 5 MB | ✅ Images only |
-| `listing-images/{listingId}` | Public | Listing owner | 10 MB | ✅ Images only |
-| `chat-images/{chatId}` | Participants | Participants | 10 MB | ✅ Images only |
-| `invoices/{invoiceId}` | Owner/Admin | ❌ Server-only | N/A | N/A |
+| Bucket                       | Read         | Write          | Max Size | Type Check     |
+| ---------------------------- | ------------ | -------------- | -------- | -------------- |
+| `avatars/{userId}`           | Public       | Owner only     | 5 MB     | ✅ Images only |
+| `listing-images/{listingId}` | Public       | Listing owner  | 10 MB    | ✅ Images only |
+| `chat-images/{chatId}`       | Participants | Participants   | 10 MB    | ✅ Images only |
+| `invoices/{invoiceId}`       | Owner/Admin  | ❌ Server-only | N/A      | N/A            |
 
 **Key Security Features:**
+
 - ✅ Path-based ownership validation
 - ✅ File size limits enforced
 - ✅ Content type validation (images only)
@@ -141,21 +146,23 @@ All 15 collections have explicit security rules:
 **Status:** ✅ **Secure**
 
 All secrets are stored in Firebase Secret Manager:
+
 - ✅ `GEMINI_API_KEY` - Set (AI moderation)
 - ✅ `CASHFREE_APP_ID` - Set (Payment gateway)
 - ✅ `CASHFREE_SECRET_KEY` - Set (Payment gateway)
 - ⚠️ `CASHFREE_WEBHOOK_SECRET` - Placeholder (needs update from dashboard)
 
 **Frontend Environment Variables:**
+
 ```typescript
 // ✅ SAFE - Public Firebase config
-VITE_FIREBASE_API_KEY
-VITE_FIREBASE_AUTH_DOMAIN
-VITE_FIREBASE_PROJECT_ID
-VITE_FIREBASE_STORAGE_BUCKET
-VITE_FIREBASE_MESSAGING_SENDER_ID
-VITE_FIREBASE_APP_ID
-VITE_FIREBASE_MEASUREMENT_ID
+VITE_FIREBASE_API_KEY;
+VITE_FIREBASE_AUTH_DOMAIN;
+VITE_FIREBASE_PROJECT_ID;
+VITE_FIREBASE_STORAGE_BUCKET;
+VITE_FIREBASE_MESSAGING_SENDER_ID;
+VITE_FIREBASE_APP_ID;
+VITE_FIREBASE_MEASUREMENT_ID;
 
 // ❌ NO PRIVATE KEYS EXPOSED
 ```
@@ -174,6 +181,7 @@ VITE_FIREBASE_MEASUREMENT_ID
 - ✅ Rate limiting on sensitive operations
 
 **Security Patterns:**
+
 ```typescript
 // ✅ Proper server-side validation
 function isAuthenticated() {
@@ -181,8 +189,11 @@ function isAuthenticated() {
 }
 
 function isAdmin() {
-  return isAuthenticated() && 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+  return (
+    isAuthenticated() &&
+    get(/databases/$(database) / documents / users / $(request.auth.uid)).data
+      .role == "admin"
+  );
 }
 ```
 
@@ -197,6 +208,7 @@ function isAdmin() {
 **Implementation Quality:** **9/10**
 
 **Features:**
+
 - ✅ Cashfree v2023-08-01 API compliance
 - ✅ Webhook signature verification (HMAC SHA256)
 - ✅ Idempotent webhook processing
@@ -228,6 +240,7 @@ function isAdmin() {
    - ✅ Updates local records
 
 **Webhook Handler:**
+
 - ✅ Signature verification with `x-webhook-signature`
 - ✅ Timestamp validation with `x-webhook-timestamp`
 - ✅ Duplicate event detection
@@ -235,11 +248,13 @@ function isAdmin() {
 - ✅ Event logging in `paymentEvents` collection
 
 **Event Types Supported:**
+
 - ✅ `PAYMENT_SUCCESS_WEBHOOK` → Marks listing as sold
 - ✅ `PAYMENT_FAILED_WEBHOOK` → Releases reservation
 - ✅ `PAYMENT_USER_DROPPED_WEBHOOK` → Releases reservation
 
 **Security Compliance:**
+
 - ✅ All payment verification server-side
 - ✅ Webhook signature validation
 - ✅ Client never marks payment as successful
@@ -263,6 +278,7 @@ Payment Initiated (PENDING)
 ```
 
 **Firestore Schema:**
+
 ```typescript
 payments/{orderId}
   - orderId: string
@@ -292,6 +308,7 @@ payments/{orderId}
 - ✅ No `any` types in critical paths
 
 **Sample Type Definitions:**
+
 ```typescript
 // types.ts - Well-defined interfaces
 export interface Profile {
@@ -300,7 +317,7 @@ export interface Profile {
   full_name?: string;
   profile_photo_url?: string;
   is_location_verified?: boolean;
-  trust_level: 'newbie' | 'verified' | 'legend' | 'official';
+  trust_level: "newbie" | "verified" | "legend" | "official";
   is_official?: boolean;
   // ... 20+ more fields
 }
@@ -324,6 +341,7 @@ export interface Listing {
 **Component Count:** 37 components
 
 **Categories:**
+
 - **Layout:** Layout, Header, Footer, Navigation
 - **Forms:** CreateListing, AuthView, ReportModal
 - **Display:** ListingCard, TrustCard, TrustBadge
@@ -332,6 +350,7 @@ export interface Listing {
 - **Utility:** ErrorBoundary, LazyRoute, PerformanceMonitor
 
 **Design Patterns:**
+
 - ✅ Functional components with hooks
 - ✅ Custom hooks for reusable logic
 - ✅ Context API for global state
@@ -348,11 +367,12 @@ export interface Listing {
    - **Count:** 128 instances across 45 files
    - **Impact:** Performance degradation in production, log pollution
    - **Recommendation:** Implement structured logging with log levels
+
    ```typescript
    // Replace console.log with:
-   import { logger } from './lib/logger';
-   logger.info('User action', { userId, action });
-   logger.error('Payment failed', { orderId, error });
+   import { logger } from "./lib/logger";
+   logger.info("User action", { userId, action });
+   logger.error("Payment failed", { orderId, error });
    ```
 
 2. **Development Artifacts in Production**
@@ -364,15 +384,16 @@ export interface Listing {
 3. **Missing Environment Variable Validation**
    - **Impact:** Runtime failures if env vars missing
    - **Recommendation:** Add startup validation
+
    ```typescript
    // Add to App.tsx or index.tsx
    const requiredEnvVars = [
-     'VITE_FIREBASE_API_KEY',
-     'VITE_FIREBASE_PROJECT_ID',
+     "VITE_FIREBASE_API_KEY",
+     "VITE_FIREBASE_PROJECT_ID",
      // ... all required vars
    ];
-   
-   requiredEnvVars.forEach(varName => {
+
+   requiredEnvVars.forEach((varName) => {
      if (!import.meta.env[varName]) {
        throw new Error(`Missing required env var: ${varName}`);
      }
@@ -433,6 +454,7 @@ export interface Listing {
 **Test Files:** 63 files
 
 **Test Categories:**
+
 - Unit tests: ✅ Present
 - Integration tests: ⚠️ Sparse (`--passWithNoTests` flag)
 - E2E tests: ✅ Playwright configured
@@ -441,6 +463,7 @@ export interface Listing {
 - Performance tests: ✅ Lighthouse configured
 
 **Test Scripts:**
+
 ```json
 "test": "vitest",
 "test:unit": "vitest run tests/unit",
@@ -452,11 +475,13 @@ export interface Listing {
 ```
 
 **Issues:**
+
 - ⚠️ Integration tests use `--passWithNoTests` (no tests written)
 - ⚠️ Accessibility tests use `--passWithNoTests` (no tests written)
 - ⚠️ No coverage thresholds enforced
 
 **Recommendations:**
+
 1. Write integration tests for critical flows (auth, payments, listings)
 2. Add accessibility tests using jest-axe
 3. Set minimum coverage thresholds (80% for critical paths)
@@ -465,11 +490,13 @@ export interface Listing {
 ### 5.2 Test Quality
 
 **Strengths:**
+
 - ✅ Modern testing stack (Vitest, Playwright, Testing Library)
 - ✅ Security-focused tests
 - ✅ E2E tests for user flows
 
 **Weaknesses:**
+
 - ❌ Missing payment flow integration tests
 - ❌ Missing webhook handler tests
 - ❌ Missing Cloud Function unit tests
@@ -484,18 +511,19 @@ export interface Listing {
 
 **Categories:**
 
-| Category | Files | Quality |
-|----------|-------|---------|
-| Architecture | 5 | ✅ Excellent |
-| Deployment | 10 | ✅ Excellent |
-| Testing | 8 | ✅ Excellent |
-| Migration | 12 | ✅ Excellent |
-| Payment | 6 | ✅ Excellent |
-| Security | 3 | ✅ Excellent |
-| Features | 4 | ✅ Excellent |
-| API | 2 | ✅ Excellent |
+| Category     | Files | Quality      |
+| ------------ | ----- | ------------ |
+| Architecture | 5     | ✅ Excellent |
+| Deployment   | 10    | ✅ Excellent |
+| Testing      | 8     | ✅ Excellent |
+| Migration    | 12    | ✅ Excellent |
+| Payment      | 6     | ✅ Excellent |
+| Security     | 3     | ✅ Excellent |
+| Features     | 4     | ✅ Excellent |
+| API          | 2     | ✅ Excellent |
 
 **Key Documentation:**
+
 - ✅ `AGENTS.md` - AI assistant constraints (comprehensive)
 - ✅ `ARCHITECTURE.md` - System architecture (25KB, detailed)
 - ✅ `SECURITY.md` - Security practices
@@ -525,6 +553,7 @@ export interface Listing {
 ### 7.1 Bundle Size
 
 **Production Build:**
+
 ```
 dist/index.html                  2.63 kB │ gzip:   0.96 kB
 dist/assets/index-YAC2JoRR.css  107.25 kB │ gzip:  17.42 kB
@@ -533,10 +562,12 @@ dist/assets/Dashboard-CuOu5FS4.js 387.73 kB │ gzip: 107.65 kB ⚠️
 ```
 
 **Issues:**
+
 - ⚠️ Main bundle exceeds 500 kB (Vite warning)
 - ⚠️ Dashboard chunk is very large
 
 **Recommendations:**
+
 1. Further code splitting for Dashboard
 2. Lazy load heavy dependencies (Recharts, etc.)
 3. Tree shake unused code
@@ -545,6 +576,7 @@ dist/assets/Dashboard-CuOu5FS4.js 387.73 kB │ gzip: 107.65 kB ⚠️
 ### 7.2 Performance Optimizations
 
 **Implemented:**
+
 - ✅ Lazy loading for routes
 - ✅ Image compression (browser-image-compression)
 - ✅ PWA support (vite-plugin-pwa)
@@ -552,6 +584,7 @@ dist/assets/Dashboard-CuOu5FS4.js 387.73 kB │ gzip: 107.65 kB ⚠️
 - ✅ Adaptive image loading
 
 **Missing:**
+
 - ❌ Service worker caching strategy
 - ❌ Prefetching for critical routes
 - ❌ Virtual scrolling for long lists
@@ -564,11 +597,13 @@ dist/assets/Dashboard-CuOu5FS4.js 387.73 kB │ gzip: 107.65 kB ⚠️
 ### 8.1 Deployment Configuration
 
 **Platforms Supported:**
+
 - ✅ Firebase Hosting
 - ✅ FTP/SFTP deployment
 - ✅ Docker containerization
 
 **Deployment Scripts:**
+
 ```bash
 npm run firebase-deploy  # Firebase deployment
 npm run ftp-deploy       # FTP deployment
@@ -576,10 +611,12 @@ npm run ftp-deploy       # FTP deployment
 ```
 
 **CI/CD:**
+
 - ⚠️ GitHub Actions workflows present but not fully configured
 - ⚠️ No automated testing in CI pipeline
 
 **Recommendations:**
+
 1. Set up GitHub Actions for automated testing
 2. Add deployment previews for PRs
 3. Implement blue-green deployment strategy
@@ -588,11 +625,13 @@ npm run ftp-deploy       # FTP deployment
 ### 8.2 Environment Management
 
 **Environments:**
+
 - ✅ Development (localhost)
 - ✅ Sandbox (Cashfree sandbox)
 - ✅ Production (Firebase)
 
 **Configuration:**
+
 - ✅ `.env.example` provided
 - ✅ Environment-specific configs
 - ⚠️ No environment validation on startup
@@ -603,17 +642,17 @@ npm run ftp-deploy       # FTP deployment
 
 ### 9.1 Security Rules Compliance
 
-| Rule | Status | Notes |
-|------|--------|-------|
-| Zero Client-Trusted Validation | ✅ 100% | All validation server-side |
-| All Secrets Server-Side Only | ✅ 100% | No secrets in frontend |
-| Firebase Security Rules Mandatory | ✅ 100% | All collections covered |
-| No Breaking Schema Changes | ✅ 100% | Migration scripts present |
-| Payment Integrity | ✅ 100% | Server-side verification |
-| Geo-Verification Rules | ✅ 100% | Server-side validation |
-| AI Moderation Safety | ✅ 100% | Server-triggered, logged |
-| Code Change Discipline | ✅ 100% | Followed consistently |
-| Production Mindset | ✅ 100% | Security-first approach |
+| Rule                              | Status  | Notes                      |
+| --------------------------------- | ------- | -------------------------- |
+| Zero Client-Trusted Validation    | ✅ 100% | All validation server-side |
+| All Secrets Server-Side Only      | ✅ 100% | No secrets in frontend     |
+| Firebase Security Rules Mandatory | ✅ 100% | All collections covered    |
+| No Breaking Schema Changes        | ✅ 100% | Migration scripts present  |
+| Payment Integrity                 | ✅ 100% | Server-side verification   |
+| Geo-Verification Rules            | ✅ 100% | Server-side validation     |
+| AI Moderation Safety              | ✅ 100% | Server-triggered, logged   |
+| Code Change Discipline            | ✅ 100% | Followed consistently      |
+| Production Mindset                | ✅ 100% | Security-first approach    |
 
 **Overall Compliance:** ✅ **100%**
 
@@ -626,6 +665,7 @@ npm run ftp-deploy       # FTP deployment
 1. **Update CASHFREE_WEBHOOK_SECRET**
    - Get real secret from Cashfree dashboard
    - Update Firebase Secret Manager
+
    ```bash
    firebase functions:secrets:set CASHFREE_WEBHOOK_SECRET
    ```
@@ -714,6 +754,7 @@ npm run ftp-deploy       # FTP deployment
 **Low:** 1
 
 **Low Severity:**
+
 1. **Placeholder Webhook Secret**
    - **Impact:** Webhook verification will fail in production
    - **Mitigation:** Update with real secret from Cashfree dashboard
@@ -722,6 +763,7 @@ npm run ftp-deploy       # FTP deployment
 ### 11.2 Security Best Practices
 
 **Implemented:**
+
 - ✅ HTTPS only
 - ✅ CORS configured
 - ✅ Rate limiting
@@ -734,6 +776,7 @@ npm run ftp-deploy       # FTP deployment
 - ✅ Audit logging
 
 **Missing:**
+
 - ❌ Automated security scanning in CI
 - ❌ Dependency vulnerability scanning (Snyk/Dependabot)
 - ❌ Penetration testing
@@ -747,6 +790,7 @@ npm run ftp-deploy       # FTP deployment
 AndamanBazaar is a **well-architected, production-ready application** with strong security practices and comprehensive documentation. The codebase demonstrates professional-grade engineering with attention to detail in critical areas like payment processing and data security.
 
 **Key Strengths:**
+
 1. **Security-First Design** - Comprehensive Firestore and Storage rules
 2. **Modern Architecture** - React 18, TypeScript, Firebase, Tailwind
 3. **Payment Integration** - Robust Cashfree implementation with webhook handling
@@ -754,6 +798,7 @@ AndamanBazaar is a **well-architected, production-ready application** with stron
 5. **Trust System** - Well-designed verification and trust scoring
 
 **Key Weaknesses:**
+
 1. **Logging Strategy** - Too many console.log statements
 2. **Test Coverage** - Integration and accessibility tests missing
 3. **Bundle Size** - Main chunk exceeds recommended size
@@ -764,30 +809,33 @@ AndamanBazaar is a **well-architected, production-ready application** with stron
 **Status:** ✅ **Production-Ready** (with minor fixes)
 
 **Blockers:** 1
+
 - Update `CASHFREE_WEBHOOK_SECRET` with real value
 
 **Critical Fixes:** 3
+
 - Implement production logging
 - Remove development artifacts
 - Add environment variable validation
 
 **Recommended Before Launch:**
+
 - Write integration tests for payment flow
 - Optimize bundle size
 - Set up CI/CD pipeline
 
 ### 12.3 Final Score Breakdown
 
-| Category | Score | Weight | Weighted Score |
-|----------|-------|--------|----------------|
-| Architecture | 9/10 | 15% | 1.35 |
-| Security | 10/10 | 25% | 2.50 |
-| Code Quality | 8/10 | 15% | 1.20 |
-| Testing | 6/10 | 15% | 0.90 |
-| Documentation | 10/10 | 10% | 1.00 |
-| Performance | 7/10 | 10% | 0.70 |
-| DevOps | 7/10 | 10% | 0.70 |
-| **Total** | **8.5/10** | **100%** | **8.35** |
+| Category      | Score      | Weight   | Weighted Score |
+| ------------- | ---------- | -------- | -------------- |
+| Architecture  | 9/10       | 15%      | 1.35           |
+| Security      | 10/10      | 25%      | 2.50           |
+| Code Quality  | 8/10       | 15%      | 1.20           |
+| Testing       | 6/10       | 15%      | 0.90           |
+| Documentation | 10/10      | 10%      | 1.00           |
+| Performance   | 7/10       | 10%      | 0.70           |
+| DevOps        | 7/10       | 10%      | 0.70           |
+| **Total**     | **8.5/10** | **100%** | **8.35**       |
 
 ---
 

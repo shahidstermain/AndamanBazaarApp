@@ -292,6 +292,7 @@ All previously identified blockers have been resolved. This document records the
 **safe to deploy** ✅
 
 All four previously identified blockers have been resolved:
+
 1. Payment confirmation now uses server-side Firebase Cloud Function verification only.
 2. Homepage create listing links correctly point to `/post`.
 3. Sitemap and robots.txt use the correct `andamanbazaar.in` production domain.

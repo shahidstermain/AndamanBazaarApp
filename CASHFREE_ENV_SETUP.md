@@ -98,13 +98,8 @@ npm install --save-dev @types/node
     "target": "es2017"
   },
   "compileOnSave": true,
-  "include": [
-    "**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "**/*.test.ts"
-  ]
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "**/*.test.ts"]
 }
 ```
 
@@ -161,10 +156,20 @@ FUNCTIONS_URL=http://localhost:5001/your-project/us-central1
 ### 1. Update functions/src/index.ts
 
 ```typescript
-import * as functions from 'firebase-functions';
-import { createOrder, cleanupExpiredReservations } from './payments/createOrder';
-import { cashfreeWebhook, webhookHealthCheck } from './payments/cashfreeWebhook';
-import { checkPaymentStatus, getPaymentHistory, getPaymentDetails } from './payments/checkPaymentStatus';
+import * as functions from "firebase-functions";
+import {
+  createOrder,
+  cleanupExpiredReservations,
+} from "./payments/createOrder";
+import {
+  cashfreeWebhook,
+  webhookHealthCheck,
+} from "./payments/cashfreeWebhook";
+import {
+  checkPaymentStatus,
+  getPaymentHistory,
+  getPaymentDetails,
+} from "./payments/checkPaymentStatus";
 
 // Export payment functions
 exports.createOrder = createOrder;
@@ -177,7 +182,7 @@ exports.cleanupExpiredReservations = cleanupExpiredReservations;
 
 // Scheduled tasks
 exports.scheduledCleanup = functions.pubsub
-  .schedule('every 15 minutes')
+  .schedule("every 15 minutes")
   .onRun(cleanupExpiredReservations);
 ```
 
@@ -215,29 +220,29 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Payments collection - only authenticated users can read/write their own
     match /payments/{orderId} {
-      allow read, write: if request.auth != null && 
-        (resource.data.buyerId == request.auth.uid || 
+      allow read, write: if request.auth != null &&
+        (resource.data.buyerId == request.auth.uid ||
          resource.data.sellerId == request.auth.uid);
     }
-    
+
     // Payment events - read-only for authenticated users
     match /paymentEvents/{eventId} {
       allow read: if request.auth != null;
       allow write: if false; // Only functions can write
     }
-    
+
     // Purchases collection - buyer and seller access
     match /purchases/{purchaseId} {
-      allow read: if request.auth != null && 
-        (resource.data.buyerId == request.auth.uid || 
+      allow read: if request.auth != null &&
+        (resource.data.buyerId == request.auth.uid ||
          resource.data.sellerId == request.auth.uid);
       allow write: if false; // Only functions can write
     }
-    
+
     // Listings - update permissions for payment status
     match /listings/{listingId} {
       allow read: if true;
-      allow write: if request.auth != null && 
+      allow write: if request.auth != null &&
         (resource.data.userId == request.auth.uid ||
          request.auth.token.admin == true);
     }
@@ -249,12 +254,12 @@ service cloud.firestore {
 
 ```typescript
 // functions/src/utils/cors.ts
-import * as cors from 'cors';
+import * as cors from "cors";
 
 const corsHandler = cors({
-  origin: ['https://your-app.com', 'https://your-app.firebaseapp.com'],
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin: ["https://your-app.com", "https://your-app.firebaseapp.com"],
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 });
 
 export { corsHandler };
@@ -288,30 +293,30 @@ FUNCTIONS_URL=http://localhost:5001/your-project/us-central1
 
 ```javascript
 // test/payment.test.js
-const testFunctions = require('firebase-functions-test')();
-const admin = require('firebase-admin');
-const { createOrder } = require('../lib/payments/createOrder');
+const testFunctions = require("firebase-functions-test")();
+const admin = require("firebase-admin");
+const { createOrder } = require("../lib/payments/createOrder");
 
 // Mock Firebase Auth
 const mockAuth = {
-  uid: 'test-user-123',
+  uid: "test-user-123",
   token: {
-    email: 'test@example.com',
+    email: "test@example.com",
   },
 };
 
 // Test order creation
 const testCreateOrder = async () => {
   const data = {
-    listingId: 'test-listing-123',
-    customerEmail: 'test@example.com',
-    customerPhone: '+919876543210',
+    listingId: "test-listing-123",
+    customerEmail: "test@example.com",
+    customerPhone: "+919876543210",
   };
 
   const wrapped = testFunctions.wrap(createOrder);
   const result = await wrapped(data, { auth: mockAuth });
-  
-  console.log('Order created:', result);
+
+  console.log("Order created:", result);
 };
 ```
 
@@ -349,9 +354,9 @@ curl https://your-region-project.cloudfunctions.net/webhookHealthCheck
 
 ```typescript
 // Add structured logging
-import { logger } from 'firebase-functions/v2';
+import { logger } from "firebase-functions/v2";
 
-logger.info('Payment order created', {
+logger.info("Payment order created", {
   orderId,
   buyerId,
   amount,
@@ -363,12 +368,12 @@ logger.info('Payment order created', {
 
 ```typescript
 // Error reporting
-import { reportError } from 'firebase-functions/v2';
+import { reportError } from "firebase-functions/v2";
 
 try {
   // Payment logic
 } catch (error) {
-  reportError(error, { context: 'payment-processing' });
+  reportError(error, { context: "payment-processing" });
   throw error;
 }
 ```
@@ -377,9 +382,9 @@ try {
 
 ```typescript
 // Performance traces
-import { trace } from 'firebase-functions/v2/performance';
+import { trace } from "firebase-functions/v2/performance";
 
-const paymentTrace = trace('payment-processing');
+const paymentTrace = trace("payment-processing");
 paymentTrace.start();
 // ... payment logic
 paymentTrace.stop();

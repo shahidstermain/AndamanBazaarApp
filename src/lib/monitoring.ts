@@ -1,9 +1,10 @@
-import * as Sentry from '@sentry/react';
+import * as Sentry from "@sentry/react";
 
 type MonitoringContext = Record<string, unknown>;
 
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN;
-const sentryEnvironment = import.meta.env.VITE_SENTRY_ENVIRONMENT || import.meta.env.MODE;
+const sentryEnvironment =
+  import.meta.env.VITE_SENTRY_ENVIRONMENT || import.meta.env.MODE;
 const sentryRelease = import.meta.env.VITE_APP_VERSION;
 const originalConsoleError = console.error.bind(console);
 
@@ -11,7 +12,10 @@ let monitoringInitialized = false;
 let consolePatched = false;
 let isForwardingConsoleError = false;
 
-const serializeValue = (value: unknown, seen = new WeakSet<object>()): unknown => {
+const serializeValue = (
+  value: unknown,
+  seen = new WeakSet<object>(),
+): unknown => {
   if (value instanceof Error) {
     return {
       name: value.name,
@@ -20,27 +24,30 @@ const serializeValue = (value: unknown, seen = new WeakSet<object>()): unknown =
     };
   }
 
-  if (typeof value === 'bigint') {
+  if (typeof value === "bigint") {
     return value.toString();
   }
 
-  if (typeof value === 'function') {
-    return `[Function ${value.name || 'anonymous'}]`;
+  if (typeof value === "function") {
+    return `[Function ${value.name || "anonymous"}]`;
   }
 
   if (Array.isArray(value)) {
     return value.map((entry) => serializeValue(entry, seen));
   }
 
-  if (value && typeof value === 'object') {
+  if (value && typeof value === "object") {
     if (seen.has(value)) {
-      return '[Circular]';
+      return "[Circular]";
     }
 
     seen.add(value);
 
     return Object.fromEntries(
-      Object.entries(value).map(([key, entry]) => [key, serializeValue(entry, seen)])
+      Object.entries(value).map(([key, entry]) => [
+        key,
+        serializeValue(entry, seen),
+      ]),
     );
   }
 
@@ -48,7 +55,7 @@ const serializeValue = (value: unknown, seen = new WeakSet<object>()): unknown =
 };
 
 const formatValue = (value: unknown): string => {
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     return value;
   }
 
@@ -68,18 +75,21 @@ const toError = (value: unknown): Error => {
     return value;
   }
 
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     return new Error(value);
   }
 
   try {
     return new Error(JSON.stringify(serializeValue(value)));
   } catch {
-    return new Error('Unknown error');
+    return new Error("Unknown error");
   }
 };
 
-export const captureException = (error: unknown, context?: MonitoringContext) => {
+export const captureException = (
+  error: unknown,
+  context?: MonitoringContext,
+) => {
   if (!monitoringInitialized || !sentryDsn) {
     return;
   }
@@ -106,13 +116,21 @@ const forwardConsoleError = (...args: unknown[]) => {
     const errorArg = args.find((arg) => arg instanceof Error);
 
     if (errorArg instanceof Error) {
-      captureException(errorArg, { consoleArgs: args.map((arg) => serializeValue(arg)) });
+      captureException(errorArg, {
+        consoleArgs: args.map((arg) => serializeValue(arg)),
+      });
       return;
     }
 
     Sentry.withScope((scope) => {
-      scope.setExtra('consoleArgs', args.map((arg) => serializeValue(arg)));
-      Sentry.captureMessage(args.map((arg) => formatValue(arg)).join(' '), 'error');
+      scope.setExtra(
+        "consoleArgs",
+        args.map((arg) => serializeValue(arg)),
+      );
+      Sentry.captureMessage(
+        args.map((arg) => formatValue(arg)).join(" "),
+        "error",
+      );
     });
   } finally {
     isForwardingConsoleError = false;

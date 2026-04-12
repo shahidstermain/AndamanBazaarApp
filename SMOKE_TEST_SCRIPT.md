@@ -339,10 +339,10 @@ Mobile: PASS/FAIL
 Broken Links: PASS/FAIL
 
 Blocking Issues:
-- 
+-
 
 Warnings:
-- 
+-
 
 Final Go/No-Go:
 - GO

@@ -6,7 +6,16 @@
   "localRoot": "./dist",
   "remoteRoot": "/home/sites/30b/6/6ef8ba74fd/public_html/AndamanBazaarApp",
   "include": ["*", "**/*"],
-  "exclude": ["node_modules", ".git", ".env", "*.log", "coverage", "reports", "test-results", "playwright-report"],
+  "exclude": [
+    "node_modules",
+    ".git",
+    ".env",
+    "*.log",
+    "coverage",
+    "reports",
+    "test-results",
+    "playwright-report"
+  ],
   "deleteRemote": false,
   "forcePassiveMode": true,
   "sftp": true

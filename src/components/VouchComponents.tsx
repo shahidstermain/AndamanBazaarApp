@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
-import { Shield, UserCheck, MessageSquare, AlertCircle, CheckCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import React, { useState } from "react";
+import {
+  Shield,
+  UserCheck,
+  MessageSquare,
+  AlertCircle,
+  CheckCircle,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export interface Vouch {
   vouch_id: string;
   voucher_id: string;
   voucher_name: string;
-  voucher_trust_level: 'newbie' | 'verified' | 'legend';
+  voucher_trust_level: "newbie" | "verified" | "legend";
   vouch_message: string;
   created_at: string;
   days_remaining: number;
@@ -17,23 +23,26 @@ interface VouchBadgeProps {
   className?: string;
 }
 
-export const VouchBadge: React.FC<VouchBadgeProps> = ({ vouchCount, className }) => {
+export const VouchBadge: React.FC<VouchBadgeProps> = ({
+  vouchCount,
+  className,
+}) => {
   if (vouchCount === 0) return null;
 
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium',
+        "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
         vouchCount >= 3
-          ? 'bg-green-100 text-green-800'
+          ? "bg-green-100 text-green-800"
           : vouchCount >= 2
-          ? 'bg-blue-100 text-blue-800'
-          : 'bg-gray-100 text-gray-700',
-        className
+            ? "bg-blue-100 text-blue-800"
+            : "bg-gray-100 text-gray-700",
+        className,
       )}
     >
       <UserCheck className="w-3 h-3" />
-      {vouchCount} vouch{vouchCount > 1 ? 'es' : ''}
+      {vouchCount} vouch{vouchCount > 1 ? "es" : ""}
     </div>
   );
 };
@@ -50,17 +59,17 @@ export const VouchList: React.FC<VouchListProps> = ({ vouches, className }) => {
 
   const getTrustColor = (level: string) => {
     switch (level) {
-      case 'legend':
-        return 'text-amber-600 bg-amber-50';
-      case 'verified':
-        return 'text-blue-600 bg-blue-50';
+      case "legend":
+        return "text-amber-600 bg-amber-50";
+      case "verified":
+        return "text-blue-600 bg-blue-50";
       default:
-        return 'text-gray-600 bg-gray-50';
+        return "text-gray-600 bg-gray-50";
     }
   };
 
   return (
-    <div className={cn('space-y-3', className)}>
+    <div className={cn("space-y-3", className)}>
       <h4 className="font-medium text-sm text-gray-900 flex items-center gap-2">
         <Shield className="w-4 h-4 text-teal-600" />
         Vouched by Community
@@ -77,8 +86,8 @@ export const VouchList: React.FC<VouchListProps> = ({ vouches, className }) => {
                 <span className="font-medium">{vouch.voucher_name}</span>
                 <span
                   className={cn(
-                    'text-xs px-1.5 py-0.5 rounded',
-                    getTrustColor(vouch.voucher_trust_level)
+                    "text-xs px-1.5 py-0.5 rounded",
+                    getTrustColor(vouch.voucher_trust_level),
                   )}
                 >
                   {vouch.voucher_trust_level}
@@ -120,7 +129,7 @@ export const VouchModal: React.FC<VouchModalProps> = ({
   canVouch,
   userTrustLevel,
 }) => {
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -138,10 +147,10 @@ export const VouchModal: React.FC<VouchModalProps> = ({
       setTimeout(() => {
         onClose();
         setSuccess(false);
-        setMessage('');
+        setMessage("");
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to vouch');
+      setError(err instanceof Error ? err.message : "Failed to vouch");
     } finally {
       setIsSubmitting(false);
     }
@@ -153,19 +162,24 @@ export const VouchModal: React.FC<VouchModalProps> = ({
         {success ? (
           <div className="text-center py-8">
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900">Vouch Submitted!</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Vouch Submitted!
+            </h3>
             <p className="text-gray-600 mt-2">
-              Your vouch has been recorded and will help build trust for {voucheeName}.
+              Your vouch has been recorded and will help build trust for{" "}
+              {voucheeName}.
             </p>
           </div>
         ) : !canVouch ? (
           <div className="text-center py-6">
             <AlertCircle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900">Cannot Vouch</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Cannot Vouch
+            </h3>
             <p className="text-gray-600 mt-2">
-              {userTrustLevel === 'newbie'
-                ? 'You need to be a Verified or Legend user to vouch for others.'
-                : 'You have used all 3 vouch slots. Wait for some to expire or remove existing vouches.'}
+              {userTrustLevel === "newbie"
+                ? "You need to be a Verified or Legend user to vouch for others."
+                : "You have used all 3 vouch slots. Wait for some to expire or remove existing vouches."}
             </p>
             <button
               onClick={onClose}
@@ -180,8 +194,9 @@ export const VouchModal: React.FC<VouchModalProps> = ({
               Vouch for {voucheeName}
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              As a {userTrustLevel} user, your vouch will boost their trust score.
-              You have {availableSlots} slot{availableSlots !== 1 ? 's' : ''} remaining.
+              As a {userTrustLevel} user, your vouch will boost their trust
+              score. You have {availableSlots} slot
+              {availableSlots !== 1 ? "s" : ""} remaining.
             </p>
 
             {error && (

@@ -15,35 +15,35 @@ This document maps all Supabase environment variables to their Firebase equivale
 
 ## Current Supabase Environment Variables
 
-### Frontend (VITE_*) Variables
+### Frontend (VITE\_\*) Variables
 
-| Supabase Variable | Firebase Equivalent | Notes |
-|---|---|---|
-| `VITE_SUPABASE_URL` | `VITE_FIREBASE_API_KEY` + `VITE_FIREBASE_AUTH_DOMAIN` | Firebase uses separate config |
-| `VITE_SUPABASE_ANON_KEY` | `VITE_FIREBASE_API_KEY` | Firebase uses API key for auth |
-| `VITE_API_KEY` | **REMOVE** | Gemini key moves to Cloud Functions |
-| `VITE_FIREBASE_API_KEY` | Keep | Already configured |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Keep | Already configured |
-| `VITE_FIREBASE_PROJECT_ID` | Keep | Already configured |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Keep | Already configured |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Keep | Already configured |
-| `VITE_FIREBASE_APP_ID` | Keep | Already configured |
-| `VITE_FIREBASE_MEASUREMENT_ID` | Keep | Already configured |
-| `VITE_RATE_LIMIT_WINDOW` | Keep | Used by security.ts |
-| `VITE_RATE_LIMIT_MAX_REQUESTS` | Keep | Used by security.ts |
-| `VITE_ENABLE_CSP` | Keep | Content Security Policy |
-| `VITE_ENV` | Keep | Environment identifier |
+| Supabase Variable                   | Firebase Equivalent                                   | Notes                               |
+| ----------------------------------- | ----------------------------------------------------- | ----------------------------------- |
+| `VITE_SUPABASE_URL`                 | `VITE_FIREBASE_API_KEY` + `VITE_FIREBASE_AUTH_DOMAIN` | Firebase uses separate config       |
+| `VITE_SUPABASE_ANON_KEY`            | `VITE_FIREBASE_API_KEY`                               | Firebase uses API key for auth      |
+| `VITE_API_KEY`                      | **REMOVE**                                            | Gemini key moves to Cloud Functions |
+| `VITE_FIREBASE_API_KEY`             | Keep                                                  | Already configured                  |
+| `VITE_FIREBASE_AUTH_DOMAIN`         | Keep                                                  | Already configured                  |
+| `VITE_FIREBASE_PROJECT_ID`          | Keep                                                  | Already configured                  |
+| `VITE_FIREBASE_STORAGE_BUCKET`      | Keep                                                  | Already configured                  |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Keep                                                  | Already configured                  |
+| `VITE_FIREBASE_APP_ID`              | Keep                                                  | Already configured                  |
+| `VITE_FIREBASE_MEASUREMENT_ID`      | Keep                                                  | Already configured                  |
+| `VITE_RATE_LIMIT_WINDOW`            | Keep                                                  | Used by security.ts                 |
+| `VITE_RATE_LIMIT_MAX_REQUESTS`      | Keep                                                  | Used by security.ts                 |
+| `VITE_ENABLE_CSP`                   | Keep                                                  | Content Security Policy             |
+| `VITE_ENV`                          | Keep                                                  | Environment identifier              |
 
 ### Backend/Edge Function Variables
 
-| Supabase Variable | Firebase Equivalent | Notes |
-|---|---|---|
-| `SUPABASE_URL` | `FIREBASE_PROJECT_ID` | Project identifier |
-| `SUPABASE_SERVICE_ROLE_KEY` | **REMOVE** | Firebase uses service account JSON |
-| `CASHFREE_APP_ID` | Keep | Payment provider |
-| `CASHFREE_SECRET_KEY` | Keep | Payment provider |
-| `RESEND_API_KEY` | Keep | Email service |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | **MOVE TO CLOUD FUNCTIONS** | AI service |
+| Supabase Variable              | Firebase Equivalent         | Notes                              |
+| ------------------------------ | --------------------------- | ---------------------------------- |
+| `SUPABASE_URL`                 | `FIREBASE_PROJECT_ID`       | Project identifier                 |
+| `SUPABASE_SERVICE_ROLE_KEY`    | **REMOVE**                  | Firebase uses service account JSON |
+| `CASHFREE_APP_ID`              | Keep                        | Payment provider                   |
+| `CASHFREE_SECRET_KEY`          | Keep                        | Payment provider                   |
+| `RESEND_API_KEY`               | Keep                        | Email service                      |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | **MOVE TO CLOUD FUNCTIONS** | AI service                         |
 
 ---
 
@@ -136,6 +136,7 @@ SENTRY_ENVIRONMENT=production
 ```
 
 Converted to:
+
 ```bash
 FIREBASE_PROJECT_ID=your-project-id
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-...@your-project.iam.gserviceaccount.com
@@ -172,10 +173,10 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY----
 
 ```typescript
 // src/lib/firebase.ts (replace supabase.ts)
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
+import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
+import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -184,7 +185,7 @@ const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 const app = initializeApp(firebaseConfig);
@@ -197,19 +198,19 @@ export const storage = getStorage(app);
 
 ```typescript
 // functions/src/firebase.ts
-import admin from 'firebase-admin';
-import { getFirestore } from 'firebase-admin/firestore';
-import { getStorage } from 'firebase-admin/storage';
+import admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 
 const serviceAccount = {
   projectId: process.env.FIREBASE_PROJECT_ID,
   clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  privateKey: process.env.FIREBASE_PRIVATE_KEY
+  privateKey: process.env.FIREBASE_PRIVATE_KEY,
 };
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  projectId: process.env.FIREBASE_PROJECT_ID
+  projectId: process.env.FIREBASE_PROJECT_ID,
 });
 
 export const db = getFirestore();
@@ -224,20 +225,22 @@ export const env = {
   firebase: {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
   },
   app: {
-    env: import.meta.env.VITE_ENV || 'development',
-    enableCSP: import.meta.env.VITE_ENABLE_CSP === 'true',
-    rateLimitWindow: parseInt(import.meta.env.VITE_RATE_LIMIT_WINDOW || '900'),
-    rateLimitMax: parseInt(import.meta.env.VITE_RATE_LIMIT_MAX_REQUESTS || '100')
-  }
+    env: import.meta.env.VITE_ENV || "development",
+    enableCSP: import.meta.env.VITE_ENABLE_CSP === "true",
+    rateLimitWindow: parseInt(import.meta.env.VITE_RATE_LIMIT_WINDOW || "900"),
+    rateLimitMax: parseInt(
+      import.meta.env.VITE_RATE_LIMIT_MAX_REQUESTS || "100",
+    ),
+  },
 };
 
 export const isFirebaseConfigured = () => {
-  return env.firebase.apiKey && 
-         env.firebase.projectId && 
-         env.firebase.authDomain;
+  return (
+    env.firebase.apiKey && env.firebase.projectId && env.firebase.authDomain
+  );
 };
 ```
 
@@ -321,6 +324,7 @@ WEBHOOK_SECRET_CASHFREE=your-webhook-secret
 ### Production (Firebase Console)
 
 Set these in Firebase Console > Functions > Configure:
+
 - `FIREBASE_PROJECT_ID`
 - `FIREBASE_CLIENT_EMAIL`
 - `FIREBASE_PRIVATE_KEY`

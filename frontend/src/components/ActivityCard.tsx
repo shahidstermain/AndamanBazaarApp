@@ -7,7 +7,8 @@ type ActivityCardProps = {
 };
 
 export const ActivityCard = ({ activity, onRequestBooking }: ActivityCardProps) => {
-  const image = activity.images[0] ?? "https://images.unsplash.com/photo-1507525428034-b723cf961d3e";
+  const image =
+    activity.images[0] ?? "https://images.unsplash.com/photo-1507525428034-b723cf961d3e";
 
   return (
     <article className="overflow-hidden rounded-xl border bg-white shadow-sm">

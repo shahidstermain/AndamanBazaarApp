@@ -5,6 +5,7 @@
 Based on the comprehensive audit, **Supabase is already the primary backend** for AndamanBazaar. Firebase is only used for static hosting and basic analytics. This migration design focuses on **consolidating all remaining Firebase dependencies** and **optimizing the Supabase architecture** for long-term production stability.
 
 ### Current State Analysis
+
 - **95% already on Supabase**: Auth, Database, Storage, Edge Functions, Real-time
 - **5% Firebase dependency**: Static hosting, Google Analytics, site verification
 - **Migration Complexity**: **LOW** - primarily configuration changes
@@ -15,6 +16,7 @@ Based on the comprehensive audit, **Supabase is already the primary backend** fo
 ## 📋 Migration Scope
 
 ### ✅ **ALREADY ON SUPABASE (No Changes Needed)**
+
 - **Authentication**: JWT-based auth with RLS policies
 - **Database**: PostgreSQL with comprehensive schema
 - **Storage**: File storage for images and invoices
@@ -23,6 +25,7 @@ Based on the comprehensive audit, **Supabase is already the primary backend** fo
 - **Security**: Comprehensive RLS and audit logging
 
 ### 🔄 **FIREBASE → SUPABASE MIGRATION REQUIRED**
+
 - **Static Hosting**: Firebase Hosting → Custom domain with Supabase CDN
 - **Analytics**: Firebase Analytics → Supabase-based analytics
 - **Site Verification**: Google verification → Supabase-hosted verification
@@ -33,6 +36,7 @@ Based on the comprehensive audit, **Supabase is already the primary backend** fo
 ## 🏗️ Target Architecture
 
 ### **Final Architecture: 100% Supabase**
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    ANDAMANBAZAAR.IN                        │
@@ -56,26 +60,32 @@ Based on the comprehensive audit, **Supabase is already the primary backend** fo
 ## 🔐 Authentication Migration Design
 
 ### **Current State**: ✅ **ALREADY SUPABASE NATIVE**
+
 ```typescript
 // src/lib/auth.ts - NO CHANGES NEEDED
 export const getCurrentUserId = async (): Promise<string | null> => {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   return user?.id || null;
 };
 
 export const isAuthenticated = async (): Promise<boolean> => {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   return !!session;
 };
 ```
 
 ### **Auth Flow Enhancements**
+
 ```sql
 -- New: Enhanced auth configuration
 -- File: supabase/migrations/018_auth_enhancements.sql
 
 -- 1. Add user metadata fields
-ALTER TABLE auth.users 
+ALTER TABLE auth.users
 ADD COLUMN IF NOT EXISTS phone_verified BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS location_verified BOOLEAN DEFAULT FALSE,
 ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMP WITH TIME ZONE;
@@ -114,9 +124,10 @@ CREATE INDEX IF NOT EXISTS idx_user_sessions_expires ON user_sessions(expires_at
 ```
 
 ### **Auth Callback Updates**
+
 ```typescript
 // src/lib/auth-enriched.ts - NEW FILE
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
 export interface AuthUser {
   id: string;
@@ -131,36 +142,38 @@ export interface AuthUser {
 export class AuthManager {
   // Enhanced user session tracking
   static async trackSession(userAgent?: string, ipAddress?: string) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
 
     // Clean up expired sessions
     await supabase
-      .from('user_sessions')
+      .from("user_sessions")
       .delete()
-      .lt('expires_at', new Date().toISOString());
+      .lt("expires_at", new Date().toISOString());
 
     // Create new session record
     const sessionToken = crypto.randomUUID();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
 
-    await supabase
-      .from('user_sessions')
-      .insert({
-        user_id: user.id,
-        session_token: sessionToken,
-        ip_address: ipAddress,
-        user_agent: userAgent,
-        expires_at: expiresAt.toISOString()
-      });
+    await supabase.from("user_sessions").insert({
+      user_id: user.id,
+      session_token: sessionToken,
+      ip_address: ipAddress,
+      user_agent: userAgent,
+      expires_at: expiresAt.toISOString(),
+    });
 
     return sessionToken;
   }
 
   // Enhanced user profile sync
   static async syncUserProfile(profile: Partial<AuthUser>) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
 
     // Update auth.users metadata
@@ -168,19 +181,19 @@ export class AuthManager {
       data: {
         phone_verified: profile.phone_verified,
         location_verified: profile.location_verified,
-        last_login_at: new Date().toISOString()
-      }
+        last_login_at: new Date().toISOString(),
+      },
     });
 
     // Update profiles table
     await supabase
-      .from('profiles')
+      .from("profiles")
       .update({
         phone: profile.phone,
         name: profile.name,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       })
-      .eq('id', user.id);
+      .eq("id", user.id);
   }
 }
 ```
@@ -190,9 +203,11 @@ export class AuthManager {
 ## 🗄️ Database Migration Design
 
 ### **Current Schema**: ✅ **PRODUCTION READY**
+
 All core tables are properly designed with RLS policies. Only minimal enhancements needed.
 
 ### **Schema Enhancements**
+
 ```sql
 -- File: supabase/migrations/019_analytics_enhancements.sql
 
@@ -264,7 +279,7 @@ RETURNS TABLE(
 ) AS $$
 BEGIN
   RETURN QUERY
-  SELECT 
+  SELECT
     COUNT(DISTINCT pv.id) as page_views,
     COUNT(DISTINCT pv.user_id) as unique_users,
     AVG(EXTRACT(EPOCH FROM (MAX(pv.created_at) - MIN(pv.created_at)))) as avg_session_duration
@@ -275,17 +290,18 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
 ### **RLS Policy Enhancements**
+
 ```sql
 -- File: supabase/migrations/020_rls_enhancements.sql
 
 -- 1. Enhanced security policies for listings
 CREATE POLICY "Users can view active listings" ON listings
   FOR SELECT USING (
-    status = 'active' OR 
+    status = 'active' OR
     auth.uid() = user_id OR
     EXISTS (
-      SELECT 1 FROM user_roles ur 
-      WHERE ur.user_id = auth.uid() 
+      SELECT 1 FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
       AND ur.role = 'admin'
     )
   );
@@ -300,11 +316,11 @@ CREATE POLICY "Users can view own boosts" ON listing_boosts
 -- 3. Enhanced chat policies
 CREATE POLICY "Users can participate in own chats" ON chats
   FOR ALL USING (
-    seller_id = auth.uid() OR 
+    seller_id = auth.uid() OR
     buyer_id = auth.uid() OR
     EXISTS (
-      SELECT 1 FROM user_roles ur 
-      WHERE ur.user_id = auth.uid() 
+      SELECT 1 FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
       AND ur.role = 'admin'
     )
   );
@@ -330,7 +346,7 @@ BEGIN
   WHERE user_id = check_rate_limit.user_id
     AND action_type = check_rate_limit.action_type
     AND created_at > NOW() - INTERVAL '1 minute' * window_minutes;
-  
+
   RETURN request_count < max_requests;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -341,14 +357,16 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ## 📁 Storage Migration Design
 
 ### **Current State**: ✅ **ALREADY SUPABASE NATIVE**
+
 ```typescript
 // Current storage usage - NO CHANGES NEEDED
 const { data, error } = await supabase.storage
-  .from('listing-images')
+  .from("listing-images")
   .upload(filePath, file);
 ```
 
 ### **Storage Enhancements**
+
 ```sql
 -- File: supabase/migrations/021_storage_enhancements.sql
 
@@ -402,25 +420,26 @@ BEGIN
   WHERE created_at < NOW() - INTERVAL '30 days'
     AND is_public = FALSE
     AND user_id NOT IN (
-      SELECT DISTINCT user_id FROM listings 
+      SELECT DISTINCT user_id FROM listings
       WHERE created_at > NOW() - INTERVAL '30 days'
     );
-  
+
   GET DIAGNOSTICS deleted_count = ROW_COUNT;
-  
+
   -- Log cleanup
   INSERT INTO audit_logs (event_type, details)
   VALUES ('file_cleanup', JSON_BUILD_OBJECT('deleted_count', deleted_count));
-  
+
   RETURN deleted_count;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
 ### **Storage Service Enhancements**
+
 ```typescript
 // src/lib/storage-enhanced.ts - NEW FILE
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
 export class StorageManager {
   // Enhanced file upload with tracking
@@ -430,49 +449,47 @@ export class StorageManager {
     options: {
       isPublic?: boolean;
       metadata?: Record<string, any>;
-    } = {}
+    } = {},
   ) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User not authenticated');
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error("User not authenticated");
 
     const filePath = `${user.id}/${Date.now()}-${file.name}`;
-    
+
     // Upload file
     const { data, error } = await supabase.storage
       .from(bucket)
       .upload(filePath, file, {
-        cacheControl: '3600',
+        cacheControl: "3600",
         upsert: false,
-        ...options
+        ...options,
       });
 
     if (error) throw error;
 
     // Track upload
-    await supabase
-      .from('file_uploads')
-      .insert({
-        user_id: user.id,
-        file_name: file.name,
-        file_path: filePath,
-        file_size: file.size,
-        mime_type: file.type,
-        bucket_name: bucket,
-        is_public: options.isPublic || false
-      });
+    await supabase.from("file_uploads").insert({
+      user_id: user.id,
+      file_name: file.name,
+      file_path: filePath,
+      file_size: file.size,
+      mime_type: file.type,
+      bucket_name: bucket,
+      is_public: options.isPublic || false,
+    });
 
     return data;
   }
 
   // Get public URL with tracking
   static async getPublicUrl(bucket: string, path: string) {
-    const { data } = supabase.storage
-      .from(bucket)
-      .getPublicUrl(path);
+    const { data } = supabase.storage.from(bucket).getPublicUrl(path);
 
     // Update access tracking
-    await supabase.rpc('increment_file_access', { 
-      file_path_param: path 
+    await supabase.rpc("increment_file_access", {
+      file_path_param: path,
     });
 
     return data.publicUrl;
@@ -480,22 +497,22 @@ export class StorageManager {
 
   // Delete file with cleanup
   static async deleteFile(bucket: string, path: string) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('User not authenticated');
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) throw new Error("User not authenticated");
 
     // Delete from storage
-    const { error } = await supabase.storage
-      .from(bucket)
-      .remove([path]);
+    const { error } = await supabase.storage.from(bucket).remove([path]);
 
     if (error) throw error;
 
     // Remove from tracking
     await supabase
-      .from('file_uploads')
+      .from("file_uploads")
       .delete()
-      .eq('file_path', path)
-      .eq('user_id', user.id);
+      .eq("file_path", path)
+      .eq("user_id", user.id);
   }
 }
 ```
@@ -505,20 +522,26 @@ export class StorageManager {
 ## ⚡ Real-time Migration Design
 
 ### **Current State**: ✅ **ALREADY SUPABASE NATIVE**
+
 ```typescript
 // Current real-time usage - NO CHANGES NEEDED
 const subscription = supabase
   .channel(`chat:${chatId}`)
-  .on('postgres_changes', {
-    event: 'INSERT',
-    schema: 'public',
-    table: 'messages',
-    filter: `chat_id=eq.${chatId}`
-  }, handleNewMessage)
+  .on(
+    "postgres_changes",
+    {
+      event: "INSERT",
+      schema: "public",
+      table: "messages",
+      filter: `chat_id=eq.${chatId}`,
+    },
+    handleNewMessage,
+  )
   .subscribe();
 ```
 
 ### **Real-time Enhancements**
+
 ```sql
 -- File: supabase/migrations/022_realtime_enhancements.sql
 
@@ -548,7 +571,7 @@ RETURNS TABLE(
 ) AS $$
 BEGIN
   RETURN QUERY
-  SELECT 
+  SELECT
     (SELECT COUNT(DISTINCT user_id) FROM user_sessions WHERE expires_at > NOW()),
     (SELECT COUNT(*) FROM listings WHERE created_at > NOW() - INTERVAL '1 hour'),
     (SELECT COUNT(*) FROM chats WHERE updated_at > NOW() - INTERVAL '1 hour');
@@ -557,48 +580,60 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
 ### **Enhanced Real-time Service**
+
 ```typescript
 // src/lib/realtime-enhanced.ts - NEW FILE
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
 export class RealtimeManager {
   private static subscriptions = new Map<string, any>();
 
   // Enhanced chat subscription
-  static subscribeToChat(chatId: string, callbacks: {
-    onMessage: (message: any) => void;
-    onTyping: (user: string) => void;
-    onUserStatus: (userId: string, status: string) => void;
-  }) {
+  static subscribeToChat(
+    chatId: string,
+    callbacks: {
+      onMessage: (message: any) => void;
+      onTyping: (user: string) => void;
+      onUserStatus: (userId: string, status: string) => void;
+    },
+  ) {
     // Unsubscribe existing
     this.unsubscribeFromChat(chatId);
 
     // Message subscription
     const messageSubscription = supabase
       .channel(`chat:${chatId}:messages`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `chat_id=eq.${chatId}`
-      }, (payload) => callbacks.onMessage(payload.new))
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'messages',
-        filter: `chat_id=eq.${chatId}`
-      }, (payload) => {
-        if (payload.new.read_at) {
-          callbacks.onUserStatus(payload.new.sender_id, 'read');
-        }
-      })
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `chat_id=eq.${chatId}`,
+        },
+        (payload) => callbacks.onMessage(payload.new),
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `chat_id=eq.${chatId}`,
+        },
+        (payload) => {
+          if (payload.new.read_at) {
+            callbacks.onUserStatus(payload.new.sender_id, "read");
+          }
+        },
+      )
       .subscribe();
 
     // Typing subscription
     const typingSubscription = supabase
       .channel(`chat:${chatId}:typing`)
-      .on('broadcast', { event: 'typing' }, (payload) => 
-        callbacks.onTyping(payload.payload.user)
+      .on("broadcast", { event: "typing" }, (payload) =>
+        callbacks.onTyping(payload.payload.user),
       )
       .subscribe();
 
@@ -624,28 +659,36 @@ export class RealtimeManager {
 
   // Broadcast typing indicator
   static sendTypingIndicator(chatId: string, isTyping: boolean) {
-    supabase
-      .channel(`chat:${chatId}:typing`)
-      .send({
-        type: 'broadcast',
-        event: 'typing',
-        payload: { user: supabase.auth.getUser(), typing: isTyping }
-      });
+    supabase.channel(`chat:${chatId}:typing`).send({
+      type: "broadcast",
+      event: "typing",
+      payload: { user: supabase.auth.getUser(), typing: isTyping },
+    });
   }
 
   // Subscribe to user status changes
-  static subscribeToUserStatus(userId: string, callback: (status: string) => void) {
+  static subscribeToUserStatus(
+    userId: string,
+    callback: (status: string) => void,
+  ) {
     const subscription = supabase
       .channel(`user:${userId}:status`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'user_sessions',
-        filter: `user_id=eq.${userId}`
-      }, (payload) => {
-        const status = payload.new.last_accessed_at > payload.old.last_accessed_at ? 'online' : 'offline';
-        callback(status);
-      })
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "user_sessions",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const status =
+            payload.new.last_accessed_at > payload.old.last_accessed_at
+              ? "online"
+              : "offline";
+          callback(status);
+        },
+      )
       .subscribe();
 
     this.subscriptions.set(`user:${userId}:status`, subscription);
@@ -658,71 +701,73 @@ export class RealtimeManager {
 ## 🔧 Edge Functions Migration Design
 
 ### **Current State**: ✅ **ALREADY SUPABASE NATIVE**
+
 All Edge Functions are already implemented and production-ready.
 
 ### **Edge Function Enhancements**
+
 ```typescript
 // supabase/functions/analytics-collector/index.ts - NEW FUNCTION
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
 Deno.serve(async (req) => {
   try {
     const { type, data } = await req.json();
-    const authHeader = req.headers.get('Authorization');
-    
+    const authHeader = req.headers.get("Authorization");
+
     // Verify user if authenticated
     let userId = null;
     if (authHeader) {
-      const { data: { user } } = await supabase.auth.getUser(
-        authHeader.replace('Bearer ', '')
-      );
+      const {
+        data: { user },
+      } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
       userId = user?.id;
     }
 
     switch (type) {
-      case 'page_view':
-        await supabase.from('page_views').insert({
+      case "page_view":
+        await supabase.from("page_views").insert({
           user_id: userId,
           session_id: data.sessionId,
           page_path: data.pagePath,
           referrer: data.referrer,
-          user_agent: req.headers.get('User-Agent'),
-          ip_address: req.headers.get('X-Forwarded-For')
+          user_agent: req.headers.get("User-Agent"),
+          ip_address: req.headers.get("X-Forwarded-For"),
         });
         break;
 
-      case 'user_event':
-        await supabase.from('user_events').insert({
+      case "user_event":
+        await supabase.from("user_events").insert({
           user_id: userId,
           session_id: data.sessionId,
           event_type: data.eventType,
-          event_data: data.eventData
+          event_data: data.eventData,
         });
         break;
 
-      case 'performance_metric':
-        await supabase.from('performance_metrics').insert({
+      case "performance_metric":
+        await supabase.from("performance_metrics").insert({
           metric_type: data.metricType,
           metric_value: data.metricValue,
           metric_unit: data.metricUnit,
           page_path: data.pagePath,
-          user_id: userId
+          user_id: userId,
         });
         break;
 
       default:
-        return new Response('Unknown event type', { status: 400 });
+        return new Response("Unknown event type", { status: 400 });
     }
 
-    return new Response('Event recorded', { status: 200 });
+    return new Response("Event recorded", { status: 200 });
   } catch (error) {
-    console.error('Analytics collection error:', error);
-    return new Response('Internal server error', { status: 500 });
+    console.error("Analytics collection error:", error);
+    return new Response("Internal server error", { status: 500 });
   }
 });
 ```
@@ -732,9 +777,10 @@ Deno.serve(async (req) => {
 ## 📊 Analytics Migration Design
 
 ### **Firebase Analytics → Supabase Analytics**
+
 ```typescript
 // src/lib/analytics-supabase.ts - NEW FILE
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
 export class SupabaseAnalytics {
   private static sessionId: string | null = null;
@@ -742,7 +788,7 @@ export class SupabaseAnalytics {
   // Initialize analytics session
   static async init() {
     this.sessionId = crypto.randomUUID();
-    
+
     // Track initial page view
     this.trackPageView(window.location.pathname);
   }
@@ -752,18 +798,18 @@ export class SupabaseAnalytics {
     if (!this.sessionId) await this.init();
 
     try {
-      await supabase.functions.invoke('analytics-collector', {
+      await supabase.functions.invoke("analytics-collector", {
         body: {
-          type: 'page_view',
+          type: "page_view",
           data: {
             sessionId: this.sessionId,
             pagePath: path,
-            referrer: referrer || document.referrer
-          }
-        }
+            referrer: referrer || document.referrer,
+          },
+        },
       });
     } catch (error) {
-      console.warn('Analytics tracking failed:', error);
+      console.warn("Analytics tracking failed:", error);
     }
   }
 
@@ -772,71 +818,86 @@ export class SupabaseAnalytics {
     if (!this.sessionId) await this.init();
 
     try {
-      await supabase.functions.invoke('analytics-collector', {
+      await supabase.functions.invoke("analytics-collector", {
         body: {
-          type: 'user_event',
+          type: "user_event",
           data: {
             sessionId: this.sessionId,
             eventType: eventName,
-            eventData: parameters || {}
-          }
-        }
+            eventData: parameters || {},
+          },
+        },
       });
     } catch (error) {
-      console.warn('Event tracking failed:', error);
+      console.warn("Event tracking failed:", error);
     }
   }
 
   // Track performance metrics
-  static async trackPerformance(metricType: string, value: number, unit: string = 'ms') {
+  static async trackPerformance(
+    metricType: string,
+    value: number,
+    unit: string = "ms",
+  ) {
     try {
-      await supabase.functions.invoke('analytics-collector', {
+      await supabase.functions.invoke("analytics-collector", {
         body: {
-          type: 'performance_metric',
+          type: "performance_metric",
           data: {
             metricType,
             metricValue: value,
             metricUnit: unit,
-            pagePath: window.location.pathname
-          }
-        }
+            pagePath: window.location.pathname,
+          },
+        },
       });
     } catch (error) {
-      console.warn('Performance tracking failed:', error);
+      console.warn("Performance tracking failed:", error);
     }
   }
 
   // Get analytics data (replacing Firebase Analytics queries)
-  static async getAnalytics(timeRange: 'day' | 'week' | 'month' = 'day') {
+  static async getAnalytics(timeRange: "day" | "week" | "month" = "day") {
     const { data, error } = await supabase
-      .from('page_views')
-      .select('created_at, user_id, page_path')
-      .gte('created_at', this.getDateRange(timeRange));
+      .from("page_views")
+      .select("created_at, user_id, page_path")
+      .gte("created_at", this.getDateRange(timeRange));
 
     if (error) throw error;
 
     return {
       pageViews: data?.length || 0,
-      uniqueUsers: new Set(data?.map(v => v.user_id)).size,
-      topPages: this.getTopPages(data || [])
+      uniqueUsers: new Set(data?.map((v) => v.user_id)).size,
+      topPages: this.getTopPages(data || []),
     };
   }
 
   private static getDateRange(range: string): string {
     const date = new Date();
     switch (range) {
-      case 'day': date.setDate(date.getDate() - 1); break;
-      case 'week': date.setDate(date.getDate() - 7); break;
-      case 'month': date.setMonth(date.getMonth() - 1); break;
+      case "day":
+        date.setDate(date.getDate() - 1);
+        break;
+      case "week":
+        date.setDate(date.getDate() - 7);
+        break;
+      case "month":
+        date.setMonth(date.getMonth() - 1);
+        break;
     }
     return date.toISOString();
   }
 
-  private static getTopPages(pageViews: any[]): Array<{ page: string; views: number }> {
-    const pageCounts = pageViews.reduce((acc, pv) => {
-      acc[pv.page_path] = (acc[pv.page_path] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+  private static getTopPages(
+    pageViews: any[],
+  ): Array<{ page: string; views: number }> {
+    const pageCounts = pageViews.reduce(
+      (acc, pv) => {
+        acc[pv.page_path] = (acc[pv.page_path] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return Object.entries(pageCounts)
       .map(([page, views]) => ({ page, views }))
@@ -851,6 +912,7 @@ export class SupabaseAnalytics {
 ## 🔄 Migration Implementation Plan
 
 ### **Phase 1: Preparation (Week 1)**
+
 1. **Database Schema Updates**
    - Apply migrations 018-022
    - Test RLS policies
@@ -867,6 +929,7 @@ export class SupabaseAnalytics {
    - Test file management
 
 ### **Phase 2: Implementation (Week 2)**
+
 1. **Authentication Enhancements**
    - Deploy auth tracking
    - Update login flows
@@ -883,6 +946,7 @@ export class SupabaseAnalytics {
    - Test all endpoints
 
 ### **Phase 3: Migration (Week 3)**
+
 1. **DNS Configuration**
    - Update DNS to point to Supabase
    - Configure SSL certificates
@@ -899,6 +963,7 @@ export class SupabaseAnalytics {
    - Security verification
 
 ### **Phase 4: Cleanup (Week 4)**
+
 1. **Firebase Removal**
    - Delete Firebase project
    - Remove Firebase dependencies
@@ -914,21 +979,25 @@ export class SupabaseAnalytics {
 ## 📈 Expected Benefits
 
 ### **Performance Improvements**
+
 - **CDN Performance**: 40-60% faster load times with Supabase Edge Network
 - **Database Performance**: Optimized queries with enhanced indexes
 - **Real-time Speed**: Improved WebSocket performance
 
 ### **Operational Benefits**
+
 - **Unified Platform**: Single vendor for all backend services
 - **Simplified Monitoring**: One dashboard for all metrics
 - **Reduced Complexity**: No multi-platform coordination
 
 ### **Security Benefits**
+
 - **Enhanced RLS**: Improved data access policies
 - **Better Audit Trail**: Comprehensive logging
 - **Simplified Compliance**: Single security model
 
 ### **Cost Benefits**
+
 - **Reduced Vendor Costs**: Single platform pricing
 - **Better Resource Utilization**: Optimized resource usage
 - **Simplified Billing**: Single invoice
@@ -938,18 +1007,21 @@ export class SupabaseAnalytics {
 ## 🎯 Success Metrics
 
 ### **Technical Metrics**
+
 - ✅ Zero downtime during migration
 - ✅ All tests passing (315+)
 - ✅ Performance improvement >40%
 - ✅ 99.9% uptime maintained
 
 ### **Business Metrics**
+
 - ✅ No revenue loss
 - ✅ User experience maintained
 - ✅ SEO rankings preserved
 - ✅ Support tickets <5% increase
 
 ### **Operational Metrics**
+
 - ✅ Deployment time <10 minutes
 - ✅ Monitoring coverage 100%
 - ✅ Documentation complete
@@ -960,16 +1032,19 @@ export class SupabaseAnalytics {
 ## 🔒 Security Considerations
 
 ### **Data Protection**
+
 - All data remains in Supabase (no migration needed)
 - Enhanced RLS policies provide better security
 - Comprehensive audit logging maintained
 
 ### **Access Control**
+
 - User authentication unchanged
 - Enhanced session tracking
 - Improved rate limiting
 
 ### **Compliance**
+
 - GDPR compliant data handling
 - Enhanced privacy controls
 - Better data residency

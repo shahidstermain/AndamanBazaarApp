@@ -1,5 +1,10 @@
-import { getRemoteConfig, fetchAndActivate, getValue, RemoteConfig } from 'firebase/remote-config';
-import app from './firebase';
+import {
+  getRemoteConfig,
+  fetchAndActivate,
+  getValue,
+  RemoteConfig,
+} from "firebase/remote-config";
+import app from "./firebase";
 
 // ============================================================
 // Firebase Remote Config — Feature flags & pricing overrides
@@ -21,8 +26,8 @@ const DEFAULTS: Record<string, string | number | boolean> = {
   enable_location_verification: true,
   enable_ai_moderation: true,
   maintenance_mode: false,
-  maintenance_message: '',
-  app_min_version: '1.0.0',
+  maintenance_message: "",
+  app_min_version: "1.0.0",
 
   featured_listing_limit: 6,
   chat_message_char_limit: 1000,
@@ -52,7 +57,7 @@ export const initRemoteConfig = async (): Promise<void> => {
   try {
     await fetchAndActivate(getRC());
   } catch (err) {
-    console.warn('Remote Config fetch failed (using defaults):', err);
+    console.warn("Remote Config fetch failed (using defaults):", err);
   }
 };
 
@@ -67,19 +72,19 @@ export const rcNumber = (key: string): number =>
 
 /** Typed helpers for the app's known config keys */
 export const remoteConfig = {
-  isMaintenanceMode: () => rcBool('maintenance_mode'),
-  maintenanceMessage: () => rcString('maintenance_message'),
+  isMaintenanceMode: () => rcBool("maintenance_mode"),
+  maintenanceMessage: () => rcString("maintenance_message"),
 
-  isBoostEnabled: () => rcBool('enable_boost_payments'),
-  isLocationVerificationEnabled: () => rcBool('enable_location_verification'),
-  isAIModerationEnabled: () => rcBool('enable_ai_moderation'),
+  isBoostEnabled: () => rcBool("enable_boost_payments"),
+  isLocationVerificationEnabled: () => rcBool("enable_location_verification"),
+  isAIModerationEnabled: () => rcBool("enable_ai_moderation"),
 
-  boostSparkPrice: () => rcNumber('boost_spark_price_inr'),
-  boostBoostPrice: () => rcNumber('boost_boost_price_inr'),
-  boostPowerPrice: () => rcNumber('boost_power_price_inr'),
+  boostSparkPrice: () => rcNumber("boost_spark_price_inr"),
+  boostBoostPrice: () => rcNumber("boost_boost_price_inr"),
+  boostPowerPrice: () => rcNumber("boost_power_price_inr"),
 
-  maxListingImages: () => rcNumber('max_listing_images'),
-  maxListingsPerUser: () => rcNumber('max_listings_per_user'),
-  featuredListingLimit: () => rcNumber('featured_listing_limit'),
-  chatMessageCharLimit: () => rcNumber('chat_message_char_limit'),
+  maxListingImages: () => rcNumber("max_listing_images"),
+  maxListingsPerUser: () => rcNumber("max_listings_per_user"),
+  featuredListingLimit: () => rcNumber("featured_listing_limit"),
+  chatMessageCharLimit: () => rcNumber("chat_message_char_limit"),
 };

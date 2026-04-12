@@ -1,9 +1,8 @@
-
-import React, { useState } from 'react';
-import { getCurrentUserId } from '../lib/auth';
-import { db } from '../lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { useToast } from './Toast';
+import React, { useState } from "react";
+import { getCurrentUserId } from "../lib/auth";
+import { db } from "../lib/firebase";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useToast } from "./Toast";
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -20,7 +19,7 @@ const reasons = [
   "Duplicate Listing",
   "Sold / Unavailable",
   "Wrong Category",
-  "Other"
+  "Other",
 ];
 
 export const ReportModal: React.FC<ReportModalProps> = ({
@@ -31,8 +30,8 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   reportedUserId,
   reportedItemId,
 }) => {
-  const [selectedReason, setSelectedReason] = useState('');
-  const [details, setDetails] = useState('');
+  const [selectedReason, setSelectedReason] = useState("");
+  const [details, setDetails] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const { showToast } = useToast();
@@ -46,21 +45,21 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     try {
       const userId = await getCurrentUserId();
 
-      await addDoc(collection(db, 'reports'), {
+      await addDoc(collection(db, "reports"), {
         reporterId: userId || null,
         listingId: reportedItemId || listingId,
         reportedUserId: reportedUserId || null,
         reason: selectedReason,
         details,
-        status: 'pending',
+        status: "pending",
         createdAt: serverTimestamp(),
       });
       setIsSuccess(true);
       setTimeout(() => {
         onClose();
         setIsSuccess(false);
-        setSelectedReason('');
-        setDetails('');
+        setSelectedReason("");
+        setDetails("");
       }, 2000);
     } catch (err) {
       showToast("Error submitting report. Please try again.", "error");
@@ -71,33 +70,50 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose}></div>
+      <div
+        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+        onClick={onClose}
+      ></div>
 
       <div className="bg-white/95 backdrop-blur-xl p-8 md:p-10 rounded-[40px] shadow-2xl max-w-lg w-full relative overflow-hidden border border-white animate-in zoom-in-95 duration-300">
         {isSuccess ? (
           <div className="text-center py-10 space-y-6">
-            <div className="w-20 h-20 bg-teal-50 text-teal-600 rounded-3xl flex items-center justify-center text-4xl mx-auto shadow-sm">✓</div>
-            <h2 className="text-2xl font-bold text-slate-900">Report Submitted</h2>
-            <p className="text-slate-500 font-medium">Thank you for keeping the island community safe. We will review this listing shortly.</p>
+            <div className="w-20 h-20 bg-teal-50 text-teal-600 rounded-3xl flex items-center justify-center text-4xl mx-auto shadow-sm">
+              ✓
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900">
+              Report Submitted
+            </h2>
+            <p className="text-slate-500 font-medium">
+              Thank you for keeping the island community safe. We will review
+              this listing shortly.
+            </p>
           </div>
         ) : (
           <div className="space-y-8">
             <div className="space-y-2">
-              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Report Listing</h2>
-              <p className="text-sm font-medium text-slate-400 truncate">Flagging: {listingTitle}</p>
+              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+                Report Listing
+              </h2>
+              <p className="text-sm font-medium text-slate-400 truncate">
+                Flagging: {listingTitle}
+              </p>
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Reason for reporting</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                Reason for reporting
+              </label>
               <div className="grid grid-cols-1 gap-2">
                 {reasons.map((reason) => (
                   <button
                     key={reason}
                     onClick={() => setSelectedReason(reason)}
-                    className={`text-left p-4 rounded-2xl border transition-all text-sm font-semibold ${selectedReason === reason
-                        ? 'bg-slate-900 text-white border-slate-900 shadow-lg'
-                        : 'bg-slate-50 text-slate-600 border-slate-100 hover:bg-slate-100'
-                      }`}
+                    className={`text-left p-4 rounded-2xl border transition-all text-sm font-semibold ${
+                      selectedReason === reason
+                        ? "bg-slate-900 text-white border-slate-900 shadow-lg"
+                        : "bg-slate-50 text-slate-600 border-slate-100 hover:bg-slate-100"
+                    }`}
                   >
                     {reason}
                   </button>
@@ -106,7 +122,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Additional details (Optional)</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">
+                Additional details (Optional)
+              </label>
               <textarea
                 value={details}
                 onChange={(e) => setDetails(e.target.value)}
@@ -126,10 +144,13 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               <button
                 onClick={handleSubmit}
                 disabled={!selectedReason || isSubmitting}
-                className={`flex-[2] py-4 rounded-2xl font-bold text-white shadow-xl transition-all ${selectedReason && !isSubmitting ? 'bg-slate-900 hover:scale-[1.02] active:scale-95' : 'bg-slate-200 cursor-not-allowed'
-                  }`}
+                className={`flex-[2] py-4 rounded-2xl font-bold text-white shadow-xl transition-all ${
+                  selectedReason && !isSubmitting
+                    ? "bg-slate-900 hover:scale-[1.02] active:scale-95"
+                    : "bg-slate-200 cursor-not-allowed"
+                }`}
               >
-                {isSubmitting ? 'Submitting...' : 'Submit Report'}
+                {isSubmitting ? "Submitting..." : "Submit Report"}
               </button>
             </div>
           </div>

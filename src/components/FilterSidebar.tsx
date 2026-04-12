@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
-import { SlidersHorizontal, MapPin, Clock, Tag, IndianRupee } from 'lucide-react';
+import React, { useState } from "react";
+import {
+  SlidersHorizontal,
+  MapPin,
+  Clock,
+  Tag,
+  IndianRupee,
+} from "lucide-react";
 
-export type DurationOption = '< 2 hours' | 'Half Day' | 'Full Day';
+export type DurationOption = "< 2 hours" | "Half Day" | "Full Day";
 
 export interface FilterState {
   location: string;
   category: string;
-  minPrice: number | '';
-  maxPrice: number | '';
+  minPrice: number | "";
+  maxPrice: number | "";
   durations: DurationOption[];
 }
 
@@ -17,19 +23,40 @@ interface FilterSidebarProps {
   className?: string;
 }
 
-const LOCATIONS = ['Port Blair', 'Havelock', 'Neil Island', 'Baratang', 'Diglipur', 'All Locations'];
-const CATEGORIES = ['All Categories', 'Water Sports', 'History', 'Trekking', 'Leisure', 'Experiences'];
-const DURATIONS: DurationOption[] = ['< 2 hours', 'Half Day', 'Full Day'];
+const LOCATIONS = [
+  "Port Blair",
+  "Havelock",
+  "Neil Island",
+  "Baratang",
+  "Diglipur",
+  "All Locations",
+];
+const CATEGORIES = [
+  "All Categories",
+  "Water Sports",
+  "History",
+  "Trekking",
+  "Leisure",
+  "Experiences",
+];
+const DURATIONS: DurationOption[] = ["< 2 hours", "Half Day", "Full Day"];
 
-export const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onChange, className = '' }) => {
-  const [localPriceParams, setLocalPriceParams] = useState({ min: filters.minPrice, max: filters.maxPrice });
+export const FilterSidebar: React.FC<FilterSidebarProps> = ({
+  filters,
+  onChange,
+  className = "",
+}) => {
+  const [localPriceParams, setLocalPriceParams] = useState({
+    min: filters.minPrice,
+    max: filters.maxPrice,
+  });
 
   const handleLocationChange = (loc: string) => {
-    onChange({ ...filters, location: loc === 'All Locations' ? '' : loc });
+    onChange({ ...filters, location: loc === "All Locations" ? "" : loc });
   };
 
   const handleCategoryChange = (cat: string) => {
-    onChange({ ...filters, category: cat === 'All Categories' ? '' : cat });
+    onChange({ ...filters, category: cat === "All Categories" ? "" : cat });
   };
 
   const handleDurationToggle = (dur: DurationOption) => {
@@ -40,28 +67,36 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onChange,
   };
 
   const applyPrice = () => {
-    onChange({ ...filters, minPrice: localPriceParams.min, maxPrice: localPriceParams.max });
+    onChange({
+      ...filters,
+      minPrice: localPriceParams.min,
+      maxPrice: localPriceParams.max,
+    });
   };
 
   const clearAll = () => {
     onChange({
-      location: '',
-      category: '',
-      minPrice: '',
-      maxPrice: '',
+      location: "",
+      category: "",
+      minPrice: "",
+      maxPrice: "",
       durations: [],
     });
-    setLocalPriceParams({ min: '', max: '' });
+    setLocalPriceParams({ min: "", max: "" });
   };
 
   return (
-    <div className={`bg-white rounded-2xl border border-warm-200 shadow-sm p-5 space-y-8 ${className}`}>
+    <div
+      className={`bg-white rounded-2xl border border-warm-200 shadow-sm p-5 space-y-8 ${className}`}
+    >
       <div className="flex items-center justify-between pb-4 border-b border-warm-100">
         <div className="flex items-center gap-2">
           <SlidersHorizontal size={18} className="text-teal-600" />
-          <h2 className="font-heading font-black text-midnight-800 text-lg">Filters</h2>
+          <h2 className="font-heading font-black text-midnight-800 text-lg">
+            Filters
+          </h2>
         </div>
-        <button 
+        <button
           onClick={clearAll}
           className="text-xs font-bold text-teal-600 hover:text-teal-700 transition"
         >
@@ -77,13 +112,26 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onChange,
         </div>
         <div className="space-y-2">
           {LOCATIONS.map((loc) => {
-            const isChecked = filters.location === loc || (loc === 'All Locations' && !filters.location);
+            const isChecked =
+              filters.location === loc ||
+              (loc === "All Locations" && !filters.location);
             return (
-              <label key={loc} className="flex items-center gap-3 cursor-pointer group">
-                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isChecked ? 'border-teal-500 bg-teal-500' : 'border-warm-300 group-hover:border-teal-400'}`}>
-                  {isChecked && <div className="w-2.5 h-2.5 bg-white rounded-sm" />}
+              <label
+                key={loc}
+                className="flex items-center gap-3 cursor-pointer group"
+              >
+                <div
+                  className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isChecked ? "border-teal-500 bg-teal-500" : "border-warm-300 group-hover:border-teal-400"}`}
+                >
+                  {isChecked && (
+                    <div className="w-2.5 h-2.5 bg-white rounded-sm" />
+                  )}
                 </div>
-                <span className={`text-sm ${isChecked ? 'font-bold text-midnight-800' : 'text-warm-500'}`}>{loc}</span>
+                <span
+                  className={`text-sm ${isChecked ? "font-bold text-midnight-800" : "text-warm-500"}`}
+                >
+                  {loc}
+                </span>
               </label>
             );
           })}
@@ -100,11 +148,22 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onChange,
         </div>
         <div className="space-y-2">
           {CATEGORIES.map((cat) => {
-            const isChecked = filters.category === cat || (cat === 'All Categories' && !filters.category);
+            const isChecked =
+              filters.category === cat ||
+              (cat === "All Categories" && !filters.category);
             return (
-              <label key={cat} className="flex items-center gap-3 cursor-pointer group">
-                <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${isChecked ? 'border-teal-500 border-4' : 'border-warm-300 group-hover:border-teal-400'}`} />
-                <span className={`text-sm ${isChecked ? 'font-bold text-midnight-800' : 'text-warm-500'}`}>{cat}</span>
+              <label
+                key={cat}
+                className="flex items-center gap-3 cursor-pointer group"
+              >
+                <div
+                  className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors ${isChecked ? "border-teal-500 border-4" : "border-warm-300 group-hover:border-teal-400"}`}
+                />
+                <span
+                  className={`text-sm ${isChecked ? "font-bold text-midnight-800" : "text-warm-500"}`}
+                >
+                  {cat}
+                </span>
               </label>
             );
           })}
@@ -121,27 +180,41 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onChange,
             <h3>Price Range</h3>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-warm-400 text-xs font-bold">₹</span>
-            <input 
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-warm-400 text-xs font-bold">
+              ₹
+            </span>
+            <input
               type="number"
               placeholder="Min"
               value={localPriceParams.min}
-              onChange={(e) => setLocalPriceParams(p => ({ ...p, min: e.target.value ? Number(e.target.value) : '' }))}
+              onChange={(e) =>
+                setLocalPriceParams((p) => ({
+                  ...p,
+                  min: e.target.value ? Number(e.target.value) : "",
+                }))
+              }
               onBlur={applyPrice}
               className="w-full bg-warm-50 border border-warm-200 rounded-lg py-2 pl-7 pr-3 text-sm font-medium focus:outline-none focus:border-teal-400 transition"
             />
           </div>
           <span className="text-warm-300 font-bold">-</span>
           <div className="relative flex-1">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-warm-400 text-xs font-bold">₹</span>
-            <input 
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-warm-400 text-xs font-bold">
+              ₹
+            </span>
+            <input
               type="number"
               placeholder="Max"
               value={localPriceParams.max}
-              onChange={(e) => setLocalPriceParams(p => ({ ...p, max: e.target.value ? Number(e.target.value) : '' }))}
+              onChange={(e) =>
+                setLocalPriceParams((p) => ({
+                  ...p,
+                  max: e.target.value ? Number(e.target.value) : "",
+                }))
+              }
               onBlur={applyPrice}
               className="w-full bg-warm-50 border border-warm-200 rounded-lg py-2 pl-7 pr-3 text-sm font-medium focus:outline-none focus:border-teal-400 transition"
             />
@@ -161,11 +234,22 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({ filters, onChange,
           {DURATIONS.map((dur) => {
             const isChecked = filters.durations.includes(dur);
             return (
-              <label key={dur} className="flex items-center gap-3 cursor-pointer group">
-                <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isChecked ? 'border-teal-500 bg-teal-500' : 'border-warm-300 group-hover:border-teal-400'}`}>
-                  {isChecked && <div className="w-2.5 h-2.5 bg-white rounded-sm" />}
+              <label
+                key={dur}
+                className="flex items-center gap-3 cursor-pointer group"
+              >
+                <div
+                  className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${isChecked ? "border-teal-500 bg-teal-500" : "border-warm-300 group-hover:border-teal-400"}`}
+                >
+                  {isChecked && (
+                    <div className="w-2.5 h-2.5 bg-white rounded-sm" />
+                  )}
                 </div>
-                <span className={`text-sm ${isChecked ? 'font-bold text-midnight-800' : 'text-warm-500'}`}>{dur}</span>
+                <span
+                  className={`text-sm ${isChecked ? "font-bold text-midnight-800" : "text-warm-500"}`}
+                >
+                  {dur}
+                </span>
               </label>
             );
           })}

@@ -7,6 +7,7 @@
 ## Core Trust Principles
 
 ### 1. Transparency
+
 - [ ] Show seller verification status clearly
 - [ ] Display listing freshness indicators
 - [ ] Reveal seller response time estimates
@@ -14,6 +15,7 @@
 - [ ] Make pricing and fees transparent
 
 ### 2. Local Verification
+
 - [ ] GPS-based location verification
 - [ ] Phone number verification (OTP)
 - [ ] Island residency indicators
@@ -21,6 +23,7 @@
 - [ ] Location-based trust scoring
 
 ### 3. Safety First
+
 - [ ] Safety tips in high-risk interactions
 - [ ] Report/block functionality accessible
 - [ ] In-app chat (no external contact initially)
@@ -34,6 +37,7 @@
 ### Trust Badges
 
 #### Badge Hierarchy
+
 ```
 Newbie (default)
 ├── Gray circle icon
@@ -60,6 +64,7 @@ Island Legend
 ```
 
 #### Badge Display Rules
+
 - [ ] Show on all listing cards
 - [ ] Show on seller profile page
 - [ ] Show in chat header
@@ -67,6 +72,7 @@ Island Legend
 - [ ] Badge links to trust explanation
 
 #### Badge Visual Specs
+
 ```css
 /* Newbie */
 background: bg-gray-100
@@ -99,6 +105,7 @@ shadow: shadow-lg
 **Location:** Listing detail page, seller section
 
 **Required Elements:**
+
 - [ ] Profile photo (or placeholder with initials)
 - [ ] Seller name
 - [ ] Trust badge
@@ -112,6 +119,7 @@ shadow: shadow-lg
 - [ ] "View Seller Profile" link
 
 **Visual Design:**
+
 ```
 ┌─────────────────────────────────────┐
 │  [Photo]  Rahul Sharma              │
@@ -134,12 +142,14 @@ shadow: shadow-lg
 **Purpose:** Show listing recency to build trust
 
 **Badge Types:**
+
 - [ ] **Fresh** — Listed today/tomorrow (green)
 - [ ] **Active** — Seller active in last 24h (teal)
 - [ ] **Hot** — 10+ views in last hour (coral)
 - [ ] **Expiring** — Listing older than 30 days (amber)
 
 **Display Rules:**
+
 - [ ] Show on listing cards
 - [ ] Show in search results
 - [ ] Auto-hide after threshold
@@ -149,6 +159,7 @@ shadow: shadow-lg
 ### Safety Nudges
 
 **Trigger Points:**
+
 1. [ ] First message in chat
 2. [ ] Price negotiation
 3. [ ] Meeting arrangement
@@ -156,6 +167,7 @@ shadow: shadow-lg
 5. [ ] External contact request
 
 **Safety Nudge Template:**
+
 ```tsx
 <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
   <p className="text-[10px] font-bold text-amber-700 uppercase tracking-widest text-center">
@@ -165,6 +177,7 @@ shadow: shadow-lg
 ```
 
 **Safety Nudge Messages:**
+
 - Chat start: "Meet in public places and verify items before payment."
 - Payment: "Never share OTP, PIN, or banking details with anyone."
 - Meeting: "Meet during daylight in crowded areas. Bring a friend if possible."
@@ -175,16 +188,19 @@ shadow: shadow-lg
 ### Verification Status Indicators
 
 #### Phone Verification
+
 - [ ] Show "✓ Phone Verified" badge
 - [ ] Display in seller trust card
 - [ ] Show in profile completion meter
 
 #### Location Verification
+
 - [ ] GPS verification on listing creation
 - [ ] Show "📍 Location Verified" badge
 - [ ] Display verified location badge on listings
 
 #### Profile Completeness
+
 - [ ] Progress bar showing completion %
 - [ ] Checklist of missing items
 - [ ] Trust score impact indicator
@@ -194,12 +210,14 @@ shadow: shadow-lg
 ## Page-Specific Trust Elements
 
 ### Home Page
+
 - [ ] Hero section: "Buy & Sell locally in Andaman — no mainland scams"
 - [ ] Featured listings show trust badges
 - [ ] Fresh catch section shows verified fishermen
 - [ ] Category chips show verified listing counts
 
 ### Listings Page
+
 - [ ] Filter by "Verified Sellers Only"
 - [ ] Sort by "Most Trusted"
 - [ ] Trust badge on every listing card
@@ -207,6 +225,7 @@ shadow: shadow-lg
 - [ ] Seller location visible
 
 ### Listing Detail Page
+
 - [ ] Seller trust card (full)
 - [ ] Listing creation date
 - [ ] View count
@@ -216,6 +235,7 @@ shadow: shadow-lg
 - [ ] Similar listings from trusted sellers
 
 ### Chat Interface
+
 - [ ] Seller trust badge in header
 - [ ] Safety nudge on first message
 - [ ] Report/block menu accessible
@@ -224,6 +244,7 @@ shadow: shadow-lg
 - [ ] Response time estimate
 
 ### Profile Page
+
 - [ ] Trust score prominently displayed
 - [ ] Verification checklist
 - [ ] Trust level progress bar
@@ -232,6 +253,7 @@ shadow: shadow-lg
 - [ ] Member since date
 
 ### Create Listing Page
+
 - [ ] Trust score preview
 - [ ] "Complete profile to boost trust" nudge
 - [ ] Location verification prompt
@@ -243,6 +265,7 @@ shadow: shadow-lg
 ## Trust-Building Copy Guidelines
 
 ### Do's ✓
+
 - Use "islanders trust islanders" messaging
 - Emphasize "local" and "verified"
 - Show real statistics when possible
@@ -250,6 +273,7 @@ shadow: shadow-lg
 - Celebrate trust milestones
 
 ### Don'ts ✗
+
 - Never use "safe" without proof
 - Don't over-promise verification
 - Avoid generic "secure" language
@@ -261,30 +285,32 @@ shadow: shadow-lg
 ## Trust Score Calculation
 
 ### Formula
+
 ```typescript
 function calculateTrustScore(seller: Seller): number {
   let score = 0;
-  
+
   // Verification (40 points max)
   if (seller.phone_verified) score += 15;
   if (seller.location_verified) score += 10;
   if (seller.profile_photo) score += 10;
   if (seller.email_verified) score += 5;
-  
+
   // Activity (30 points max)
   score += Math.min(seller.total_listings * 2, 10);
   score += Math.min(seller.successful_sales, 10);
   score += Math.min(seller.response_rate / 10, 10);
-  
+
   // Reputation (30 points max)
   score += (seller.average_rating / 5) * 20;
   score += Math.min(seller.total_reviews, 10);
-  
+
   return Math.min(score, 100);
 }
 ```
 
 ### Trust Levels
+
 - **0-29:** Newbie (gray badge)
 - **30-59:** Verified (teal badge)
 - **60-79:** Trusted (gold badge)
@@ -295,10 +321,11 @@ function calculateTrustScore(seller: Seller): number {
 ## Trust Indicators in Code
 
 ### TrustBadge Component
+
 ```tsx
 interface TrustBadgeProps {
-  level: 'newbie' | 'verified' | 'trusted' | 'legend';
-  size?: 'sm' | 'md' | 'lg';
+  level: "newbie" | "verified" | "trusted" | "legend";
+  size?: "sm" | "md" | "lg";
   showLabel?: boolean;
 }
 
@@ -306,6 +333,7 @@ interface TrustBadgeProps {
 ```
 
 ### TrustCard Component
+
 ```tsx
 interface TrustCardProps {
   seller: {
@@ -329,6 +357,7 @@ interface TrustCardProps {
 ## Analytics Events to Track
 
 ### Trust-Related Events
+
 - [ ] `trust_badge_viewed` — When badge is seen
 - [ ] `trust_card_expanded` — When user views full trust info
 - [ ] `verification_started` — When user initiates verification
@@ -338,6 +367,7 @@ interface TrustCardProps {
 - [ ] `report_submitted` — When user reports listing/user
 
 ### Conversion Events
+
 - [ ] `listing_viewed_from_verified_seller` — Track conversion
 - [ ] `chat_started_with_verified_seller` — Track engagement
 - [ ] `purchase_from_trusted_seller` — Track sales conversion
@@ -367,6 +397,7 @@ interface TrustCardProps {
 ## Implementation Priority
 
 ### Phase 1 (Critical)
+
 1. TrustBadge component (already exists)
 2. TrustCard component (already exists)
 3. Phone verification UI
@@ -374,6 +405,7 @@ interface TrustCardProps {
 5. Safety nudge in chat
 
 ### Phase 2 (Important)
+
 1. Trust score calculation
 2. Profile completeness meter
 3. Freshness badges
@@ -381,6 +413,7 @@ interface TrustCardProps {
 5. Report/block functionality
 
 ### Phase 3 (Enhancement)
+
 1. Trust analytics dashboard
 2. Trust milestone celebrations
 3. Trust-based pricing suggestions
@@ -392,18 +425,21 @@ interface TrustCardProps {
 ## Testing Checklist
 
 ### Visual Testing
+
 - [ ] Trust badges render correctly at all sizes
 - [ ] Trust cards display all required info
 - [ ] Safety nudges appear at right moments
 - [ ] Freshness badges update correctly
 
 ### Functional Testing
+
 - [ ] Trust score calculates correctly
 - [ ] Verification flow works end-to-end
 - [ ] Report/block functionality works
 - [ ] Trust level upgrades trigger correctly
 
 ### User Testing
+
 - [ ] Users understand trust badges
 - [ ] Trust indicators increase confidence
 - [ ] Safety tips are noticed and valued
@@ -411,5 +447,5 @@ interface TrustCardProps {
 
 ---
 
-*Last updated: March 2026*
-*Version: 1.0*
+_Last updated: March 2026_
+_Version: 1.0_

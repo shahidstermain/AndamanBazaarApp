@@ -1,11 +1,11 @@
-import React, { useState, useRef } from 'react';
-import { Upload, Image as ImageIcon, File, X, Loader2 } from 'lucide-react';
-import { storage } from '../lib/firebase';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import React, { useState, useRef } from "react";
+import { Upload, Image as ImageIcon, File, X, Loader2 } from "lucide-react";
+import { storage } from "../lib/firebase";
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
 
 interface ChatFileUploadProps {
   chatId: string;
-  onFileUploaded: (fileUrl: string, fileType: 'image' | 'file') => void;
+  onFileUploaded: (fileUrl: string, fileType: "image" | "file") => void;
   disabled?: boolean;
 }
 
@@ -25,16 +25,20 @@ export const ChatFileUpload: React.FC<ChatFileUploadProps> = ({
 
     // Validate file size (10MB max)
     if (file.size > 10 * 1024 * 1024) {
-      alert('File size must be less than 10MB');
+      alert("File size must be less than 10MB");
       return;
     }
 
     // Validate file type
-    const isImage = file.type.startsWith('image/');
-    const isDocument = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(file.type);
+    const isImage = file.type.startsWith("image/");
+    const isDocument = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ].includes(file.type);
 
     if (!isImage && !isDocument) {
-      alert('Only images and PDF/Word documents are allowed');
+      alert("Only images and PDF/Word documents are allowed");
       return;
     }
 
@@ -47,7 +51,7 @@ export const ChatFileUpload: React.FC<ChatFileUploadProps> = ({
     setUploadProgress(0);
 
     try {
-      const isImage = file.type.startsWith('image/');
+      const isImage = file.type.startsWith("image/");
       const timestamp = Date.now();
       const fileName = `${timestamp}_${file.name}`;
       const storageRef = ref(storage, `chat-images/${chatId}/${fileName}`);
@@ -55,33 +59,34 @@ export const ChatFileUpload: React.FC<ChatFileUploadProps> = ({
       const uploadTask = uploadBytesResumable(storageRef, file);
 
       uploadTask.on(
-        'state_changed',
+        "state_changed",
         (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          const progress =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
           setUploadProgress(Math.round(progress));
         },
         (error) => {
-          console.error('Upload error:', error);
-          alert('Failed to upload file. Please try again.');
+          console.error("Upload error:", error);
+          alert("Failed to upload file. Please try again.");
           setUploading(false);
           setSelectedFile(null);
         },
         async () => {
           const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-          onFileUploaded(downloadURL, isImage ? 'image' : 'file');
+          onFileUploaded(downloadURL, isImage ? "image" : "file");
           setUploading(false);
           setSelectedFile(null);
           setUploadProgress(0);
-          
+
           // Reset file input
           if (fileInputRef.current) {
-            fileInputRef.current.value = '';
+            fileInputRef.current.value = "";
           }
-        }
+        },
       );
     } catch (error) {
-      console.error('Upload error:', error);
-      alert('Failed to upload file. Please try again.');
+      console.error("Upload error:", error);
+      alert("Failed to upload file. Please try again.");
       setUploading(false);
       setSelectedFile(null);
     }
@@ -92,7 +97,7 @@ export const ChatFileUpload: React.FC<ChatFileUploadProps> = ({
     setUploading(false);
     setUploadProgress(0);
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -107,12 +112,12 @@ export const ChatFileUpload: React.FC<ChatFileUploadProps> = ({
         className="hidden"
         id={`file-upload-${chatId}`}
       />
-      
+
       {uploading && selectedFile ? (
         <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              {selectedFile.type.startsWith('image/') ? (
+              {selectedFile.type.startsWith("image/") ? (
                 <ImageIcon className="w-4 h-4 text-teal-600" />
               ) : (
                 <File className="w-4 h-4 text-teal-600" />
@@ -127,7 +132,9 @@ export const ChatFileUpload: React.FC<ChatFileUploadProps> = ({
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
-            <p className="text-xs text-gray-500 mt-1">{uploadProgress}% uploaded</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {uploadProgress}% uploaded
+            </p>
           </div>
           <button
             onClick={cancelUpload}
@@ -145,8 +152,8 @@ export const ChatFileUpload: React.FC<ChatFileUploadProps> = ({
             transition-colors duration-150
             ${
               disabled
-                ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
-                : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-teal-500'
+                ? "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed"
+                : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-teal-500"
             }
           `}
         >

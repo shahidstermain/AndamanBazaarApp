@@ -77,7 +77,9 @@ export const HomePage = () => {
           </p>
         )}
         {!loading && !error && activities.length === 0 && (
-          <p className="rounded-md border bg-white p-4">No activities found for selected filters.</p>
+          <p className="rounded-md border bg-white p-4">
+            No activities found for selected filters.
+          </p>
         )}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {activities.map((activity) => (

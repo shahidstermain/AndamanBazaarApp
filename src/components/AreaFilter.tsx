@@ -1,5 +1,5 @@
-import React from 'react';
-import { MapPin } from 'lucide-react';
+import React from "react";
+import { MapPin } from "lucide-react";
 
 interface AreaFilterProps {
   selectedArea: string;
@@ -8,29 +8,31 @@ interface AreaFilterProps {
 }
 
 const ANDAMAN_AREAS = [
-  { id: 'all', name: 'All Areas', icon: '🏝️' },
-  { id: 'port-blair', name: 'Port Blair', icon: '🏙️' },
-  { id: 'havelock', name: 'Havelock Island', icon: '🌊' },
-  { id: 'neil-island', name: 'Neil Island', icon: '🏖️' },
-  { id: 'diglipur', name: 'Diglipur', icon: '🌴' },
-  { id: 'rangat', name: 'Rangat', icon: '🌺' },
-  { id: 'mayabunder', name: 'Mayabunder', icon: '⛵' },
-  { id: 'little-andaman', name: 'Little Andaman', icon: '🐚' },
-  { id: 'car-nicobar', name: 'Car Nicobar', icon: '🥥' },
+  { id: "all", name: "All Areas", icon: "🏝️" },
+  { id: "port-blair", name: "Port Blair", icon: "🏙️" },
+  { id: "havelock", name: "Havelock Island", icon: "🌊" },
+  { id: "neil-island", name: "Neil Island", icon: "🏖️" },
+  { id: "diglipur", name: "Diglipur", icon: "🌴" },
+  { id: "rangat", name: "Rangat", icon: "🌺" },
+  { id: "mayabunder", name: "Mayabunder", icon: "⛵" },
+  { id: "little-andaman", name: "Little Andaman", icon: "🐚" },
+  { id: "car-nicobar", name: "Car Nicobar", icon: "🥥" },
 ];
 
 export const AreaFilter: React.FC<AreaFilterProps> = ({
   selectedArea,
   onAreaChange,
-  className = '',
+  className = "",
 }) => {
   return (
-    <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 ${className}`}>
+    <div
+      className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 ${className}`}
+    >
       <div className="flex items-center gap-2 mb-3">
         <MapPin className="w-5 h-5 text-teal-600" />
         <h3 className="font-semibold text-gray-900">Filter by Area</h3>
       </div>
-      
+
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
         {ANDAMAN_AREAS.map((area) => (
           <button
@@ -41,8 +43,8 @@ export const AreaFilter: React.FC<AreaFilterProps> = ({
               transition-all duration-200 border
               ${
                 selectedArea === area.id
-                  ? 'bg-teal-50 border-teal-500 text-teal-700'
-                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                  ? "bg-teal-50 border-teal-500 text-teal-700"
+                  : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
               }
             `}
           >
@@ -51,10 +53,10 @@ export const AreaFilter: React.FC<AreaFilterProps> = ({
           </button>
         ))}
       </div>
-      
-      {selectedArea !== 'all' && (
+
+      {selectedArea !== "all" && (
         <button
-          onClick={() => onAreaChange('all')}
+          onClick={() => onAreaChange("all")}
           className="mt-3 text-sm text-teal-600 hover:text-teal-700 font-medium"
         >
           Clear filter

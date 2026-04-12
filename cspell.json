@@ -16,10 +16,5 @@
     "Shaheed",
     "Cashfree"
   ],
-  "ignorePaths": [
-    "node_modules",
-    "dist",
-    "*.lock",
-    "package-lock.json"
-  ]
+  "ignorePaths": ["node_modules", "dist", "*.lock", "package-lock.json"]
 }

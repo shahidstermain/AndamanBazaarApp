@@ -1,7 +1,14 @@
-import { useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
-import { auth, db } from '../lib/firebase';
-import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
+import { auth, db } from "../lib/firebase";
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 
 export const useNotifications = () => {
   const location = useLocation();
@@ -9,14 +16,14 @@ export const useNotifications = () => {
   const senderNameCacheRef = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
-    if (!('Notification' in window)) return;
-    if (Notification.permission === 'default') {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
   }, []);
 
   useEffect(() => {
-    if (!('Notification' in window)) return;
+    if (!("Notification" in window)) return;
 
     let isActive = true;
     const unsubscribers: (() => void)[] = [];
@@ -26,12 +33,12 @@ export const useNotifications = () => {
       if (cached) return cached;
 
       try {
-        const snap = await getDoc(doc(db, 'users', senderId));
-        const name = snap.exists() ? (snap.data().name || 'Someone') : 'Someone';
+        const snap = await getDoc(doc(db, "users", senderId));
+        const name = snap.exists() ? snap.data().name || "Someone" : "Someone";
         senderNameCacheRef.current.set(senderId, name);
         return name;
       } catch {
-        return 'Someone';
+        return "Someone";
       }
     };
 
@@ -41,12 +48,12 @@ export const useNotifications = () => {
 
       // Subscribe to buyer-side chats
       const buyerChatsQ = query(
-        collection(db, 'chats'),
-        where('buyerId', '==', user.uid)
+        collection(db, "chats"),
+        where("buyerId", "==", user.uid),
       );
       const sellerChatsQ = query(
-        collection(db, 'chats'),
-        where('sellerId', '==', user.uid)
+        collection(db, "chats"),
+        where("sellerId", "==", user.uid),
       );
 
       const handleChatsSnap = (snap: any) => {
@@ -59,37 +66,39 @@ export const useNotifications = () => {
 
       // Subscribe to new messages across user's chats
       const messagesQ = query(
-        collection(db, 'messages'),
-        where('recipientId', '==', user.uid)
+        collection(db, "messages"),
+        where("recipientId", "==", user.uid),
       );
 
-      unsubscribers.push(onSnapshot(messagesQ, async (snap) => {
-        if (!isActive) return;
-        for (const change of snap.docChanges()) {
-          if (change.type !== 'added') continue;
-          const msg = change.doc.data();
-          if (!msg?.chatId || !msg?.senderId) continue;
-          if (msg.senderId === user.uid) continue;
-          if (!chatIdsRef.current.has(msg.chatId)) continue;
+      unsubscribers.push(
+        onSnapshot(messagesQ, async (snap) => {
+          if (!isActive) return;
+          for (const change of snap.docChanges()) {
+            if (change.type !== "added") continue;
+            const msg = change.doc.data();
+            if (!msg?.chatId || !msg?.senderId) continue;
+            if (msg.senderId === user.uid) continue;
+            if (!chatIdsRef.current.has(msg.chatId)) continue;
 
-          const isChatOpen = location.pathname === `/chats/${msg.chatId}`;
-          if (isChatOpen && document.visibilityState === 'visible') continue;
-          if (Notification.permission !== 'granted') continue;
+            const isChatOpen = location.pathname === `/chats/${msg.chatId}`;
+            if (isChatOpen && document.visibilityState === "visible") continue;
+            if (Notification.permission !== "granted") continue;
 
-          const senderName = await getSenderName(msg.senderId);
-          const body = msg.content || 'New message';
+            const senderName = await getSenderName(msg.senderId);
+            const body = msg.content || "New message";
 
-          try {
-            new Notification(`New message from ${senderName}`, {
-              body,
-              icon: '/logo192.png',
-              tag: msg.chatId,
-            });
-          } catch {
-            // ignore
+            try {
+              new Notification(`New message from ${senderName}`, {
+                body,
+                icon: "/logo192.png",
+                tag: msg.chatId,
+              });
+            } catch {
+              // ignore
+            }
           }
-        }
-      }));
+        }),
+      );
     };
 
     // Wait for auth state to resolve
@@ -100,8 +109,7 @@ export const useNotifications = () => {
     return () => {
       isActive = false;
       unsubAuth();
-      unsubscribers.forEach(fn => fn());
+      unsubscribers.forEach((fn) => fn());
     };
   }, [location.pathname]);
 };
-

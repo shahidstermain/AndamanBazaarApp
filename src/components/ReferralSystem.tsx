@@ -1,7 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { Gift, Copy, Check, Share2, Users } from 'lucide-react';
-import { db, auth } from '../lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import React, { useState, useEffect } from "react";
+import { Gift, Copy, Check, Share2, Users } from "lucide-react";
+import { db, auth } from "../lib/firebase";
+import {
+  doc,
+  getDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+} from "firebase/firestore";
 
 interface ReferralStats {
   referralCode: string;
@@ -23,23 +30,25 @@ export const ReferralSystem: React.FC = () => {
     if (!auth.currentUser) return;
 
     try {
-      const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
+      const userDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
       const userData = userDoc.data();
 
       if (!userData) return;
 
       // Get referral code (use user ID as base)
-      const referralCode = userData.referralCode || `AB${auth.currentUser.uid.substring(0, 8).toUpperCase()}`;
+      const referralCode =
+        userData.referralCode ||
+        `AB${auth.currentUser.uid.substring(0, 8).toUpperCase()}`;
 
       // Count referrals
       const referralsQuery = query(
-        collection(db, 'users'),
-        where('referredBy', '==', auth.currentUser.uid)
+        collection(db, "users"),
+        where("referredBy", "==", auth.currentUser.uid),
       );
       const referralsSnapshot = await getDocs(referralsQuery);
 
       const activeReferrals = referralsSnapshot.docs.filter(
-        (doc) => doc.data().isActive === true
+        (doc) => doc.data().isActive === true,
       ).length;
 
       setStats({
@@ -49,7 +58,7 @@ export const ReferralSystem: React.FC = () => {
         rewardsEarned: activeReferrals * 50, // ₹50 per active referral
       });
     } catch (error) {
-      console.error('Error loading referral stats:', error);
+      console.error("Error loading referral stats:", error);
     } finally {
       setLoading(false);
     }
@@ -73,7 +82,7 @@ export const ReferralSystem: React.FC = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Join AndamanBazaar',
+          title: "Join AndamanBazaar",
           text: shareText,
         });
       } catch (error) {
@@ -105,7 +114,9 @@ export const ReferralSystem: React.FC = () => {
         </div>
         <div>
           <h3 className="text-lg font-bold text-gray-900">Referral Program</h3>
-          <p className="text-sm text-gray-600">Earn ₹50 for each friend who joins!</p>
+          <p className="text-sm text-gray-600">
+            Earn ₹50 for each friend who joins!
+          </p>
         </div>
       </div>
 
@@ -113,17 +124,23 @@ export const ReferralSystem: React.FC = () => {
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-lg p-3 text-center">
           <Users className="w-5 h-5 text-teal-600 mx-auto mb-1" />
-          <p className="text-2xl font-bold text-gray-900">{stats.totalReferrals}</p>
+          <p className="text-2xl font-bold text-gray-900">
+            {stats.totalReferrals}
+          </p>
           <p className="text-xs text-gray-600">Total Referrals</p>
         </div>
         <div className="bg-white rounded-lg p-3 text-center">
           <Check className="w-5 h-5 text-green-600 mx-auto mb-1" />
-          <p className="text-2xl font-bold text-gray-900">{stats.activeReferrals}</p>
+          <p className="text-2xl font-bold text-gray-900">
+            {stats.activeReferrals}
+          </p>
           <p className="text-xs text-gray-600">Active Users</p>
         </div>
         <div className="bg-white rounded-lg p-3 text-center">
           <Gift className="w-5 h-5 text-purple-600 mx-auto mb-1" />
-          <p className="text-2xl font-bold text-gray-900">₹{stats.rewardsEarned}</p>
+          <p className="text-2xl font-bold text-gray-900">
+            ₹{stats.rewardsEarned}
+          </p>
           <p className="text-xs text-gray-600">Rewards Earned</p>
         </div>
       </div>

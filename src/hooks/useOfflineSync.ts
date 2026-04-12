@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   QueueItem,
   QueueEntityType,
@@ -15,8 +15,8 @@ import {
   loadDraftIndexedDB,
   clearDraftIndexedDB,
   cleanupNetworkListeners,
-} from '../lib/offlineQueue';
-import { auth } from '../lib/firebase';
+} from "../lib/offlineQueue";
+import { auth } from "../lib/firebase";
 
 export interface UseOfflineSyncReturn {
   // Network status
@@ -43,20 +43,23 @@ export interface UseOfflineSyncReturn {
 
   // Drafts
   saveDraft: (draft: Parameters<typeof saveDraftIndexedDB>[1]) => Promise<void>;
-  loadDraft: () => Promise<import('../lib/offlineQueue').DraftListingData | null>;
+  loadDraft: () => Promise<
+    import("../lib/offlineQueue").DraftListingData | null
+  >;
   clearDraft: () => Promise<void>;
 }
 
 export function useOfflineSync(
   userId: string | null,
-  handlers: Record<QueueEntityType, SyncHandler>
+  handlers: Record<QueueEntityType, SyncHandler>,
 ): UseOfflineSyncReturn {
   const [isOnline, setIsOnline] = useState(isNetworkOnline());
   const [isSyncing, setIsSyncing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [syncingCount, setSyncingCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
-  const [lastSyncResult, setLastSyncResult] = useState<UseOfflineSyncReturn['lastSyncResult']>(null);
+  const [lastSyncResult, setLastSyncResult] =
+    useState<UseOfflineSyncReturn["lastSyncResult"]>(null);
 
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
@@ -70,7 +73,7 @@ export function useOfflineSync(
         syncNow();
       }
     });
-    
+
     // Cleanup network listeners when component unmounts
     return () => {
       unsubscribe();
@@ -140,7 +143,7 @@ export function useOfflineSync(
       if (!userId) return;
       await saveDraftIndexedDB(userId, draft);
     },
-    [userId]
+    [userId],
   );
 
   const loadDraft = useCallback(async () => {
@@ -173,17 +176,17 @@ export function useOfflineSync(
 
 const getSyncFunctionUrl = (): string => {
   const functionUrl = import.meta.env.VITE_FIREBASE_SECURE_SYNC_FUNCTION;
-  if (!functionUrl) throw new Error('Secure sync function URL not configured');
+  if (!functionUrl) throw new Error("Secure sync function URL not configured");
   return functionUrl;
 };
 
 const getAuthHeaders = async (): Promise<Record<string, string>> => {
   const user = auth.currentUser;
-  if (!user) throw new Error('Not authenticated');
+  if (!user) throw new Error("Not authenticated");
   const token = await user.getIdToken();
   return {
     Authorization: `Bearer ${token}`,
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   };
 };
 
@@ -191,20 +194,20 @@ export function createListingSyncHandler(): SyncHandler {
   return async (item) => {
     try {
       const response = await fetch(getSyncFunctionUrl(), {
-        method: 'POST',
+        method: "POST",
         headers: await getAuthHeaders(),
         body: JSON.stringify({
-          entityType: 'listing',
-          operation: 'create',
+          entityType: "listing",
+          operation: "create",
           payload: item.payload,
           clientTimestamp: item.clientTimestamp,
         }),
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
-        return { success: false, error: result.error || 'Sync failed' };
+        return { success: false, error: result.error || "Sync failed" };
       }
 
       return { success: result.success, serverId: result.serverId };
@@ -223,20 +226,20 @@ export function createMessageSyncHandler(): SyncHandler {
   return async (item) => {
     try {
       const response = await fetch(getSyncFunctionUrl(), {
-        method: 'POST',
+        method: "POST",
         headers: await getAuthHeaders(),
         body: JSON.stringify({
-          entityType: 'message',
-          operation: 'create',
+          entityType: "message",
+          operation: "create",
           payload: item.payload,
           clientTimestamp: item.clientTimestamp,
         }),
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
-        return { success: false, error: result.error || 'Sync failed' };
+        return { success: false, error: result.error || "Sync failed" };
       }
 
       return { success: result.success, serverId: result.serverId };
@@ -255,20 +258,20 @@ export function createProfileSyncHandler(): SyncHandler {
   return async (item) => {
     try {
       const response = await fetch(getSyncFunctionUrl(), {
-        method: 'POST',
+        method: "POST",
         headers: await getAuthHeaders(),
         body: JSON.stringify({
-          entityType: 'profile_update',
-          operation: 'update',
+          entityType: "profile_update",
+          operation: "update",
           payload: item.payload,
           clientTimestamp: item.clientTimestamp,
         }),
       });
 
       const result = await response.json();
-      
+
       if (!response.ok) {
-        return { success: false, error: result.error || 'Sync failed' };
+        return { success: false, error: result.error || "Sync failed" };
       }
 
       return { success: result.success, serverId: result.serverId };
@@ -308,5 +311,9 @@ export function useSyncQueueItems(userId: string | null) {
     return () => clearInterval(interval);
   }, [userId]);
 
-  return { items, loading, refresh: () => getPendingItems(userId || '').then(setItems) };
+  return {
+    items,
+    loading,
+    refresh: () => getPendingItems(userId || "").then(setItems),
+  };
 }

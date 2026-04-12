@@ -1,6 +1,6 @@
-import * as admin from 'firebase-admin';
-import { logger } from 'firebase-functions/v2';
-import { SECRET_NAMES } from './secrets';
+import * as admin from "firebase-admin";
+import { logger } from "firebase-functions/v2";
+import { SECRET_NAMES } from "./secrets";
 
 const initializeAdmin = (): void => {
   if (admin.apps.length > 0) {
@@ -18,7 +18,7 @@ const initializeAdmin = (): void => {
     const parsed = JSON.parse(serviceAccountJson);
 
     if (!parsed.project_id || !parsed.client_email || !parsed.private_key) {
-      throw new Error('Service account JSON is missing required fields');
+      throw new Error("Service account JSON is missing required fields");
     }
 
     // Convert to format expected by Firebase Admin SDK
@@ -32,9 +32,12 @@ const initializeAdmin = (): void => {
       credential: admin.credential.cert(serviceAccount),
     });
   } catch (error) {
-    logger.error('Failed to initialize Firebase Admin from service-account secret', error);
+    logger.error(
+      "Failed to initialize Firebase Admin from service-account secret",
+      error,
+    );
     throw new Error(
-      `Invalid ${SECRET_NAMES.GCP_SERVICE_ACCOUNT_JSON} value. Rotate and set a valid JSON service account secret.`
+      `Invalid ${SECRET_NAMES.GCP_SERVICE_ACCOUNT_JSON} value. Rotate and set a valid JSON service account secret.`,
     );
   }
 };

@@ -40,21 +40,21 @@ AndamanBazaar is a full-stack eCommerce marketplace purpose-built for the Andama
 
 ## Tech Stack
 
-| Layer | Technology |
-| --- | --- |
-| **Frontend** | React 18, TypeScript, Vite |
-| **Styling** | Tailwind CSS, DaisyUI, Radix UI primitives |
-| **State / Data** | React Context, Firestore real-time listeners |
-| **Authentication** | Firebase Authentication (Google, Email/Password) |
-| **Database** | Cloud Firestore |
-| **File Storage** | Firebase Storage |
-| **Server Logic** | Firebase Cloud Functions (Node.js) |
-| **Payments** | Cashfree Payment Gateway |
-| **AI / ML** | Google Generative AI (Gemini) for moderation & itinerary |
-| **Hosting** | Firebase Hosting |
-| **Testing** | Vitest, Testing Library, Playwright, axe-core |
-| **Charts** | Recharts |
-| **PWA** | vite-plugin-pwa, Service Worker |
+| Layer              | Technology                                               |
+| ------------------ | -------------------------------------------------------- |
+| **Frontend**       | React 18, TypeScript, Vite                               |
+| **Styling**        | Tailwind CSS, DaisyUI, Radix UI primitives               |
+| **State / Data**   | React Context, Firestore real-time listeners             |
+| **Authentication** | Firebase Authentication (Google, Email/Password)         |
+| **Database**       | Cloud Firestore                                          |
+| **File Storage**   | Firebase Storage                                         |
+| **Server Logic**   | Firebase Cloud Functions (Node.js)                       |
+| **Payments**       | Cashfree Payment Gateway                                 |
+| **AI / ML**        | Google Generative AI (Gemini) for moderation & itinerary |
+| **Hosting**        | Firebase Hosting                                         |
+| **Testing**        | Vitest, Testing Library, Playwright, axe-core            |
+| **Charts**         | Recharts                                                 |
+| **PWA**            | vite-plugin-pwa, Service Worker                          |
 
 ---
 
@@ -336,17 +336,17 @@ AndamanBazaar is a full-stack eCommerce marketplace purpose-built for the Andama
 
 ### 19. Scheduled Cloud Functions
 
-| Function | Schedule | Description |
-| --- | --- | --- |
-| `expireBoosts` | Periodic | Deactivates boosts that have passed their expiry date |
-| `cleanupExpiredReservations` | Periodic | Removes stale payment reservations |
-| `sendListingExpiryReminders` | Daily (IST) | Emails sellers whose listings expire within 24 hours |
+| Function                     | Schedule      | Description                                           |
+| ---------------------------- | ------------- | ----------------------------------------------------- |
+| `expireBoosts`               | Periodic      | Deactivates boosts that have passed their expiry date |
+| `cleanupExpiredReservations` | Periodic      | Removes stale payment reservations                    |
+| `sendListingExpiryReminders` | Daily (IST)   | Emails sellers whose listings expire within 24 hours  |
 | `sendAbandonedChatReminders` | Every 6 hours | Nudges users who haven't replied to chats in 24 hours |
-| `updateListingFreshness` | Periodic | Recalculates freshness scores on all active listings |
-| `markInactiveListings` | Periodic | Marks old listings with no activity as inactive |
-| `calculateResponseRates` | Periodic | Computes seller response rates for trust scoring |
-| `sendWeeklyTrendingEmails` | Weekly | Sends curated "trending this week" digest emails |
-| `cleanupOldData` | Daily | General cleanup of expired/stale records |
+| `updateListingFreshness`     | Periodic      | Recalculates freshness scores on all active listings  |
+| `markInactiveListings`       | Periodic      | Marks old listings with no activity as inactive       |
+| `calculateResponseRates`     | Periodic      | Computes seller response rates for trust scoring      |
+| `sendWeeklyTrendingEmails`   | Weekly        | Sends curated "trending this week" digest emails      |
+| `cleanupOldData`             | Daily         | General cleanup of expired/stale records              |
 
 ---
 

@@ -1,10 +1,10 @@
-import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import { openDB, DBSchema, IDBPDatabase } from "idb";
 
 // ===== TYPES =====
 
-export type QueueEntityType = 'listing' | 'message' | 'profile_update';
-export type QueueOperation = 'create' | 'update' | 'delete';
-export type QueueStatus = 'pending' | 'syncing' | 'synced' | 'failed';
+export type QueueEntityType = "listing" | "message" | "profile_update";
+export type QueueOperation = "create" | "update" | "delete";
+export type QueueStatus = "pending" | "syncing" | "synced" | "failed";
 
 export interface QueueItem {
   id?: string; // Client-side ID, will be replaced with server ID after sync
@@ -51,8 +51,8 @@ interface AndamanDBSchema extends DBSchema {
     key: string;
     value: QueueItem;
     indexes: {
-      'by-status': QueueStatus;
-      'by-user': string;
+      "by-status": QueueStatus;
+      "by-user": string;
     };
   };
   drafts: {
@@ -67,7 +67,7 @@ interface AndamanDBSchema extends DBSchema {
 
 // ===== CONSTANTS =====
 
-const DB_NAME = 'andaman-bazaar-v1';
+const DB_NAME = "andaman-bazaar-v1";
 const DB_VERSION = 1;
 const MAX_RETRY_ATTEMPTS = 5;
 const RETRY_DELAYS = [1000, 5000, 15000, 30000, 60000]; // Exponential backoff
@@ -83,15 +83,15 @@ export function getDB(): Promise<IDBPDatabase<AndamanDBSchema>> {
     upgrade(db, oldVersion, newVersion) {
       if (oldVersion < 1) {
         // Create sync queue store
-        const queueStore = db.createObjectStore('syncQueue', { keyPath: 'id' });
-        queueStore.createIndex('by-status', 'status');
-        queueStore.createIndex('by-user', 'userId');
+        const queueStore = db.createObjectStore("syncQueue", { keyPath: "id" });
+        queueStore.createIndex("by-status", "status");
+        queueStore.createIndex("by-user", "userId");
 
         // Create drafts store
-        db.createObjectStore('drafts', { keyPath: 'id' });
+        db.createObjectStore("drafts", { keyPath: "id" });
 
         // Create cached listings store
-        db.createObjectStore('cachedListings', { keyPath: 'id' });
+        db.createObjectStore("cachedListings", { keyPath: "id" });
       }
     },
   });
@@ -108,7 +108,7 @@ export async function addToQueue(
   userId: string,
   entityType: QueueEntityType,
   operation: QueueOperation,
-  payload: unknown
+  payload: unknown,
 ): Promise<string> {
   const db = await getDB();
   const id = `${entityType}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -120,11 +120,11 @@ export async function addToQueue(
     operation,
     payload,
     clientTimestamp: new Date(),
-    status: 'pending',
+    status: "pending",
     retryCount: 0,
   };
 
-  await db.put('syncQueue', item);
+  await db.put("syncQueue", item);
   return id;
 }
 
@@ -133,8 +133,10 @@ export async function addToQueue(
  */
 export async function getPendingItems(userId: string): Promise<QueueItem[]> {
   const db = await getDB();
-  const allItems = await db.getAllFromIndex('syncQueue', 'by-user', userId);
-  return allItems.filter(item => item.status === 'pending' || item.status === 'failed');
+  const allItems = await db.getAllFromIndex("syncQueue", "by-user", userId);
+  return allItems.filter(
+    (item) => item.status === "pending" || item.status === "failed",
+  );
 }
 
 /**
@@ -142,7 +144,7 @@ export async function getPendingItems(userId: string): Promise<QueueItem[]> {
  */
 export async function getAllQueueItems(userId: string): Promise<QueueItem[]> {
   const db = await getDB();
-  return db.getAllFromIndex('syncQueue', 'by-user', userId);
+  return db.getAllFromIndex("syncQueue", "by-user", userId);
 }
 
 /**
@@ -151,20 +153,20 @@ export async function getAllQueueItems(userId: string): Promise<QueueItem[]> {
 export async function updateQueueItemStatus(
   id: string,
   status: QueueStatus,
-  errorMessage?: string
+  errorMessage?: string,
 ): Promise<void> {
   const db = await getDB();
-  const item = await db.get('syncQueue', id);
+  const item = await db.get("syncQueue", id);
 
   if (item) {
     item.status = status;
     if (errorMessage) item.errorMessage = errorMessage;
-    if (status === 'synced') {
+    if (status === "synced") {
       item.syncedAt = new Date();
-    } else if (status === 'failed') {
+    } else if (status === "failed") {
       item.retryCount++;
     }
-    await db.put('syncQueue', item);
+    await db.put("syncQueue", item);
   }
 }
 
@@ -172,14 +174,14 @@ export async function updateQueueItemStatus(
  * Mark item as syncing (in progress)
  */
 export async function markItemSyncing(id: string): Promise<void> {
-  await updateQueueItemStatus(id, 'syncing');
+  await updateQueueItemStatus(id, "syncing");
 }
 
 /**
  * Mark item as synced successfully
  */
 export async function markItemSynced(id: string): Promise<void> {
-  await updateQueueItemStatus(id, 'synced');
+  await updateQueueItemStatus(id, "synced");
 }
 
 /**
@@ -187,14 +189,14 @@ export async function markItemSynced(id: string): Promise<void> {
  */
 export async function markItemFailed(id: string, error: string): Promise<void> {
   const db = await getDB();
-  const item = await db.get('syncQueue', id);
+  const item = await db.get("syncQueue", id);
 
   if (item) {
-    item.status = 'failed';
+    item.status = "failed";
     item.errorMessage = error;
     item.retryCount++;
     item.lastFailedAt = new Date(); // Track actual failure time
-    await db.put('syncQueue', item);
+    await db.put("syncQueue", item);
   }
 }
 
@@ -203,7 +205,7 @@ export async function markItemFailed(id: string, error: string): Promise<void> {
  */
 export async function removeFromQueue(id: string): Promise<void> {
   const db = await getDB();
-  await db.delete('syncQueue', id);
+  await db.delete("syncQueue", id);
 }
 
 /**
@@ -226,13 +228,15 @@ export function shouldRetry(item: QueueItem): boolean {
  */
 export async function resetFailedItems(userId: string): Promise<number> {
   const db = await getDB();
-  const items = await db.getAllFromIndex('syncQueue', 'by-user', userId);
-  const failedItems = items.filter(i => i.status === 'failed' && i.retryCount < MAX_RETRY_ATTEMPTS);
+  const items = await db.getAllFromIndex("syncQueue", "by-user", userId);
+  const failedItems = items.filter(
+    (i) => i.status === "failed" && i.retryCount < MAX_RETRY_ATTEMPTS,
+  );
 
   for (const item of failedItems) {
-    item.status = 'pending';
+    item.status = "pending";
     item.errorMessage = undefined;
-    await db.put('syncQueue', item);
+    await db.put("syncQueue", item);
   }
 
   return failedItems.length;
@@ -243,13 +247,17 @@ export async function resetFailedItems(userId: string): Promise<number> {
  */
 export async function cleanupSyncedItems(): Promise<number> {
   const db = await getDB();
-  const allItems = await db.getAll('syncQueue');
+  const allItems = await db.getAll("syncQueue");
   const cutoffDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   let deletedCount = 0;
   for (const item of allItems) {
-    if (item.status === 'synced' && item.syncedAt && new Date(item.syncedAt) < cutoffDate) {
-      await db.delete('syncQueue', item.id!);
+    if (
+      item.status === "synced" &&
+      item.syncedAt &&
+      new Date(item.syncedAt) < cutoffDate
+    ) {
+      await db.delete("syncQueue", item.id!);
       deletedCount++;
     }
   }
@@ -268,20 +276,20 @@ export async function getQueueStats(userId: string): Promise<{
   total: number;
 }> {
   const db = await getDB();
-  const items = await db.getAllFromIndex('syncQueue', 'by-user', userId);
+  const items = await db.getAllFromIndex("syncQueue", "by-user", userId);
 
   return {
-    pending: items.filter(i => i.status === 'pending').length,
-    syncing: items.filter(i => i.status === 'syncing').length,
-    synced: items.filter(i => i.status === 'synced').length,
-    failed: items.filter(i => i.status === 'failed').length,
+    pending: items.filter((i) => i.status === "pending").length,
+    syncing: items.filter((i) => i.status === "syncing").length,
+    synced: items.filter((i) => i.status === "synced").length,
+    failed: items.filter((i) => i.status === "failed").length,
     total: items.length,
   };
 }
 
 // ===== DRAFT OPERATIONS =====
 
-const DRAFT_KEY_PREFIX = 'draft_listing_';
+const DRAFT_KEY_PREFIX = "draft_listing_";
 
 /**
  * Get the draft key for a user
@@ -295,19 +303,21 @@ function getDraftKey(userId: string): string {
  */
 export async function saveDraftIndexedDB(
   userId: string,
-  draft: DraftListingData
+  draft: DraftListingData,
 ): Promise<void> {
   const db = await getDB();
-  await db.put('drafts', { ...draft, id: getDraftKey(userId) });
+  await db.put("drafts", { ...draft, id: getDraftKey(userId) });
 }
 
 /**
  * Load draft from IndexedDB
  */
-export async function loadDraftIndexedDB(userId: string): Promise<DraftListingData | null> {
+export async function loadDraftIndexedDB(
+  userId: string,
+): Promise<DraftListingData | null> {
   const db = await getDB();
   const key = getDraftKey(userId);
-  const draft = await db.get('drafts', key);
+  const draft = await db.get("drafts", key);
 
   if (!draft) return null;
 
@@ -326,7 +336,7 @@ export async function loadDraftIndexedDB(userId: string): Promise<DraftListingDa
  */
 export async function clearDraftIndexedDB(userId: string): Promise<void> {
   const db = await getDB();
-  await db.delete('drafts', getDraftKey(userId));
+  await db.delete("drafts", getDraftKey(userId));
 }
 
 /**
@@ -339,7 +349,9 @@ export async function hasDraftIndexedDB(userId: string): Promise<boolean> {
 
 // ===== SYNC PROCESSOR =====
 
-export type SyncHandler = (item: QueueItem) => Promise<{ success: boolean; serverId?: string; error?: string }>;
+export type SyncHandler = (
+  item: QueueItem,
+) => Promise<{ success: boolean; serverId?: string; error?: string }>;
 
 /**
  * Process the sync queue
@@ -347,7 +359,7 @@ export type SyncHandler = (item: QueueItem) => Promise<{ success: boolean; serve
  */
 export async function processSyncQueue(
   userId: string,
-  handlers: Record<QueueEntityType, SyncHandler>
+  handlers: Record<QueueEntityType, SyncHandler>,
 ): Promise<{
   processed: number;
   succeeded: number;
@@ -355,16 +367,24 @@ export async function processSyncQueue(
   errors: string[];
 }> {
   const pendingItems = await getPendingItems(userId);
-  const result = { processed: 0, succeeded: 0, failed: 0, errors: [] as string[] };
+  const result = {
+    processed: 0,
+    succeeded: 0,
+    failed: 0,
+    errors: [] as string[],
+  };
 
   for (const item of pendingItems) {
     // Skip items that need to wait before retry
-    if (item.status === 'failed') {
+    if (item.status === "failed") {
       const retryDelay = getRetryDelay(item.retryCount);
       if (retryDelay === -1) continue; // Max retries reached
 
       // Use actual failure time instead of client timestamp
-      const failureTime = item.lastFailedAt?.getTime() || item.clientTimestamp?.getTime() || Date.now();
+      const failureTime =
+        item.lastFailedAt?.getTime() ||
+        item.clientTimestamp?.getTime() ||
+        Date.now();
       const timeSinceFailure = Date.now() - failureTime;
       if (timeSinceFailure < retryDelay) continue;
     }
@@ -384,12 +404,13 @@ export async function processSyncQueue(
         await markItemSynced(item.id!);
         result.succeeded++;
       } else {
-        await markItemFailed(item.id!, response.error || 'Unknown error');
+        await markItemFailed(item.id!, response.error || "Unknown error");
         result.failed++;
-        result.errors.push(response.error || 'Unknown error');
+        result.errors.push(response.error || "Unknown error");
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       await markItemFailed(item.id!, errorMessage);
       result.failed++;
       result.errors.push(errorMessage);
@@ -406,20 +427,20 @@ const listeners = new Set<(online: boolean) => void>();
 
 function updateNetworkStatus() {
   isOnline = navigator.onLine;
-  listeners.forEach(listener => listener(isOnline));
+  listeners.forEach((listener) => listener(isOnline));
 }
 
 // Store event listener references for cleanup
 const onlineEventListener = () => updateNetworkStatus();
 const offlineEventListener = () => updateNetworkStatus();
 
-window.addEventListener('online', onlineEventListener);
-window.addEventListener('offline', offlineEventListener);
+window.addEventListener("online", onlineEventListener);
+window.addEventListener("offline", offlineEventListener);
 
 // Cleanup function for SPA environments
 export function cleanupNetworkListeners() {
-  window.removeEventListener('online', onlineEventListener);
-  window.removeEventListener('offline', offlineEventListener);
+  window.removeEventListener("online", onlineEventListener);
+  window.removeEventListener("offline", offlineEventListener);
   listeners.clear();
 }
 
@@ -427,7 +448,9 @@ export function isNetworkOnline(): boolean {
   return isOnline;
 }
 
-export function subscribeToNetworkChanges(callback: (online: boolean) => void): () => void {
+export function subscribeToNetworkChanges(
+  callback: (online: boolean) => void,
+): () => void {
   listeners.add(callback);
   return () => listeners.delete(callback);
 }

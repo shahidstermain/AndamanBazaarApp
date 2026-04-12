@@ -89,9 +89,9 @@ After force-pushing the rewritten history:
       in GitHub Actions Secrets, HashiCorp Vault, or a similar secrets-management system rather
       than in the repository.
 - [ ] **Verify the file is gone** – after the force-push, run:
-      ```bash
-      git log --all --full-history -- gh_deploy_key
-      ```
+      `bash
+git log --all --full-history -- gh_deploy_key
+`
       The output should be empty.
 
 ---

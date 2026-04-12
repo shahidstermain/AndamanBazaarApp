@@ -18,12 +18,7 @@ export const adminLeadController = {
       const updatedLead = await adminLeadService.updateLeadStatus(leadId, payload.status);
       res.status(200).json({ data: updatedLead });
     } catch (error) {
-      if (
-        error &&
-        typeof error === "object" &&
-        "code" in error &&
-        error.code === "P2025"
-      ) {
+      if (error && typeof error === "object" && "code" in error && error.code === "P2025") {
         throw new HttpError(404, "Lead not found");
       }
       throw error;

@@ -1,24 +1,37 @@
-import React, { useState } from 'react';
-import { CheckSquare, Trash2, Archive, Flag, Ban, CheckCircle, AlertTriangle } from 'lucide-react';
-import { db } from '../lib/firebase';
-import { doc, updateDoc, writeBatch, serverTimestamp } from 'firebase/firestore';
+import React, { useState } from "react";
+import {
+  CheckSquare,
+  Trash2,
+  Archive,
+  Flag,
+  Ban,
+  CheckCircle,
+  AlertTriangle,
+} from "lucide-react";
+import { db } from "../lib/firebase";
+import {
+  doc,
+  updateDoc,
+  writeBatch,
+  serverTimestamp,
+} from "firebase/firestore";
 
 interface BulkAdminOperationsProps {
   selectedItems: string[];
-  itemType: 'listings' | 'users' | 'reports';
+  itemType: "listings" | "users" | "reports";
   onOperationComplete: () => void;
   onClearSelection: () => void;
 }
 
-type BulkOperation = 
-  | 'approve' 
-  | 'reject' 
-  | 'delete' 
-  | 'archive' 
-  | 'ban' 
-  | 'unban' 
-  | 'feature' 
-  | 'unfeature';
+type BulkOperation =
+  | "approve"
+  | "reject"
+  | "delete"
+  | "archive"
+  | "ban"
+  | "unban"
+  | "feature"
+  | "unfeature";
 
 export const BulkAdminOperations: React.FC<BulkAdminOperationsProps> = ({
   selectedItems,
@@ -40,31 +53,31 @@ export const BulkAdminOperations: React.FC<BulkAdminOperationsProps> = ({
         const docRef = doc(db, itemType, itemId);
 
         switch (operation) {
-          case 'approve':
+          case "approve":
             batch.update(docRef, {
-              moderationStatus: 'approved',
+              moderationStatus: "approved",
               moderatedAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
             });
             break;
 
-          case 'reject':
+          case "reject":
             batch.update(docRef, {
-              moderationStatus: 'rejected',
+              moderationStatus: "rejected",
               moderatedAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
             });
             break;
 
-          case 'delete':
+          case "delete":
             batch.update(docRef, {
-              status: 'deleted',
+              status: "deleted",
               deletedAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
             });
             break;
 
-          case 'archive':
+          case "archive":
             batch.update(docRef, {
               isActive: false,
               archivedAt: serverTimestamp(),
@@ -72,7 +85,7 @@ export const BulkAdminOperations: React.FC<BulkAdminOperationsProps> = ({
             });
             break;
 
-          case 'ban':
+          case "ban":
             batch.update(docRef, {
               isBanned: true,
               bannedAt: serverTimestamp(),
@@ -80,7 +93,7 @@ export const BulkAdminOperations: React.FC<BulkAdminOperationsProps> = ({
             });
             break;
 
-          case 'unban':
+          case "unban":
             batch.update(docRef, {
               isBanned: false,
               bannedAt: null,
@@ -88,7 +101,7 @@ export const BulkAdminOperations: React.FC<BulkAdminOperationsProps> = ({
             });
             break;
 
-          case 'feature':
+          case "feature":
             batch.update(docRef, {
               isFeatured: true,
               featuredAt: serverTimestamp(),
@@ -96,7 +109,7 @@ export const BulkAdminOperations: React.FC<BulkAdminOperationsProps> = ({
             });
             break;
 
-          case 'unfeature':
+          case "unfeature":
             batch.update(docRef, {
               isFeatured: false,
               featuredAt: null,
@@ -112,7 +125,7 @@ export const BulkAdminOperations: React.FC<BulkAdminOperationsProps> = ({
       onOperationComplete();
       onClearSelection();
     } catch (error) {
-      console.error('Bulk operation error:', error);
+      console.error("Bulk operation error:", error);
       alert(`Failed to ${operation} ${itemType}. Please try again.`);
     } finally {
       setProcessing(false);
@@ -141,25 +154,31 @@ export const BulkAdminOperations: React.FC<BulkAdminOperationsProps> = ({
   }> = [];
 
   // Add operations based on item type
-  if (itemType === 'listings') {
+  if (itemType === "listings") {
     operations.push(
-      { id: 'approve', label: 'Approve', icon: CheckCircle, color: 'green' },
-      { id: 'reject', label: 'Reject', icon: AlertTriangle, color: 'yellow' },
-      { id: 'feature', label: 'Feature', icon: Flag, color: 'purple' },
-      { id: 'unfeature', label: 'Unfeature', icon: Flag, color: 'gray' },
-      { id: 'archive', label: 'Archive', icon: Archive, color: 'blue' },
-      { id: 'delete', label: 'Delete', icon: Trash2, color: 'red', dangerous: true }
+      { id: "approve", label: "Approve", icon: CheckCircle, color: "green" },
+      { id: "reject", label: "Reject", icon: AlertTriangle, color: "yellow" },
+      { id: "feature", label: "Feature", icon: Flag, color: "purple" },
+      { id: "unfeature", label: "Unfeature", icon: Flag, color: "gray" },
+      { id: "archive", label: "Archive", icon: Archive, color: "blue" },
+      {
+        id: "delete",
+        label: "Delete",
+        icon: Trash2,
+        color: "red",
+        dangerous: true,
+      },
     );
-  } else if (itemType === 'users') {
+  } else if (itemType === "users") {
     operations.push(
-      { id: 'ban', label: 'Ban', icon: Ban, color: 'red', dangerous: true },
-      { id: 'unban', label: 'Unban', icon: CheckCircle, color: 'green' },
-      { id: 'archive', label: 'Archive', icon: Archive, color: 'blue' }
+      { id: "ban", label: "Ban", icon: Ban, color: "red", dangerous: true },
+      { id: "unban", label: "Unban", icon: CheckCircle, color: "green" },
+      { id: "archive", label: "Archive", icon: Archive, color: "blue" },
     );
-  } else if (itemType === 'reports') {
+  } else if (itemType === "reports") {
     operations.push(
-      { id: 'approve', label: 'Resolve', icon: CheckCircle, color: 'green' },
-      { id: 'reject', label: 'Dismiss', icon: AlertTriangle, color: 'yellow' }
+      { id: "approve", label: "Resolve", icon: CheckCircle, color: "green" },
+      { id: "reject", label: "Dismiss", icon: AlertTriangle, color: "yellow" },
     );
   }
 
@@ -194,17 +213,17 @@ export const BulkAdminOperations: React.FC<BulkAdminOperationsProps> = ({
                     flex items-center gap-2 px-4 py-2 rounded-lg font-medium
                     transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed
                     ${
-                      op.color === 'green'
-                        ? 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
-                        : op.color === 'red'
-                        ? 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
-                        : op.color === 'yellow'
-                        ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200'
-                        : op.color === 'blue'
-                        ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
-                        : op.color === 'purple'
-                        ? 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200'
-                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'
+                      op.color === "green"
+                        ? "bg-green-50 text-green-700 hover:bg-green-100 border border-green-200"
+                        : op.color === "red"
+                          ? "bg-red-50 text-red-700 hover:bg-red-100 border border-red-200"
+                          : op.color === "yellow"
+                            ? "bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200"
+                            : op.color === "blue"
+                              ? "bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+                              : op.color === "purple"
+                                ? "bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200"
+                                : "bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200"
                     }
                   `}
                 >
@@ -225,8 +244,9 @@ export const BulkAdminOperations: React.FC<BulkAdminOperationsProps> = ({
               Confirm Bulk Operation
             </h3>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to <strong>{showConfirm}</strong>{' '}
-              <strong>{selectedItems.length}</strong> {itemType}? This action cannot be undone.
+              Are you sure you want to <strong>{showConfirm}</strong>{" "}
+              <strong>{selectedItems.length}</strong> {itemType}? This action
+              cannot be undone.
             </p>
             <div className="flex gap-3 justify-end">
               <button
@@ -249,7 +269,7 @@ export const BulkAdminOperations: React.FC<BulkAdminOperationsProps> = ({
                     Processing...
                   </>
                 ) : (
-                  'Confirm'
+                  "Confirm"
                 )}
               </button>
             </div>

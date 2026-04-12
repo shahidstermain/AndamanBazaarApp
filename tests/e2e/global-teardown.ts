@@ -1,4 +1,4 @@
-import { FullConfig } from '@playwright/test'
+import { FullConfig } from "@playwright/test";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function globalTeardown(_config: FullConfig): Promise<void> {
@@ -6,4 +6,4 @@ async function globalTeardown(_config: FullConfig): Promise<void> {
   // Add any cleanup logic here (e.g., remove test data, stop services).
 }
 
-export default globalTeardown
+export default globalTeardown;

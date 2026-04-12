@@ -5,6 +5,7 @@
 Based on the comprehensive audit, **AndamanBazaar already uses Supabase Authentication natively**. There is no Firebase Authentication dependency to migrate from. This document analyzes the current Supabase authentication implementation and identifies enhancements for a more robust, production-ready authentication system.
 
 ### Current Authentication Status: ✅ **ALREADY SUPABASE NATIVE**
+
 - **Provider**: Supabase Auth (JWT-based)
 - **Storage**: Supabase `auth.users` table
 - **Session Management**: Supabase JWT tokens
@@ -18,9 +19,10 @@ Based on the comprehensive audit, **AndamanBazaar already uses Supabase Authenti
 ### **✅ CURRENT IMPLEMENTATION (Already Supabase Native)**
 
 #### **Authentication Architecture**
+
 ```typescript
 // src/lib/supabase.ts - Current Implementation
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -29,15 +31,20 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 ```
 
 #### **Authentication Utilities**
+
 ```typescript
 // src/lib/auth.ts - Current Implementation
 export const getCurrentUserId = async (): Promise<string | null> => {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   return user?.id || null;
 };
 
 export const isAuthenticated = async (): Promise<boolean> => {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
   return !!session;
 };
 
@@ -48,16 +55,17 @@ export const logoutUser = async () => {
 ```
 
 #### **Authentication State Management**
+
 ```typescript
 // src/App.tsx - Current Implementation
 useEffect(() => {
   // Listen for auth changes
-  const { data: { subscription } } = supabase.auth.onAuthStateChange(
-    async (event, session) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    }
-  );
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange(async (event, session) => {
+    setUser(session?.user ?? null);
+    setLoading(false);
+  });
 
   return () => subscription.unsubscribe();
 }, []);
@@ -68,9 +76,10 @@ useEffect(() => {
 ## 🔄 Authentication Flow Enhancements
 
 ### **Enhanced Authentication Architecture**
+
 ```typescript
 // src/lib/auth-enhanced.ts - NEW ENHANCED IMPLEMENTATION
-import { supabase } from './supabase';
+import { supabase } from "./supabase";
 
 export interface AuthUser {
   id: string;
@@ -96,46 +105,50 @@ export class EnhancedAuth {
 
   // Enhanced user session tracking
   static async trackSession(userAgent?: string, ipAddress?: string) {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
 
     // Clean up expired sessions
     await supabase
-      .from('user_sessions')
+      .from("user_sessions")
       .delete()
-      .lt('expires_at', new Date().toISOString());
+      .lt("expires_at", new Date().toISOString());
 
     // Create new session record
     const sessionToken = crypto.randomUUID();
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 30); // 30 days
 
-    await supabase
-      .from('user_sessions')
-      .insert({
-        user_id: user.id,
-        session_token: sessionToken,
-        ip_address: ipAddress,
-        user_agent: userAgent,
-        expires_at: expiresAt.toISOString()
-      });
+    await supabase.from("user_sessions").insert({
+      user_id: user.id,
+      session_token: sessionToken,
+      ip_address: ipAddress,
+      user_agent: userAgent,
+      expires_at: expiresAt.toISOString(),
+    });
 
     return sessionToken;
   }
 
   // Enhanced authentication with device tracking
-  static async signIn(email: string, password: string, deviceInfo?: {
-    userAgent?: string;
-    ipAddress?: string;
-    deviceFingerprint?: string;
-  }) {
+  static async signIn(
+    email: string,
+    password: string,
+    deviceInfo?: {
+      userAgent?: string;
+      ipAddress?: string;
+      deviceFingerprint?: string;
+    },
+  ) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
         options: {
-          captchaToken: deviceInfo?.deviceFingerprint
-        }
+          captchaToken: deviceInfo?.deviceFingerprint,
+        },
       });
 
       if (error) throw error;
@@ -143,10 +156,10 @@ export class EnhancedAuth {
       // Track session
       if (data.user && data.session) {
         await this.trackSession(deviceInfo?.userAgent, deviceInfo?.ipAddress);
-        
+
         // Update last login
         await supabase.auth.updateUser({
-          data: { last_login_at: new Date().toISOString() }
+          data: { last_login_at: new Date().toISOString() },
         });
 
         // Cache session
@@ -154,24 +167,28 @@ export class EnhancedAuth {
           user: await this.getUserProfile(data.user.id),
           accessToken: data.session.access_token,
           refreshToken: data.session.refresh_token,
-          expiresAt: Date.now() + (data.session.expires_in * 1000)
+          expiresAt: Date.now() + data.session.expires_in * 1000,
         };
         this.sessionExpiry = this.sessionCache.expiresAt;
       }
 
       return data;
     } catch (error) {
-      console.error('Sign in error:', error);
+      console.error("Sign in error:", error);
       throw error;
     }
   }
 
   // Enhanced sign up with verification
-  static async signUp(email: string, password: string, metadata?: {
-    name?: string;
-    phone?: string;
-    location?: string;
-  }) {
+  static async signUp(
+    email: string,
+    password: string,
+    metadata?: {
+      name?: string;
+      phone?: string;
+      location?: string;
+    },
+  ) {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -181,29 +198,27 @@ export class EnhancedAuth {
             name: metadata?.name,
             phone: metadata?.phone,
             location: metadata?.location,
-            signup_source: 'web_app'
-          }
-        }
+            signup_source: "web_app",
+          },
+        },
       });
 
       if (error) throw error;
 
       // Create profile record
       if (data.user) {
-        await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            email: data.user.email!,
-            name: metadata?.name,
-            phone: metadata?.phone,
-            location_verified: false
-          });
+        await supabase.from("profiles").insert({
+          id: data.user.id,
+          email: data.user.email!,
+          name: metadata?.name,
+          phone: metadata?.phone,
+          location_verified: false,
+        });
       }
 
       return data;
     } catch (error) {
-      console.error('Sign up error:', error);
+      console.error("Sign up error:", error);
       throw error;
     }
   }
@@ -211,27 +226,27 @@ export class EnhancedAuth {
   // Enhanced user profile with roles
   static async getUserProfile(userId: string): Promise<AuthUser> {
     const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
       .single();
 
     const { data: roles } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId);
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId);
 
     const { data: authUser } = await supabase.auth.getUser(userId);
 
     return {
       id: userId,
-      email: authUser.user?.email || '',
+      email: authUser.user?.email || "",
       phone: profile?.phone,
       name: profile?.name,
       phone_verified: profile?.phone_verified || false,
       location_verified: profile?.location_verified || false,
-      last_login_at: authUser.user?.user_metadata?.last_login_at || '',
-      roles: roles?.map(r => r.role) || []
+      last_login_at: authUser.user?.user_metadata?.last_login_at || "",
+      roles: roles?.map((r) => r.role) || [],
     };
   }
 
@@ -243,8 +258,10 @@ export class EnhancedAuth {
     }
 
     // Get fresh session
-    const { data: { session } } = await supabase.auth.getSession();
-    
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
     if (!session) {
       this.sessionCache = null;
       return null;
@@ -252,12 +269,12 @@ export class EnhancedAuth {
 
     // Build enhanced session
     const userProfile = await this.getUserProfile(session.user.id);
-    
+
     this.sessionCache = {
       user: userProfile,
       accessToken: session.access_token,
       refreshToken: session.refresh_token,
-      expiresAt: Date.now() + (session.expires_in * 1000)
+      expiresAt: Date.now() + session.expires_in * 1000,
     };
     this.sessionExpiry = this.sessionCache.expiresAt;
 
@@ -272,20 +289,18 @@ export class EnhancedAuth {
       this.sessionExpiry = 0;
 
       // Clean up user sessions
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
-        await supabase
-          .from('user_sessions')
-          .delete()
-          .eq('user_id', user.id);
+        await supabase.from("user_sessions").delete().eq("user_id", user.id);
       }
 
       // Sign out from Supabase
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-
     } catch (error) {
-      console.error('Sign out error:', error);
+      console.error("Sign out error:", error);
       throw error;
     }
   }
@@ -293,10 +308,10 @@ export class EnhancedAuth {
   // Role-based authorization
   static async hasRole(userId: string, role: string): Promise<boolean> {
     const { data } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .eq('role', role)
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", role)
       .single();
 
     return !!data;
@@ -305,15 +320,15 @@ export class EnhancedAuth {
   // Multi-factor authentication setup
   static async setupMFA(): Promise<{ qrCode: string; secret: string }> {
     const { data, error } = await supabase.auth.mfa.enroll({
-      factorType: 'totp',
-      friendlyName: 'AndamanBazaar App'
+      factorType: "totp",
+      friendlyName: "AndamanBazaar App",
     });
 
     if (error) throw error;
 
     return {
-      qrCode: data.qr_code || '',
-      secret: data.secret || ''
+      qrCode: data.qr_code || "",
+      secret: data.secret || "",
     };
   }
 
@@ -321,7 +336,7 @@ export class EnhancedAuth {
   static async verifyMFA(challengeId: string, code: string) {
     const { data, error } = await supabase.auth.mfa.verify({
       challengeId,
-      code
+      code,
     });
 
     if (error) throw error;
@@ -330,21 +345,23 @@ export class EnhancedAuth {
   }
 
   // Password reset with enhanced security
-  static async resetPassword(email: string, newPassword: string, token: string) {
+  static async resetPassword(
+    email: string,
+    newPassword: string,
+    token: string,
+  ) {
     const { error } = await supabase.auth.updateUser({
-      password: newPassword
+      password: newPassword,
     });
 
     if (error) throw error;
 
     // Log password reset
-    await supabase
-      .from('audit_logs')
-      .insert({
-        event_type: 'password_reset',
-        user_id: (await supabase.auth.getUser()).data.user?.id,
-        details: { email, timestamp: new Date().toISOString() }
-      });
+    await supabase.from("audit_logs").insert({
+      event_type: "password_reset",
+      user_id: (await supabase.auth.getUser()).data.user?.id,
+      details: { email, timestamp: new Date().toISOString() },
+    });
   }
 }
 ```
@@ -354,6 +371,7 @@ export class EnhancedAuth {
 ## 🔐 Enhanced Security Policies
 
 ### **Database Schema Enhancements**
+
 ```sql
 -- File: supabase/migrations/018_auth_enhancements.sql
 
@@ -415,8 +433,8 @@ CREATE POLICY "Users can delete own sessions" ON user_sessions
 CREATE POLICY "Admins can view all auth logs" ON auth_audit_log
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM user_roles ur 
-      WHERE ur.user_id = auth.uid() 
+      SELECT 1 FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
       AND ur.role = 'admin'
     )
   );
@@ -436,6 +454,7 @@ CREATE INDEX IF NOT EXISTS idx_failed_login_attempts_time ON failed_login_attemp
 ```
 
 ### **Enhanced RLS Policies**
+
 ```sql
 -- File: supabase/migrations/020_rls_enhancements.sql
 
@@ -445,8 +464,8 @@ CREATE POLICY "Users can view own active listings" ON listings
     (auth.uid() = user_id AND status = 'active') OR
     (status = 'active' AND is_featured = TRUE AND featured_until > NOW()) OR
     EXISTS (
-      SELECT 1 FROM user_roles ur 
-      WHERE ur.user_id = auth.uid() 
+      SELECT 1 FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
       AND ur.role = 'admin'
     )
   );
@@ -454,18 +473,18 @@ CREATE POLICY "Users can view own active listings" ON listings
 -- Time-based access for sensitive operations
 CREATE POLICY "Users can update own listings within 24 hours" ON listings
   FOR UPDATE USING (
-    auth.uid() = user_id AND 
+    auth.uid() = user_id AND
     created_at > NOW() - INTERVAL '24 hours'
   );
 
 -- Enhanced chat policies with read receipts
 CREATE POLICY "Users can participate in own chats" ON chats
   FOR ALL USING (
-    seller_id = auth.uid() OR 
+    seller_id = auth.uid() OR
     buyer_id = auth.uid() OR
     EXISTS (
-      SELECT 1 FROM user_roles ur 
-      WHERE ur.user_id = auth.uid() 
+      SELECT 1 FROM user_roles ur
+      WHERE ur.user_id = auth.uid()
       AND ur.role = 'admin'
     )
   );
@@ -485,7 +504,7 @@ BEGIN
   WHERE email = email_param
     AND attempt_time > NOW() - INTERVAL '15 minutes'
     AND success = FALSE;
-  
+
   RETURN recent_attempts < 5; -- Allow max 5 failed attempts per 15 minutes
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -496,6 +515,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 ## 🚀 Enhanced Authentication Components
 
 ### **Authentication Context Provider**
+
 ```typescript
 // src/contexts/AuthContext.tsx - ENHANCED VERSION
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -668,7 +688,7 @@ const generateDeviceFingerprint = (): string => {
     ctx.font = '14px Arial';
     ctx.fillText('Device fingerprint', 2, 2);
   }
-  
+
   const fingerprint = [
     navigator.userAgent,
     navigator.language,
@@ -676,12 +696,13 @@ const generateDeviceFingerprint = (): string => {
     new Date().getTimezoneOffset(),
     canvas?.toDataURL()
   ].join('|');
-  
+
   return btoa(fingerprint).slice(0, 32);
 };
 ```
 
 ### **Enhanced Authentication Components**
+
 ```typescript
 // src/components/auth/EnhancedAuthView.tsx - NEW COMPONENT
 import React, { useState } from 'react';
@@ -745,7 +766,7 @@ export const EnhancedAuthView: React.FC = () => {
             {isSignUp ? 'Create Account' : 'Sign In'}
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            {isSignUp 
+            {isSignUp
               ? 'Join AndamanBazaar community marketplace'
               : 'Welcome back to AndamanBazaar'
             }
@@ -873,7 +894,7 @@ export const EnhancedAuthView: React.FC = () => {
               onClick={() => setIsSignUp(!isSignUp)}
               className="text-sm text-indigo-600 hover:text-indigo-500"
             >
-              {isSignUp 
+              {isSignUp
                 ? 'Already have an account? Sign in'
                 : "Don't have an account? Sign up"
               }
@@ -892,20 +913,21 @@ export const EnhancedAuthView: React.FC = () => {
 
 ### **Current vs Enhanced Authentication**
 
-| Feature | Current Implementation | Enhanced Implementation | Improvement |
-|---------|---------------------|------------------------|-------------|
-| **Session Management** | Basic JWT tokens | Enhanced session tracking with device fingerprinting | 🔒 Better security |
-| **User Profiles** | Basic profile data | Rich profiles with roles and verification status | 📊 More user data |
-| **Rate Limiting** | None | Failed login attempt tracking | 🛡️ Abuse prevention |
-| **Audit Logging** | Basic | Comprehensive authentication audit trail | 📋 Better compliance |
-| **Multi-Factor Auth** | Not implemented | TOTP-based MFA support | 🔐 Enhanced security |
-| **Device Tracking** | None | Device fingerprinting and session tracking | 📱 Better session management |
-| **Password Reset** | Basic flow | Enhanced with audit logging | 🔒 Better security |
-| **Role Management** | Basic | Comprehensive role-based access control | 👥 Better access control |
+| Feature                | Current Implementation | Enhanced Implementation                              | Improvement                  |
+| ---------------------- | ---------------------- | ---------------------------------------------------- | ---------------------------- |
+| **Session Management** | Basic JWT tokens       | Enhanced session tracking with device fingerprinting | 🔒 Better security           |
+| **User Profiles**      | Basic profile data     | Rich profiles with roles and verification status     | 📊 More user data            |
+| **Rate Limiting**      | None                   | Failed login attempt tracking                        | 🛡️ Abuse prevention          |
+| **Audit Logging**      | Basic                  | Comprehensive authentication audit trail             | 📋 Better compliance         |
+| **Multi-Factor Auth**  | Not implemented        | TOTP-based MFA support                               | 🔐 Enhanced security         |
+| **Device Tracking**    | None                   | Device fingerprinting and session tracking           | 📱 Better session management |
+| **Password Reset**     | Basic flow             | Enhanced with audit logging                          | 🔒 Better security           |
+| **Role Management**    | Basic                  | Comprehensive role-based access control              | 👥 Better access control     |
 
 ### **Authentication Flow Diagrams**
 
 #### **Current Flow**
+
 ```mermaid
 graph TD
     A[User enters credentials] --> B[Supabase Auth]
@@ -917,6 +939,7 @@ graph TD
 ```
 
 #### **Enhanced Flow**
+
 ```mermaid
 graph TD
     A[User enters credentials] --> B[Device Fingerprinting]
@@ -937,50 +960,59 @@ graph TD
 ## 🔒 Security Enhancements
 
 ### **Enhanced Security Features**
+
 ```typescript
 // src/lib/security-enhanced.ts - NEW SECURITY UTILITIES
 export class SecurityEnhancements {
   // Device fingerprinting
   static generateDeviceFingerprint(): string {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
     if (ctx) {
-      ctx.textBaseline = 'top';
-      ctx.font = '14px Arial';
-      ctx.fillText('Device fingerprint', 2, 2);
+      ctx.textBaseline = "top";
+      ctx.font = "14px Arial";
+      ctx.fillText("Device fingerprint", 2, 2);
     }
-    
-    return btoa([
-      navigator.userAgent,
-      navigator.language,
-      screen.width + 'x' + screen.height,
-      new Date().getTimezoneOffset(),
-      canvas?.toDataURL()
-    ].join('|')).slice(0, 32);
+
+    return btoa(
+      [
+        navigator.userAgent,
+        navigator.language,
+        screen.width + "x" + screen.height,
+        new Date().getTimezoneOffset(),
+        canvas?.toDataURL(),
+      ].join("|"),
+    ).slice(0, 32);
   }
 
   // IP-based security
   static async getClientIP(): Promise<string> {
     try {
-      const response = await fetch('https://api.ipify.org?format=json');
+      const response = await fetch("https://api.ipify.org?format=json");
       const data = await response.json();
       return data.ip;
     } catch {
-      return 'unknown';
+      return "unknown";
     }
   }
 
   // Suspicious activity detection
-  static async detectSuspiciousActivity(userId: string, ipAddress: string): Promise<boolean> {
+  static async detectSuspiciousActivity(
+    userId: string,
+    ipAddress: string,
+  ): Promise<boolean> {
     // Check for multiple locations
     const { data: recentSessions } = await supabase
-      .from('user_sessions')
-      .select('ip_address, created_at')
-      .eq('user_id', userId)
-      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+      .from("user_sessions")
+      .select("ip_address, created_at")
+      .eq("user_id", userId)
+      .gte(
+        "created_at",
+        new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      );
 
     if (recentSessions && recentSessions.length > 0) {
-      const uniqueIPs = new Set(recentSessions.map(s => s.ip_address));
+      const uniqueIPs = new Set(recentSessions.map((s) => s.ip_address));
       if (uniqueIPs.size > 3) {
         return true; // Suspicious: Multiple IPs in 24 hours
       }
@@ -988,10 +1020,10 @@ export class SecurityEnhancements {
 
     // Check for rapid login attempts
     const { data: failedAttempts } = await supabase
-      .from('failed_login_attempts')
-      .select('attempt_time')
-      .eq('ip_address', ipAddress)
-      .gte('attempt_time', new Date(Date.now() - 15 * 60 * 1000).toISOString());
+      .from("failed_login_attempts")
+      .select("attempt_time")
+      .eq("ip_address", ipAddress)
+      .gte("attempt_time", new Date(Date.now() - 15 * 60 * 1000).toISOString());
 
     if (failedAttempts && failedAttempts.length > 5) {
       return true; // Suspicious: Multiple failed attempts
@@ -1013,52 +1045,55 @@ export class SecurityEnhancements {
     if (password.length >= 8) {
       score += 1;
     } else {
-      feedback.push('Password should be at least 8 characters long');
+      feedback.push("Password should be at least 8 characters long");
     }
 
     // Uppercase check
     if (/[A-Z]/.test(password)) {
       score += 1;
     } else {
-      feedback.push('Include uppercase letters');
+      feedback.push("Include uppercase letters");
     }
 
     // Lowercase check
     if (/[a-z]/.test(password)) {
       score += 1;
     } else {
-      feedback.push('Include lowercase letters');
+      feedback.push("Include lowercase letters");
     }
 
     // Number check
     if (/\d/.test(password)) {
       score += 1;
     } else {
-      feedback.push('Include numbers');
+      feedback.push("Include numbers");
     }
 
     // Special character check
     if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
       score += 1;
     } else {
-      feedback.push('Include special characters');
+      feedback.push("Include special characters");
     }
 
     return {
       isValid: score >= 4,
       score: score / 5,
-      feedback
+      feedback,
     };
   }
 
   // Session security validation
-  static async validateSessionSecurity(sessionToken: string, userId: string): Promise<boolean> {
+  static async validateSessionSecurity(
+    sessionToken: string,
+    userId: string,
+  ): Promise<boolean> {
     const { data: session } = await supabase
-      .from('user_sessions')
-      .select('*')
-      .eq('session_token', sessionToken)
-      .eq('user_id', userId)
-      .eq('is_active', true)
+      .from("user_sessions")
+      .select("*")
+      .eq("session_token", sessionToken)
+      .eq("user_id", userId)
+      .eq("is_active", true)
       .single();
 
     if (!session) {
@@ -1068,17 +1103,17 @@ export class SecurityEnhancements {
     // Check if session expired
     if (new Date(session.expires_at) < new Date()) {
       await supabase
-        .from('user_sessions')
+        .from("user_sessions")
         .update({ is_active: false })
-        .eq('id', session.id);
+        .eq("id", session.id);
       return false;
     }
 
     // Update last accessed
     await supabase
-      .from('user_sessions')
+      .from("user_sessions")
       .update({ last_accessed_at: new Date().toISOString() })
-      .eq('id', session.id);
+      .eq("id", session.id);
 
     return true;
   }
@@ -1090,12 +1125,13 @@ export class SecurityEnhancements {
 ## 📊 Authentication Analytics
 
 ### **Authentication Metrics Tracking**
+
 ```typescript
 // src/lib/auth-analytics.ts - NEW ANALYTICS
 export class AuthAnalytics {
   // Track authentication events
   static async trackAuthEvent(event: {
-    type: 'login' | 'signup' | 'logout' | 'password_reset' | 'mfa_setup';
+    type: "login" | "signup" | "logout" | "password_reset" | "mfa_setup";
     userId?: string;
     success: boolean;
     ipAddress?: string;
@@ -1104,9 +1140,9 @@ export class AuthAnalytics {
     duration?: number;
   }) {
     try {
-      await supabase.functions.invoke('analytics-collector', {
+      await supabase.functions.invoke("analytics-collector", {
         body: {
-          type: 'user_event',
+          type: "user_event",
           data: {
             eventType: `auth_${event.type}`,
             eventData: {
@@ -1116,35 +1152,50 @@ export class AuthAnalytics {
               userAgent: event.userAgent,
               errorCode: event.errorCode,
               duration: event.duration,
-              timestamp: new Date().toISOString()
-            }
-          }
-        }
+              timestamp: new Date().toISOString(),
+            },
+          },
+        },
       });
     } catch (error) {
-      console.warn('Failed to track auth event:', error);
+      console.warn("Failed to track auth event:", error);
     }
   }
 
   // Get authentication metrics
-  static async getAuthMetrics(timeRange: 'day' | 'week' | 'month' = 'week') {
+  static async getAuthMetrics(timeRange: "day" | "week" | "month" = "week") {
     const { data, error } = await supabase
-      .from('user_events')
-      .select('*')
-      .like('event_type', 'auth_%')
-      .gte('created_at', this.getDateRange(timeRange));
+      .from("user_events")
+      .select("*")
+      .like("event_type", "auth_%")
+      .gte("created_at", this.getDateRange(timeRange));
 
     if (error) throw error;
 
     const metrics = {
       totalEvents: data?.length || 0,
-      successfulLogins: data?.filter(e => e.event_type === 'auth_login' && e.event_data.success).length || 0,
-      failedLogins: data?.filter(e => e.event_type === 'auth_login' && !e.event_data.success).length || 0,
-      signups: data?.filter(e => e.event_type === 'auth_signup' && e.event_data.success).length || 0,
-      passwordResets: data?.filter(e => e.event_type === 'auth_password_reset').length || 0,
-      mfaSetups: data?.filter(e => e.event_type === 'auth_mfa_setup').length || 0,
-      averageLoginTime: this.calculateAverageTime(data?.filter(e => e.event_type === 'auth_login') || []),
-      topErrorCodes: this.getTopErrorCodes(data?.filter(e => !e.event_data.success) || [])
+      successfulLogins:
+        data?.filter(
+          (e) => e.event_type === "auth_login" && e.event_data.success,
+        ).length || 0,
+      failedLogins:
+        data?.filter(
+          (e) => e.event_type === "auth_login" && !e.event_data.success,
+        ).length || 0,
+      signups:
+        data?.filter(
+          (e) => e.event_type === "auth_signup" && e.event_data.success,
+        ).length || 0,
+      passwordResets:
+        data?.filter((e) => e.event_type === "auth_password_reset").length || 0,
+      mfaSetups:
+        data?.filter((e) => e.event_type === "auth_mfa_setup").length || 0,
+      averageLoginTime: this.calculateAverageTime(
+        data?.filter((e) => e.event_type === "auth_login") || [],
+      ),
+      topErrorCodes: this.getTopErrorCodes(
+        data?.filter((e) => !e.event_data.success) || [],
+      ),
     };
 
     return metrics;
@@ -1153,25 +1204,39 @@ export class AuthAnalytics {
   private static getDateRange(range: string): string {
     const date = new Date();
     switch (range) {
-      case 'day': date.setDate(date.getDate() - 1); break;
-      case 'week': date.setDate(date.getDate() - 7); break;
-      case 'month': date.setMonth(date.getMonth() - 1); break;
+      case "day":
+        date.setDate(date.getDate() - 1);
+        break;
+      case "week":
+        date.setDate(date.getDate() - 7);
+        break;
+      case "month":
+        date.setMonth(date.getMonth() - 1);
+        break;
     }
     return date.toISOString();
   }
 
   private static calculateAverageTime(events: any[]): number {
     if (events.length === 0) return 0;
-    const totalTime = events.reduce((sum, event) => sum + (event.event_data.duration || 0), 0);
+    const totalTime = events.reduce(
+      (sum, event) => sum + (event.event_data.duration || 0),
+      0,
+    );
     return Math.round(totalTime / events.length);
   }
 
-  private static getTopErrorCodes(events: any[]): Array<{ code: string; count: number }> {
-    const errorCounts = events.reduce((acc, event) => {
-      const code = event.event_data.errorCode || 'unknown';
-      acc[code] = (acc[code] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
+  private static getTopErrorCodes(
+    events: any[],
+  ): Array<{ code: string; count: number }> {
+    const errorCounts = events.reduce(
+      (acc, event) => {
+        const code = event.event_data.errorCode || "unknown";
+        acc[code] = (acc[code] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return Object.entries(errorCounts)
       .map(([code, count]) => ({ code, count }))
@@ -1186,6 +1251,7 @@ export class AuthAnalytics {
 ## 🚀 Migration Implementation Plan
 
 ### **Phase 1: Database Schema Updates (Week 1)**
+
 ```bash
 # Apply authentication enhancements
 supabase db push
@@ -1200,6 +1266,7 @@ supabase db shell --command "SELECT * FROM pg_policies WHERE tablename IN ('user
 ```
 
 ### **Phase 2: Enhanced Authentication Implementation (Week 2)**
+
 ```bash
 # Implement enhanced auth utilities
 # Update authentication context
@@ -1212,6 +1279,7 @@ npm run test:auth
 ```
 
 ### **Phase 3: Integration & Testing (Week 3)**
+
 ```bash
 # Update all components to use enhanced auth
 # Test role-based access control
@@ -1224,6 +1292,7 @@ npm run test:e2e
 ```
 
 ### **Phase 4: Deployment & Monitoring (Week 4)**
+
 ```bash
 # Deploy enhanced authentication
 # Monitor authentication metrics
@@ -1237,6 +1306,7 @@ npm run test:e2e
 ## 📈 Expected Benefits
 
 ### **Security Improvements**
+
 - **Enhanced Session Management**: Device fingerprinting and tracking
 - **Rate Limiting**: Prevent brute force attacks
 - **Audit Logging**: Complete authentication trail
@@ -1244,6 +1314,7 @@ npm run test:e2e
 - **Suspicious Activity Detection**: Proactive security monitoring
 
 ### **User Experience Improvements**
+
 - **Better Error Messages**: Clear feedback for users
 - **Password Strength Validation**: Real-time feedback
 - **Session Persistence**: Better session management
@@ -1251,6 +1322,7 @@ npm run test:e2e
 - **Device Management**: User session control
 
 ### **Operational Benefits**
+
 - **Authentication Analytics**: Detailed metrics and insights
 - **Security Monitoring**: Proactive threat detection
 - **Compliance Support**: Audit trails and logging
@@ -1262,6 +1334,7 @@ npm run test:e2e
 ## 🎯 Success Metrics
 
 ### **Security Metrics**
+
 ```bash
 □ Zero security incidents
 □ Failed login attempts < 1% of total attempts
@@ -1272,6 +1345,7 @@ npm run test:e2e
 ```
 
 ### **User Experience Metrics**
+
 ```bash
 □ Login success rate > 95%
 □ Average login time < 2 seconds
@@ -1281,6 +1355,7 @@ npm run test:e2e
 ```
 
 ### **Technical Metrics**
+
 ```bash
 □ Authentication latency < 500ms
 □ Session validation < 100ms

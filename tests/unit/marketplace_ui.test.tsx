@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from "vitest";
 
-describe('marketplace_ui placeholder suite', () => {
-    it('loads test file', () => {
-        expect(true).toBe(true);
-    });
+describe("marketplace_ui placeholder suite", () => {
+  it("loads test file", () => {
+    expect(true).toBe(true);
+  });
 });

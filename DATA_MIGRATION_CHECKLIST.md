@@ -5,6 +5,7 @@
 Based on the comprehensive audit, **NO DATA MIGRATION IS REQUIRED** for AndamanBazaar. All data is already stored in Supabase PostgreSQL with proper RLS policies and backup procedures. This checklist focuses on **data validation, backup verification, and consistency checks** to ensure data integrity during the Firebase retirement process.
 
 ### Data Migration Status: ✅ **NOT REQUIRED**
+
 - **User Data**: Already in Supabase (profiles, auth.users)
 - **Marketplace Data**: Already in Supabase (listings, categories, chats)
 - **Payment Data**: Already in Supabase (boosts, invoices, audit logs)
@@ -18,6 +19,7 @@ Based on the comprehensive audit, **NO DATA MIGRATION IS REQUIRED** for AndamanB
 ### **✅ ALREADY IN SUPABASE (No Migration Needed)**
 
 #### **User Data**
+
 ```sql
 -- Tables: Already in Supabase
 auth.users              -- Firebase authentication replacement
@@ -27,6 +29,7 @@ user_sessions          -- Session tracking (enhanced)
 ```
 
 #### **Marketplace Data**
+
 ```sql
 -- Tables: Already in Supabase
 listings               -- Core marketplace listings
@@ -38,6 +41,7 @@ reports                -- User reports and moderation
 ```
 
 #### **Payment Data**
+
 ```sql
 -- Tables: Already in Supabase
 listing_boosts         -- Payment boost tracking
@@ -46,6 +50,7 @@ payment_audit_log      -- Complete audit trail
 ```
 
 #### **File Storage**
+
 ```sql
 -- Buckets: Already in Supabase
 listing-images         -- Listing photos
@@ -57,6 +62,7 @@ file_uploads           -- File tracking (enhanced)
 ### **🔄 DATA TO BE REBUILT (No Migration, Fresh Start)**
 
 #### **Analytics Data**
+
 ```sql
 -- Tables: New in Supabase (replacing Firebase Analytics)
 page_views             -- Page view tracking
@@ -72,9 +78,10 @@ realtime_events        -- Real-time event tracking
 ### **Phase 1: Pre-Migration Data Validation**
 
 #### **1.1 User Data Integrity**
+
 ```sql
 -- Validation Queries
-SELECT 
+SELECT
   COUNT(*) as total_users,
   COUNT(DISTINCT id) as unique_users,
   COUNT(CASE WHEN email IS NOT NULL THEN 1 END) as users_with_email,
@@ -91,9 +98,10 @@ FROM profiles;
 ```
 
 #### **1.2 Marketplace Data Integrity**
+
 ```sql
 -- Validation Queries
-SELECT 
+SELECT
   COUNT(*) as total_listings,
   COUNT(DISTINCT user_id) as unique_sellers,
   COUNT(CASE WHEN status = 'active' THEN 1 END) as active_listings,
@@ -102,7 +110,7 @@ SELECT
 FROM listings;
 
 -- Category Distribution
-SELECT 
+SELECT
   c.name as category,
   COUNT(l.id) as listing_count,
   COUNT(CASE WHEN l.status = 'active' THEN 1 END) as active_count
@@ -121,9 +129,10 @@ ORDER BY listing_count DESC;
 ```
 
 #### **1.3 Payment Data Integrity**
+
 ```sql
 -- Validation Queries
-SELECT 
+SELECT
   COUNT(*) as total_boosts,
   COUNT(DISTINCT user_id) as unique_buyers,
   COUNT(CASE WHEN status = 'paid' THEN 1 END) as paid_boosts,
@@ -132,7 +141,7 @@ SELECT
 FROM listing_boosts;
 
 -- Invoice Validation
-SELECT 
+SELECT
   COUNT(*) as total_invoices,
   COUNT(CASE WHEN status = 'paid' THEN 1 END) as paid_invoices,
   COUNT(CASE WHEN email_sent = TRUE THEN 1 END) as emailed_invoices,
@@ -147,9 +156,10 @@ FROM invoices;
 ```
 
 #### **1.4 Chat & Communication Data**
+
 ```sql
 -- Validation Queries
-SELECT 
+SELECT
   COUNT(*) as total_chats,
   COUNT(DISTINCT seller_id) as active_sellers,
   COUNT(DISTINCT buyer_id) as active_buyers,
@@ -157,7 +167,7 @@ SELECT
 FROM chats;
 
 -- Message Activity
-SELECT 
+SELECT
   COUNT(*) as total_messages,
   COUNT(DISTINCT chat_id) as chats_with_messages,
   COUNT(CASE WHEN created_at > NOW() - INTERVAL '7 days' THEN 1 END) as messages_7d
@@ -172,9 +182,10 @@ FROM messages;
 ### **Phase 2: File Storage Validation**
 
 #### **2.1 Storage Bucket Integrity**
+
 ```sql
 -- File Upload Tracking
-SELECT 
+SELECT
   bucket_name,
   COUNT(*) as file_count,
   SUM(file_size) as total_size_bytes,
@@ -191,15 +202,16 @@ GROUP BY bucket_name;
 ```
 
 #### **2.2 Image File Validation**
+
 ```bash
 # Automated File Checks
 for bucket in listing-images profile-photos invoice-pdfs; do
   echo "Checking bucket: $bucket"
-  
+
   # Count files
   file_count=$(supabase storage list $bucket --json | jq '.length')
   echo "Files in $bucket: $file_count"
-  
+
   # Check file accessibility (sample)
   sample_file=$(supabase storage list $bucket --json | jq -r '.[0].name')
   if [ "$sample_file" != "null" ]; then
@@ -219,6 +231,7 @@ done
 ### **Phase 3: Performance & Security Validation**
 
 #### **3.1 Database Performance**
+
 ```sql
 -- Query Performance Checks
 EXPLAIN ANALYZE SELECT * FROM listings WHERE status = 'active' ORDER BY created_at DESC LIMIT 20;
@@ -226,7 +239,7 @@ EXPLAIN ANALYZE SELECT * FROM profiles WHERE id = 'user_id_placeholder';
 EXPLAIN ANALYZE SELECT * FROM messages WHERE chat_id = 'chat_id_placeholder' ORDER BY created_at;
 
 -- Index Usage
-SELECT 
+SELECT
   schemaname,
   tablename,
   indexname,
@@ -244,6 +257,7 @@ ORDER BY idx_scan DESC;
 ```
 
 #### **3.2 RLS Policy Validation**
+
 ```sql
 -- Test RLS Policies
 SET ROLE anon;
@@ -266,6 +280,7 @@ SELECT COUNT(*) FROM listings WHERE user_id = 'test_user_id';
 ## 🔄 Data Consistency Checks
 
 ### **Referential Integrity Validation**
+
 ```sql
 -- Check for Orphaned Records
 SELECT 'listings without valid user' as issue, COUNT(*) as count
@@ -294,21 +309,22 @@ WHERE l.id IS NULL;
 ```
 
 ### **Data Consistency Across Tables**
+
 ```sql
 -- Featured Listings Consistency
-SELECT 
+SELECT
   COUNT(*) as featured_in_listings,
   COUNT(*) as featured_boosts
 FROM listings l
 WHERE l.is_featured = TRUE
 AND EXISTS (
-  SELECT 1 FROM listing_boosts lb 
-  WHERE lb.listing_id = l.id 
+  SELECT 1 FROM listing_boosts lb
+  WHERE lb.listing_id = l.id
   AND lb.status = 'paid'
 );
 
 -- Chat-Message Consistency
-SELECT 
+SELECT
   c.id as chat_id,
   COUNT(m.id) as message_count
 FROM chats c
@@ -327,6 +343,7 @@ HAVING COUNT(m.id) = 0;
 ## 📊 Analytics Data Setup
 
 ### **New Analytics Tables Creation**
+
 ```sql
 -- These will be created fresh (no migration needed)
 -- File: supabase/migrations/019_analytics_enhancements.sql
@@ -336,22 +353,23 @@ HAVING COUNT(m.id) = 0;
 ```
 
 ### **Analytics Data Collection Setup**
+
 ```typescript
 // Add to main application entry point
-import { SupabaseAnalytics } from './lib/analytics-supabase';
+import { SupabaseAnalytics } from "./lib/analytics-supabase";
 
 // Initialize analytics
 SupabaseAnalytics.init();
 
 // Track page views on route changes
-router.addEventListener('routeChange', () => {
+router.addEventListener("routeChange", () => {
   SupabaseAnalytics.trackPageView(window.location.pathname);
 });
 
 // Track user interactions
-document.addEventListener('click', (event) => {
+document.addEventListener("click", (event) => {
   const target = event.target as HTMLElement;
-  const eventName = target.getAttribute('data-analytics-event');
+  const eventName = target.getAttribute("data-analytics-event");
   if (eventName) {
     SupabaseAnalytics.trackEvent(eventName);
   }
@@ -363,6 +381,7 @@ document.addEventListener('click', (event) => {
 ## 🔐 Backup & Recovery Validation
 
 ### **Current Backup Status**
+
 ```bash
 # Check Supabase Backup Status
 supabase backups list
@@ -375,6 +394,7 @@ supabase db status --wal
 ```
 
 ### **Manual Backup Verification**
+
 ```sql
 -- Create Test Backup
 pg_dump $DATABASE_URL > backup_$(date +%Y%m%d_%H%M%S).sql
@@ -389,6 +409,7 @@ psql test_restore < backup_file.sql
 ```
 
 ### **Recovery Procedures Test**
+
 ```bash
 # Document Recovery Steps
 1. Identify recovery point in time
@@ -407,6 +428,7 @@ time supabase db restore --timestamp "2024-01-01 12:00:00"
 ## 📈 Performance Benchmarks
 
 ### **Database Performance Baseline**
+
 ```sql
 -- Record Current Performance Metrics
 CREATE TABLE IF NOT EXISTS performance_baseline (
@@ -419,26 +441,27 @@ CREATE TABLE IF NOT EXISTS performance_baseline (
 
 -- Benchmark Queries
 INSERT INTO performance_baseline (test_name, query_time_ms, records_returned)
-SELECT 
+SELECT
   'listings_homepage',
   EXTRACT(EPOCH FROM (NOW() - start_time)) * 1000,
   COUNT(*)
 FROM (
   SELECT NOW() as start_time
-  FROM listings 
-  WHERE status = 'active' 
-  ORDER BY created_at DESC 
+  FROM listings
+  WHERE status = 'active'
+  ORDER BY created_at DESC
   LIMIT 20
 ) subquery;
 ```
 
 ### **Application Performance Metrics**
+
 ```typescript
 // Performance Monitoring Setup
 class PerformanceBenchmark {
   static measureQuery<T>(
-    queryName: string, 
-    query: () => Promise<T>
+    queryName: string,
+    query: () => Promise<T>,
   ): Promise<T> {
     return new Promise(async (resolve, reject) => {
       const startTime = performance.now();
@@ -446,15 +469,15 @@ class PerformanceBenchmark {
         const result = await query();
         const endTime = performance.now();
         const duration = endTime - startTime;
-        
+
         // Log performance
         console.log(`Query ${queryName}: ${duration.toFixed(2)}ms`);
-        
+
         // Track in analytics
-        SupabaseAnalytics.trackPerformance('query_response', duration, 'ms', {
-          query: queryName
+        SupabaseAnalytics.trackPerformance("query_response", duration, "ms", {
+          query: queryName,
         });
-        
+
         resolve(result);
       } catch (error) {
         reject(error);
@@ -469,6 +492,7 @@ class PerformanceBenchmark {
 ## 🚨 Data Migration Risk Assessment
 
 ### **Risk Matrix**
+
 ```bash
 # Data Risks: MINIMAL (no migration required)
 ├── Data Loss Risk: NONE (data stays in Supabase)
@@ -485,6 +509,7 @@ class PerformanceBenchmark {
 ```
 
 ### **Mitigation Strategies**
+
 ```bash
 # Data Protection
 □ Daily automated backups
@@ -506,6 +531,7 @@ class PerformanceBenchmark {
 ## 📋 Pre-Migration Checklist
 
 ### **Data Validation (Week 1)**
+
 ```bash
 □ User data integrity verified
 □ Marketplace data complete
@@ -520,6 +546,7 @@ class PerformanceBenchmark {
 ```
 
 ### **Analytics Setup (Week 2)**
+
 ```bash
 □ Analytics migrations applied
 □ Analytics functions deployed
@@ -534,6 +561,7 @@ class PerformanceBenchmark {
 ```
 
 ### **Security Validation (Week 3)**
+
 ```bash
 □ Access controls verified
 □ Authentication flows tested
@@ -552,6 +580,7 @@ class PerformanceBenchmark {
 ## 📊 Post-Migration Validation
 
 ### **Immediate Checks (Day 1)**
+
 ```bash
 □ All data accessible
 □ User authentication working
@@ -566,6 +595,7 @@ class PerformanceBenchmark {
 ```
 
 ### **Week 1 Monitoring**
+
 ```bash
 □ Daily data integrity checks
 □ Performance trend analysis
@@ -580,6 +610,7 @@ class PerformanceBenchmark {
 ```
 
 ### **Month 1 Review**
+
 ```bash
 □ Monthly data integrity report
 □ Performance analysis
@@ -598,6 +629,7 @@ class PerformanceBenchmark {
 ## 🎯 Success Criteria
 
 ### **Data Integrity Success**
+
 ```bash
 □ Zero data loss
 □ Zero data corruption
@@ -608,6 +640,7 @@ class PerformanceBenchmark {
 ```
 
 ### **Operational Success**
+
 ```bash
 □ All features functional
 □ User experience maintained
@@ -619,6 +652,7 @@ class PerformanceBenchmark {
 ```
 
 ### **Business Success**
+
 ```bash
 □ No revenue impact
 □ User engagement maintained
@@ -633,6 +667,7 @@ class PerformanceBenchmark {
 ## 📚 Documentation Requirements
 
 ### **Technical Documentation**
+
 ```bash
 □ Data schema documentation
 □ Backup procedures
@@ -645,6 +680,7 @@ class PerformanceBenchmark {
 ```
 
 ### **Operational Documentation**
+
 ```bash
 □ Deployment procedures
 □ Monitoring runbooks

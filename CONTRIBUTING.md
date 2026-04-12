@@ -169,16 +169,16 @@ const getUser = async (id) => {
 const fetchListing = async (id: string) => {
   try {
     const { data, error } = await supabase
-      .from('listings')
-      .select('*')
-      .eq('id', id)
+      .from("listings")
+      .select("*")
+      .eq("id", id)
       .single();
-    
+
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Failed to fetch listing:', error);
-    showToast('Failed to load listing', 'error');
+    console.error("Failed to fetch listing:", error);
+    showToast("Failed to load listing", "error");
     throw error;
   }
 };
@@ -186,9 +186,9 @@ const fetchListing = async (id: string) => {
 // ❌ Bad - No error handling
 const fetchListing = async (id: string) => {
   const { data } = await supabase
-    .from('listings')
-    .select('*')
-    .eq('id', id)
+    .from("listings")
+    .select("*")
+    .eq("id", id)
     .single();
   return data;
 };
@@ -210,7 +210,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({
   className = ''
 }) => {
   const [isFavorited, setIsFavorited] = useState(false);
-  
+
   const handleFavorite = useCallback(() => {
     setIsFavorited(!isFavorited);
     onFavorite?.(listing.id);
@@ -226,7 +226,7 @@ export const ListingCard: React.FC<ListingCardProps> = ({
 // ❌ Bad - Poor structure
 export default function ListingCard({ listing, onFavorite }) {
   const [isFavorited, setIsFavorited] = useState(false);
-  
+
   return (
     <div>
       {/* Component JSX */}
@@ -268,13 +268,13 @@ const useListing = (id: string) => {
 // ❌ Bad - Incorrect hook usage
 const useListing = (id: string) => {
   const [listing, setListing] = useState(null);
-  
+
   // Don't use async directly in useEffect
   useEffect(async () => {
     const data = await listingService.getById(id);
     setListing(data);
   }, [id]);
-  
+
   return listing;
 };
 ```
@@ -302,7 +302,7 @@ const ExpensiveComponent = React.memo<Props>(({ data, onAction }) => {
 // ❌ Bad - Unoptimized component
 const ExpensiveComponent = ({ data, onAction }) => {
   const value = expensiveCalculation(data); // Recalculates every render
-  
+
   return (
     <div>
       {/* Component JSX */}
@@ -370,7 +370,7 @@ describe('ListingCard', () => {
 
   it('renders listing information correctly', () => {
     render(<ListingCard listing={mockListing} />);
-    
+
     expect(screen.getByText('Test Listing')).toBeInTheDocument();
     expect(screen.getByText('₹100')).toBeInTheDocument();
   });
@@ -378,15 +378,15 @@ describe('ListingCard', () => {
   it('calls onFavorite when favorite button is clicked', () => {
     const onFavorite = vi.fn();
     render(<ListingCard listing={mockListing} onFavorite={onFavorite} />);
-    
+
     fireEvent.click(screen.getByRole('button', { name: /favorite/i }));
-    
+
     expect(onFavorite).toHaveBeenCalledWith('1');
   });
 
   it('handles loading state', () => {
     render(<ListingCard listing={null} loading={true} />);
-    
+
     expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument();
   });
 });
@@ -407,16 +407,16 @@ describe('Listing Creation Flow', () => {
 
   it('creates listing successfully', async () => {
     const user = await createTestUser();
-    
+
     render(<CreateListing />, { wrapper: AuthProvider });
-    
+
     // Fill form
     await userEvent.type(screen.getByLabelText(/title/i), 'Test Listing');
     await userEvent.type(screen.getByLabelText(/price/i), '100');
-    
+
     // Submit
     await userEvent.click(screen.getByRole('button', { name: /create listing/i }));
-    
+
     // Verify
     await waitFor(() => {
       expect(screen.getByText(/listing created successfully/i)).toBeInTheDocument();
@@ -429,20 +429,20 @@ describe('Listing Creation Flow', () => {
 
 ```typescript
 // ✅ Good - E2E test
-test('user can browse and contact seller', async ({ page }) => {
-  await page.goto('/');
-  
+test("user can browse and contact seller", async ({ page }) => {
+  await page.goto("/");
+
   // Browse listings
   await page.click('[data-testid="listing-card"]:first-child');
-  
+
   // Verify listing details
-  await expect(page.locator('h1')).toContainText('Listing Details');
-  
+  await expect(page.locator("h1")).toContainText("Listing Details");
+
   // Contact seller
   await page.click('[data-testid="contact-seller"]');
-  await page.fill('[data-testid="message-input"]', 'Is this item available?');
+  await page.fill('[data-testid="message-input"]', "Is this item available?");
   await page.click('[data-testid="send-message"]');
-  
+
   // Verify message sent
   await expect(page.locator('[data-testid="success-toast"]')).toBeVisible();
 });
@@ -510,21 +510,25 @@ git push origin feature/your-feature-name
 
 ```markdown
 ## Description
+
 Brief description of changes made.
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
 - [ ] Documentation update
 
 ## Testing
+
 - [ ] Unit tests pass
 - [ ] Integration tests pass
 - [ ] E2E tests pass
 - [ ] Manual testing completed
 
 ## Checklist
+
 - [ ] Code follows project standards
 - [ ] Self-review completed
 - [ ] Documentation updated
@@ -533,6 +537,7 @@ Brief description of changes made.
 - [ ] Mobile responsive
 
 ## Related Issues
+
 Closes #123
 ```
 
@@ -603,6 +608,7 @@ Use the bug report template:
 Clear and concise description of the bug.
 
 **Steps to Reproduce**
+
 1. Go to '...'
 2. Click on '....'
 3. Scroll down to '....'
@@ -618,6 +624,7 @@ What actually happened.
 Add screenshots if applicable.
 
 **Environment**
+
 - OS: [e.g. iOS, Android, Windows, macOS]
 - Browser: [e.g. Chrome, Safari, Firefox]
 - Version: [e.g. 1.0.0]
@@ -746,4 +753,4 @@ For new contributors, follow this checklist:
 
 Thank you for contributing to AndamanBazaar! 🎉
 
-*Last updated: March 7, 2026*
+_Last updated: March 7, 2026_

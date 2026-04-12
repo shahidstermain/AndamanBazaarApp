@@ -3,6 +3,7 @@
 Complete inventory of all components, dependencies, and configurations in the AndamanBazaarApp repository.
 
 ## 📋 Table of Contents
+
 - [Build Configuration](#build-configuration)
 - [Dependencies](#dependencies)
 - [Source Code Structure](#source-code-structure)
@@ -19,6 +20,7 @@ Complete inventory of all components, dependencies, and configurations in the An
 ## 🔧 Build Configuration
 
 ### **Package.json** ✅ **CONFIRMED IN USE**
+
 ```json
 {
   "name": "andaman-bazaar",
@@ -39,6 +41,7 @@ Complete inventory of all components, dependencies, and configurations in the An
 **Migration Impact**: Low - Compatible with Firebase Hosting
 
 ### **Vite Config** ✅ **CONFIRMED IN USE**
+
 - **React Plugin**: `@vitejs/plugin-react`
 - **PWA Plugin**: `vite-plugin-pwa` with service worker
 - **Path Aliases**: `@/*` mapped to `src/*`
@@ -49,6 +52,7 @@ Complete inventory of all components, dependencies, and configurations in the An
 **Migration Impact**: Low - Firebase Hosting compatible
 
 ### **TypeScript Config** ✅ **CONFIRMED IN USE**
+
 - **Target**: ES2020
 - **Module**: ESNext
 - **Strict**: Enabled
@@ -59,6 +63,7 @@ Complete inventory of all components, dependencies, and configurations in the An
 **Migration Impact**: None
 
 ### **ESLint Config** ⚠️ **SUSPECTED IN USE**
+
 - **TypeScript ESLint**: ^8.56.1
 - **React Hooks**: eslint-plugin-react-hooks
 - **React Refresh**: eslint-plugin-react-refresh
@@ -67,6 +72,7 @@ Complete inventory of all components, dependencies, and configurations in the An
 **Migration Impact**: None
 
 ### **Tailwind Config** ✅ **CONFIRMED IN USE**
+
 - **Version**: 3.4.10
 - **UI Framework**: DaisyUI 5.5.19
 - **Content**: Standard paths
@@ -80,10 +86,11 @@ Complete inventory of all components, dependencies, and configurations in the An
 ## 📦 Dependencies
 
 ### **Core Dependencies** ✅ **CONFIRMED IN USE**
+
 ```json
 {
   "react": "18.3.1",
-  "react-dom": "18.3.1", 
+  "react-dom": "18.3.1",
   "react-router-dom": "^6.30.3",
   "typescript": "5.5.4",
   "vite": "^7.3.1"
@@ -94,6 +101,7 @@ Complete inventory of all components, dependencies, and configurations in the An
 **Migration Impact**: None
 
 ### **Backend Integration** ✅ **CONFIRMED IN USE**
+
 ```json
 {
   "@supabase/supabase-js": "^2.98.0",
@@ -105,6 +113,7 @@ Complete inventory of all components, dependencies, and configurations in the An
 **Migration Impact**: None - Supabase remains unchanged
 
 ### **UI Components** ✅ **CONFIRMED IN USE**
+
 ```json
 {
   "@radix-ui/react-dialog": "1.1.2",
@@ -122,6 +131,7 @@ Complete inventory of all components, dependencies, and configurations in the An
 **Migration Impact**: None
 
 ### **Payment Integration** ✅ **CONFIRMED IN USE**
+
 ```json
 {
   "ftp-deploy": "^2.4.3"
@@ -133,6 +143,7 @@ Complete inventory of all components, dependencies, and configurations in the An
 **Migration Impact**: None - Edge functions remain on Supabase
 
 ### **Security & Validation** ✅ **CONFIRMED IN USE**
+
 ```json
 {
   "dompurify": "^3.1.2",
@@ -145,6 +156,7 @@ Complete inventory of all components, dependencies, and configurations in the An
 **Migration Impact**: None
 
 ### **Testing Dependencies** ✅ **CONFIRMED IN USE**
+
 ```json
 {
   "@playwright/test": "1.58.2",
@@ -159,6 +171,7 @@ Complete inventory of all components, dependencies, and configurations in the An
 **Migration Impact**: None
 
 ### **Legacy Dependencies** ❌ **DEAD CODE**
+
 ```json
 {
   "@lovable.dev/cloud-auth-js": "0.0.3",
@@ -174,6 +187,7 @@ Complete inventory of all components, dependencies, and configurations in the An
 ## 📁 Source Code Structure
 
 ### **Pages** ✅ **CONFIRMED IN USE**
+
 ```
 src/pages/
 ├── Home.tsx (33.5KB) - Main marketplace
@@ -201,6 +215,7 @@ src/pages/
 **Migration Impact**: None
 
 ### **Components** ✅ **CONFIRMED IN USE**
+
 ```
 src/components/
 ├── Layout.tsx (12.2KB) - Main layout
@@ -221,6 +236,7 @@ src/components/
 **Migration Impact**: None
 
 ### **Libraries** ✅ **CONFIRMED IN USE**
+
 ```
 src/lib/
 ├── supabase.ts (0.9KB) - Supabase client
@@ -242,6 +258,7 @@ src/lib/
 **Migration Impact**: None
 
 ### **Hooks** ✅ **CONFIRMED IN USE**
+
 ```
 src/hooks/
 ├── useAuth.ts - Authentication hook
@@ -257,6 +274,7 @@ src/hooks/
 ## 🔧 Backend Services
 
 ### **Supabase Integration** ✅ **CONFIRMED IN USE**
+
 - **Client**: `@supabase/supabase-js` v2.98.0
 - **Auth**: JWT-based authentication
 - **Database**: PostgreSQL with RLS
@@ -264,6 +282,7 @@ src/hooks/
 - **Edge Functions**: Deno runtime serverless
 
 **Files**:
+
 - `src/lib/supabase.ts` - Client configuration
 - `src/lib/auth.ts` - Auth utilities
 - `supabase/functions/` - Edge functions
@@ -272,11 +291,13 @@ src/hooks/
 **Migration Impact**: None - Remains unchanged
 
 ### **Firebase Integration** ⚠️ **LIMITED USE**
+
 - **Hosting**: Static site hosting only
 - **Analytics**: Google Analytics via measurement ID
 - **No Auth/Database**: Not used for core features
 
 **Files**:
+
 - `firebase.json` - Hosting configuration
 - `.firebaserc` - Project configuration
 - `apphosting.yaml` - App hosting config
@@ -285,6 +306,7 @@ src/hooks/
 **Migration Impact**: High - Migration target
 
 ### **Legacy Backend** ❌ **DEAD CODE**
+
 ```
 backend/
 ├── package.json (2.1KB) - Express/Prisma setup
@@ -301,6 +323,7 @@ backend/
 ## 🗄️ Database & Migrations
 
 ### **Supabase Migrations** ✅ **CONFIRMED IN USE**
+
 ```
 supabase/migrations/
 ├── 012_upgrade_schema.sql (9.8KB) - Core schema
@@ -315,6 +338,7 @@ supabase/migrations/
 **Migration Impact**: None - Remains unchanged
 
 ### **Edge Functions** ✅ **CONFIRMED IN USE**
+
 ```
 supabase/functions/
 ├── cashfree-webhook/ - Payment webhook processing
@@ -332,6 +356,7 @@ supabase/functions/
 ## 🧪 Testing Infrastructure
 
 ### **Unit Tests** ✅ **CONFIRMED IN USE**
+
 ```
 tests/unit/
 ├── auth.test.tsx - Authentication
@@ -346,6 +371,7 @@ tests/unit/
 **Migration Impact**: None
 
 ### **Integration Tests** ⚠️ **PARTIALLY WORKING**
+
 ```
 tests/integration/
 ├── payment.integration.test.ts - Payment flows
@@ -356,6 +382,7 @@ tests/integration/
 **Migration Impact**: Low
 
 ### **E2E Tests** ⚠️ **CONFIGURATION ISSUES**
+
 ```
 tests/e2e/
 ├── auth.spec.ts - Authentication flows
@@ -368,6 +395,7 @@ tests/e2e/
 **Migration Impact**: Medium - Need CI/CD updates
 
 ### **Security Tests** ✅ **CONFIRMED IN USE**
+
 ```
 tests/security/
 ├── input-validation.test.ts - Input sanitization
@@ -383,6 +411,7 @@ tests/security/
 ## 🚀 Deployment Configuration
 
 ### **Firebase Hosting** ✅ **CONFIRMED IN USE**
+
 - **Project**: andamanbazaarfirebase
 - **Region**: asia-southeast1
 - **Backend**: andamanbazaarbackend
@@ -390,6 +419,7 @@ tests/security/
 - **CDN**: Global
 
 **Files**:
+
 - `firebase.json` - Hosting configuration
 - `apphosting.yaml` - Backend configuration
 - `.firebaserc` - Project settings
@@ -398,6 +428,7 @@ tests/security/
 **Migration Impact**: High - Primary migration target
 
 ### **cPanel/FTP Deployment** ⚠️ **CURRENT PRODUCTION**
+
 ```
 deploy-ftp.sh - FTP deployment script
 deploy-sftp.sh - SFTP deployment script
@@ -409,6 +440,7 @@ ftp-deploy.json - FTP configuration
 **Migration Impact**: High - Will be decommissioned
 
 ### **Docker Configuration** ⚠️ **AVAILABLE**
+
 ```
 Dockerfile - Application container
 docker-compose.yml - Multi-container setup
@@ -419,6 +451,7 @@ nginx.conf - Reverse proxy config
 **Migration Impact**: Low - Optional for future use
 
 ### **GitHub Actions** ✅ **CONFIRMED IN USE**
+
 ```
 .github/workflows/
 ├── ci.yml - Continuous integration
@@ -434,45 +467,53 @@ nginx.conf - Reverse proxy config
 ## 🎯 SEO & Meta Configuration
 
 ### **HTML Meta** ✅ **CONFIRMED IN USE**
+
 ```html
 <title>AndamanBazaar - Local Marketplace for Andaman & Nicobar Islands</title>
-<meta name="description" content="Buy and sell locally...">
-<meta name="keywords" content="Andaman, Nicobar, Port Blair...">
+<meta name="description" content="Buy and sell locally..." />
+<meta name="keywords" content="Andaman, Nicobar, Port Blair..." />
 ```
 
 **Status**: ✅ **Active** - Complete SEO meta tags
 **Migration Impact**: None
 
 ### **Open Graph** ✅ **CONFIRMED IN USE**
+
 ```html
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://andamanbazaar.in/">
-<meta property="og:title" content="AndamanBazaar...">
-<meta property="og:image" content="https://andamanbazaar.in/logo512.png">
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://andamanbazaar.in/" />
+<meta property="og:title" content="AndamanBazaar..." />
+<meta property="og:image" content="https://andamanbazaar.in/logo512.png" />
 ```
 
 **Status**: ✅ **Active** - Social sharing optimized
 **Migration Impact**: None
 
 ### **Twitter Cards** ✅ **CONFIRMED IN USE**
+
 ```html
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:url" content="https://andamanbazaar.in/">
-<meta name="twitter:title" content="AndamanBazaar...">
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:url" content="https://andamanbazaar.in/" />
+<meta name="twitter:title" content="AndamanBazaar..." />
 ```
 
 **Status**: ✅ **Active** - Twitter sharing optimized
 **Migration Impact**: None
 
 ### **Google Verification** ✅ **CONFIRMED IN USE**
+
 ```html
-<meta name="google-site-verification" content="5gSA0s1rN-0S-I_2iB3-M2_Vz-n2-v_k_dJ_6qD-4c">
+<meta
+  name="google-site-verification"
+  content="5gSA0s1rN-0S-I_2iB3-M2_Vz-n2-v_k_dJ_6qD-4c"
+/>
 ```
 
 **Status**: ✅ **Active** - Google Search Console verified
 **Migration Impact**: None
 
 ### **PWA Configuration** ✅ **CONFIRMED IN USE**
+
 - **Manifest**: Vite PWA plugin
 - **Service Worker**: Cache-first strategy
 - **Icons**: Multiple sizes
@@ -486,6 +527,7 @@ nginx.conf - Reverse proxy config
 ## 🔒 Security Configuration
 
 ### **Content Security Policy** ✅ **CONFIRMED IN USE**
+
 ```json
 {
   "default-src": "'self'",
@@ -500,10 +542,11 @@ nginx.conf - Reverse proxy config
 **Migration Impact**: Low - May need Firebase domain updates
 
 ### **Security Headers** ✅ **CONFIRMED IN USE**
+
 ```json
 {
   "X-Content-Type-Options": "nosniff",
-  "X-Frame-Options": "DENY", 
+  "X-Frame-Options": "DENY",
   "X-XSS-Protection": "1; mode=block",
   "Referrer-Policy": "strict-origin-when-cross-origin"
 }
@@ -513,6 +556,7 @@ nginx.conf - Reverse proxy config
 **Migration Impact**: None
 
 ### **Input Sanitization** ✅ **CONFIRMED IN USE**
+
 - **DOMPurify**: HTML content sanitization
 - **Zod**: Schema validation
 - **Custom Security**: Client and middleware security
@@ -525,6 +569,7 @@ nginx.conf - Reverse proxy config
 ## 🌍 Environment Variables
 
 ### **Supabase Configuration** ✅ **CONFIRMED IN USE**
+
 ```bash
 VITE_SUPABASE_URL=https://msxeqzceqjatoaluempo.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIs...
@@ -535,6 +580,7 @@ VITE_SUPABASE_PROJECT_ID=msxeqzceqjatoaluempo
 **Migration Impact**: None
 
 ### **Firebase Configuration** ⚠️ **MIXED USAGE**
+
 ```bash
 VITE_FIREBASE_API_KEY=AIzaSyClP_DWVESxywrzRD10DF-y2vGnPtRtnFU
 VITE_FIREBASE_AUTH_DOMAIN=gen-lang-client-0408960446.firebaseapp.com
@@ -546,6 +592,7 @@ VITE_FIREBASE_STORAGE_BUCKET=gen-lang-client-0408960446.appspot.com
 **Migration Impact**: High - Need to update to correct project
 
 ### **Cashfree Configuration** ✅ **CONFIRMED IN USE**
+
 ```bash
 VITE_CASHFREE_ENV=sandbox
 CASHFREE_APP_ID=your_cashfree_app_id
@@ -556,6 +603,7 @@ CASHFREE_SECRET_KEY=your_cashfree_secret_key
 **Migration Impact**: None - Edge functions unchanged
 
 ### **AI Configuration** ✅ **CONFIRMED IN USE**
+
 ```bash
 VITE_API_KEY=AIzaSyBX6bCBmaHp4nsL1jurzhjZX48ufAlez4I
 ```
@@ -568,6 +616,7 @@ VITE_API_KEY=AIzaSyBX6bCBmaHp4nsL1jurzhjZX48ufAlez4I
 ## 📊 Migration Impact Summary
 
 ### **No Impact** (70%)
+
 - React/Vite application
 - Supabase backend
 - All business logic
@@ -576,11 +625,13 @@ VITE_API_KEY=AIzaSyBX6bCBmaHp4nsL1jurzhjZX48ufAlez4I
 - Security implementation
 
 ### **Low Impact** (15%)
+
 - CI/CD pipeline updates
 - Environment variable cleanup
 - Some test configurations
 
 ### **High Impact** (15%)
+
 - Firebase project configuration
 - Deployment pipeline
 - Domain configuration
@@ -591,6 +642,7 @@ VITE_API_KEY=AIzaSyBX6bCBmaHp4nsL1jurzhjZX48ufAlez4I
 ## 🎯 Migration Readiness
 
 ### **✅ Ready for Migration**
+
 - Core application architecture
 - Supabase backend integration
 - Payment system functionality
@@ -598,12 +650,14 @@ VITE_API_KEY=AIzaSyBX6bCBmaHp4nsL1jurzhjZX48ufAlez4I
 - SEO optimization
 
 ### **⚠️ Requires Migration Work**
+
 - Firebase project alignment
 - Deployment pipeline updates
 - Environment cleanup
 - Legacy code removal
 
 ### **❌ Migration Blockers**
+
 - None identified
 
 ---

@@ -1,4 +1,8 @@
-import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
+import {
+  onCall,
+  HttpsError,
+  CallableRequest,
+} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { Cashfree } from "cashfree-pg";
 
@@ -9,7 +13,10 @@ if (!admin.apps.length) {
 
 export const createBookingOrder = onCall(async (request: CallableRequest) => {
   if (!request.auth) {
-    throw new HttpsError("unauthenticated", "User must be authenticated to create a booking order.");
+    throw new HttpsError(
+      "unauthenticated",
+      "User must be authenticated to create a booking order.",
+    );
   }
 
   const uid = request.auth.uid;
@@ -18,24 +25,45 @@ export const createBookingOrder = onCall(async (request: CallableRequest) => {
     throw new HttpsError("invalid-argument", "Invalid request payload.");
   }
 
-  const { listing_id, booking_date, guest_details, contact_number, special_requests } = request.data;
+  const {
+    listing_id,
+    booking_date,
+    guest_details,
+    contact_number,
+    special_requests,
+  } = request.data;
 
   if (!listing_id || typeof listing_id !== "string") {
-    throw new HttpsError("invalid-argument", "listing_id must be a non-empty string.");
+    throw new HttpsError(
+      "invalid-argument",
+      "listing_id must be a non-empty string.",
+    );
   }
   if (!booking_date || typeof booking_date !== "string") {
-    throw new HttpsError("invalid-argument", "booking_date must be a non-empty string.");
+    throw new HttpsError(
+      "invalid-argument",
+      "booking_date must be a non-empty string.",
+    );
   }
   if (!Array.isArray(guest_details) || guest_details.length === 0) {
-    throw new HttpsError("invalid-argument", "guest_details must be a non-empty array.");
+    throw new HttpsError(
+      "invalid-argument",
+      "guest_details must be a non-empty array.",
+    );
   }
   for (const g of guest_details) {
     if (!g.tier_id || typeof g.tier_id !== "string") {
-      throw new HttpsError("invalid-argument", "Each guest entry must have a valid tier_id.");
+      throw new HttpsError(
+        "invalid-argument",
+        "Each guest entry must have a valid tier_id.",
+      );
     }
     const count = Number(g.count);
     if (!Number.isInteger(count) || count <= 0) {
-      throw new HttpsError("invalid-argument", "Each guest entry count must be a positive integer.");
+      throw new HttpsError(
+        "invalid-argument",
+        "Each guest entry count must be a positive integer.",
+      );
     }
   }
 
@@ -51,20 +79,31 @@ export const createBookingOrder = onCall(async (request: CallableRequest) => {
 
   const listing = listingDoc.data();
   if (!listing?.is_experience) {
-    throw new HttpsError("failed-precondition", "This listing is not an experience");
+    throw new HttpsError(
+      "failed-precondition",
+      "This listing is not an experience",
+    );
   }
 
-  const tiersSnapshot = await db.collection("pricing_tiers")
+  const tiersSnapshot = await db
+    .collection("pricing_tiers")
     .where("listing_id", "==", listing_id)
     .get();
 
   if (tiersSnapshot.empty) {
-    throw new HttpsError("not-found", "No pricing tiers found for this experience");
+    throw new HttpsError(
+      "not-found",
+      "No pricing tiers found for this experience",
+    );
   }
 
-  const tiers = tiersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  const tiers = tiersSnapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
 
-  const availabilitySnapshot = await db.collection("experience_availability")
+  const availabilitySnapshot = await db
+    .collection("experience_availability")
     .where("listing_id", "==", listing_id)
     .where("slot_date", "==", booking_date)
     .limit(1)
@@ -73,8 +112,9 @@ export const createBookingOrder = onCall(async (request: CallableRequest) => {
   // 3. Calculate Total & Advance (15%)
   let totalAmount = 0;
   guest_details.forEach((g: any) => {
-    const tier: any = tiers.find(t => t.id === g.tier_id);
-    if (!tier) throw new HttpsError("invalid-argument", "Invalid pricing tier ID");
+    const tier: any = tiers.find((t) => t.id === g.tier_id);
+    if (!tier)
+      throw new HttpsError("invalid-argument", "Invalid pricing tier ID");
     totalAmount += (tier.price || 0) * (g.count || 0);
   });
 
@@ -83,7 +123,7 @@ export const createBookingOrder = onCall(async (request: CallableRequest) => {
 
   // 4. Create Pending Booking atomically (reserve slots in the same transaction)
   const orderId = `AB_BOOK_${listing_id.substring(0, 8)}_${Date.now()}`;
-  
+
   const userDoc = await db.collection("profiles").doc(uid).get();
   const user = userDoc.data();
 
@@ -98,14 +138,22 @@ export const createBookingOrder = onCall(async (request: CallableRequest) => {
     let currentSlots: number;
     if (availabilityRef) {
       const availDoc = await transaction.get(availabilityRef);
-      currentSlots = availDoc.exists ? (availDoc.data()?.slots_available || 0) : 0;
+      currentSlots = availDoc.exists
+        ? availDoc.data()?.slots_available || 0
+        : 0;
     } else {
       currentSlots = listing?.inventory_per_slot || 0;
     }
 
-    const totalGuests = guest_details.reduce((sum: number, g: any) => sum + (g.count || 0), 0);
+    const totalGuests = guest_details.reduce(
+      (sum: number, g: any) => sum + (g.count || 0),
+      0,
+    );
     if (currentSlots < totalGuests) {
-      throw new HttpsError("failed-precondition", `Only ${currentSlots} slots available for this date.`);
+      throw new HttpsError(
+        "failed-precondition",
+        `Only ${currentSlots} slots available for this date.`,
+      );
     }
 
     const newBookingRef = db.collection("bookings").doc();
@@ -124,7 +172,7 @@ export const createBookingOrder = onCall(async (request: CallableRequest) => {
       guest_details,
       contact_number: contact_number || null,
       special_requests: special_requests || null,
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     };
     transaction.set(newBookingRef, bookingData);
 
@@ -140,9 +188,10 @@ export const createBookingOrder = onCall(async (request: CallableRequest) => {
   // 5. Initialize Cashfree
   (Cashfree as any).XClientId = process.env.CASHFREE_APP_ID || "";
   (Cashfree as any).XClientSecret = process.env.CASHFREE_SECRET_KEY || "";
-  (Cashfree as any).XEnvironment = process.env.CASHFREE_ENV === "production"
-    ? (Cashfree as any).Environment.PRODUCTION
-    : (Cashfree as any).Environment.SANDBOX;
+  (Cashfree as any).XEnvironment =
+    process.env.CASHFREE_ENV === "production"
+      ? (Cashfree as any).Environment.PRODUCTION
+      : (Cashfree as any).Environment.SANDBOX;
 
   // 6. Create Cashfree Order
   const APP_URL = process.env.FRONTEND_ORIGIN || "https://www.andamanbazaar.in";
@@ -175,20 +224,29 @@ export const createBookingOrder = onCall(async (request: CallableRequest) => {
 
   let cashfreeData: any;
   try {
-    const response = await (Cashfree as any).PGCreateOrder("2023-08-01", cashfreePayload as any);
+    const response = await (Cashfree as any).PGCreateOrder(
+      "2023-08-01",
+      cashfreePayload as any,
+    );
     cashfreeData = response.data;
   } catch (error: any) {
-    console.error("Cashfree order creation failed:", error.response?.data || error);
+    console.error(
+      "Cashfree order creation failed:",
+      error.response?.data || error,
+    );
 
     // Mark the booking as failed
-    await bookingRef.update({ 
+    await bookingRef.update({
       booking_status: "failed",
       status: "failed",
       payment_status: "failed",
-      updated_at: new Date().toISOString() 
+      updated_at: new Date().toISOString(),
     });
 
-    throw new HttpsError("internal", "Payment gateway error. Please try again.");
+    throw new HttpsError(
+      "internal",
+      "Payment gateway error. Please try again.",
+    );
   }
 
   // 8. Update booking record with payment session ID

@@ -16,21 +16,21 @@ Frontend → Firebase Functions → Cashfree API → Webhook → Firebase Functi
 
 ### Order States
 
-| State | Description | Trigger | Next States |
-|-------|-------------|---------|-------------|
-| `ACTIVE` | Order created, awaiting payment | createOrder() | PAID, EXPIRED, CANCELLED |
-| `PAID` | Payment completed successfully | Webhook SUCCESS | - |
-| `EXPIRED` | Order expired (15 minutes) | Webhook EXPIRED | - |
-| `CANCELLED` | Order cancelled by user or system | Webhook CANCELLED | - |
+| State       | Description                       | Trigger           | Next States              |
+| ----------- | --------------------------------- | ----------------- | ------------------------ |
+| `ACTIVE`    | Order created, awaiting payment   | createOrder()     | PAID, EXPIRED, CANCELLED |
+| `PAID`      | Payment completed successfully    | Webhook SUCCESS   | -                        |
+| `EXPIRED`   | Order expired (15 minutes)        | Webhook EXPIRED   | -                        |
+| `CANCELLED` | Order cancelled by user or system | Webhook CANCELLED | -                        |
 
 ### Payment States
 
-| State | Description | Trigger | Next States |
-|-------|-------------|---------|-------------|
-| `PENDING` | Payment initiated, awaiting completion | createOrder() | SUCCESS, FAILED, CANCELLED |
-| `SUCCESS` | Payment successful | Webhook SUCCESS | - |
-| `FAILED` | Payment failed (insufficient funds, etc.) | Webhook FAILED | - |
-| `CANCELLED` | Payment cancelled by user | Webhook CANCELLED | - |
+| State       | Description                               | Trigger           | Next States                |
+| ----------- | ----------------------------------------- | ----------------- | -------------------------- |
+| `PENDING`   | Payment initiated, awaiting completion    | createOrder()     | SUCCESS, FAILED, CANCELLED |
+| `SUCCESS`   | Payment successful                        | Webhook SUCCESS   | -                          |
+| `FAILED`    | Payment failed (insufficient funds, etc.) | Webhook FAILED    | -                          |
+| `CANCELLED` | Payment cancelled by user                 | Webhook CANCELLED | -                          |
 
 ## State Flow Diagram
 
@@ -64,27 +64,27 @@ Frontend → Firebase Functions → Cashfree API → Webhook → Firebase Functi
 
 ```typescript
 interface PaymentOrder {
-  orderId: string;                    // Primary key
-  cfOrderId: string;                  // Cashfree order ID
-  listingId: string;                 // Listing being purchased
-  buyerId: string;                   // Firebase Auth UID
-  sellerId: string;                  // Firebase Auth UID
-  orderAmount: number;               // Amount in INR
-  orderCurrency: string;             // "INR"
-  orderStatus: 'ACTIVE' | 'PAID' | 'EXPIRED' | 'CANCELLED';
-  paymentStatus: 'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELLED';
+  orderId: string; // Primary key
+  cfOrderId: string; // Cashfree order ID
+  listingId: string; // Listing being purchased
+  buyerId: string; // Firebase Auth UID
+  sellerId: string; // Firebase Auth UID
+  orderAmount: number; // Amount in INR
+  orderCurrency: string; // "INR"
+  orderStatus: "ACTIVE" | "PAID" | "EXPIRED" | "CANCELLED";
+  paymentStatus: "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED";
   customerEmail: string;
   customerPhone?: string;
-  paymentSessionId: string;          // Cashfree session ID
-  orderToken: string;                // Cashfree order token
-  orderExpiryTime: string;           // ISO timestamp
+  paymentSessionId: string; // Cashfree session ID
+  orderToken: string; // Cashfree order token
+  orderExpiryTime: string; // ISO timestamp
   createdAt: Timestamp;
   updatedAt: Timestamp;
-  lastSyncedAt?: Timestamp;          // Last sync with Cashfree
+  lastSyncedAt?: Timestamp; // Last sync with Cashfree
   listingTitle?: string;
   listingPrice?: number;
-  duplicatePreventionKey?: string;   // Idempotency key
-  cashfreeResponse?: any;            // Raw Cashfree response
+  duplicatePreventionKey?: string; // Idempotency key
+  cashfreeResponse?: any; // Raw Cashfree response
 }
 ```
 
@@ -92,19 +92,19 @@ interface PaymentOrder {
 
 ```typescript
 interface PaymentEvent {
-  eventId: string;                    // Primary key
-  type: string;                       // Event type
-  timestamp: string;                  // Event timestamp
+  eventId: string; // Primary key
+  type: string; // Event type
+  timestamp: string; // Event timestamp
   orderId: string;
   cfOrderId?: string;
   listingId?: string;
   buyerId?: string;
   sellerId?: string;
   orderAmount?: number;
-  signature: string;                  // Webhook signature
-  payload: any;                      // Raw webhook payload
+  signature: string; // Webhook signature
+  payload: any; // Raw webhook payload
   processedAt: Timestamp;
-  processingStatus: 'SUCCESS' | 'FAILED' | 'DUPLICATE';
+  processingStatus: "SUCCESS" | "FAILED" | "DUPLICATE";
   errorMessage?: string;
   ip?: string;
   userAgent?: string;
@@ -115,19 +115,19 @@ interface PaymentEvent {
 
 ```typescript
 interface Purchase {
-  id: string;                         // Primary key
-  orderId: string;                    // Payment order ID
-  cfOrderId: string;                  // Cashfree order ID
-  listingId: string;                  // Purchased listing
-  buyerId: string;                    // Buyer UID
-  sellerId: string;                   // Seller UID
-  purchaseAmount: number;            // Amount paid
-  purchaseCurrency: string;          // "INR"
-  paymentId?: string;                 // Cashfree payment ID
-  paymentMethod: 'cashfree';         // Payment method
-  purchaseStatus: 'completed';       // Status
-  purchaseAt: Timestamp;             // Purchase timestamp
-  createdAt: Timestamp;               // Record creation
+  id: string; // Primary key
+  orderId: string; // Payment order ID
+  cfOrderId: string; // Cashfree order ID
+  listingId: string; // Purchased listing
+  buyerId: string; // Buyer UID
+  sellerId: string; // Seller UID
+  purchaseAmount: number; // Amount paid
+  purchaseCurrency: string; // "INR"
+  paymentId?: string; // Cashfree payment ID
+  paymentMethod: "cashfree"; // Payment method
+  purchaseStatus: "completed"; // Status
+  purchaseAt: Timestamp; // Purchase timestamp
+  createdAt: Timestamp; // Record creation
 }
 ```
 
@@ -138,6 +138,7 @@ interface Purchase {
 **Purpose**: Creates a new payment order with Cashfree
 
 **Input**:
+
 ```typescript
 {
   listingId: string;
@@ -149,6 +150,7 @@ interface Purchase {
 ```
 
 **Output**:
+
 ```typescript
 {
   success: boolean;
@@ -161,6 +163,7 @@ interface Purchase {
 ```
 
 **Security**:
+
 - Requires Firebase Auth token
 - Validates listing exists and is available
 - Prevents self-purchase
@@ -168,6 +171,7 @@ interface Purchase {
 - Implements duplicate prevention
 
 **Side Effects**:
+
 - Creates order in Cashfree
 - Stores payment record in Firestore
 - Reserves listing for 15 minutes
@@ -182,17 +186,20 @@ interface Purchase {
 **Output**: HTTP response with processing status
 
 **Security**:
+
 - Validates webhook signature
 - Idempotent processing
 - Logs all events
 
 **Event Types Handled**:
+
 - `PAYMENT_SUCCESS` / `ORDER_PAID`
 - `PAYMENT_FAILED` / `ORDER_FAILED`
 - `PAYMENT_CANCELLED` / `ORDER_CANCELLED`
 - `ORDER_EXPIRED`
 
 **Side Effects**:
+
 - Updates payment status
 - Marks listing as sold (on success)
 - Releases reservation (on failure/cancellation)
@@ -205,6 +212,7 @@ interface Purchase {
 **Purpose**: Allows polling for payment status
 
 **Input**:
+
 ```typescript
 {
   orderId: string;
@@ -212,6 +220,7 @@ interface Purchase {
 ```
 
 **Output**:
+
 ```typescript
 {
   success: boolean;
@@ -232,11 +241,13 @@ interface Purchase {
 ```
 
 **Security**:
+
 - Requires Firebase Auth token
 - Only buyer can check their own orders
 - Syncs with Cashfree API
 
 **Side Effects**:
+
 - Updates Firestore if status changed
 - Handles status change side effects
 - Logs sync events

@@ -1,26 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  getAuthProvider, 
+import React, { useState, useEffect } from "react";
+import {
+  getAuthProvider,
   isFirebaseAvailable,
-  getCurrentUser 
-} from '../lib/auth';
-import { checkFunctionHealth } from '../lib/functions';
-import { 
-  Activity, 
-  Database, 
-  HardDrive, 
-  Cloud, 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle, 
+  getCurrentUser,
+} from "../lib/auth";
+import { checkFunctionHealth } from "../lib/functions";
+import {
+  Activity,
+  Database,
+  HardDrive,
+  Cloud,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
   RefreshCw,
   BarChart3,
   Users,
   Package,
   CreditCard,
   MapPin,
-  Shield
-} from 'lucide-react';
+  Shield,
+} from "lucide-react";
 
 interface ProviderStatus {
   name: string;
@@ -42,7 +42,9 @@ interface MigrationMetrics {
 }
 
 export const MigrationDashboard: React.FC = () => {
-  const [providerStatuses, setProviderStatuses] = useState<ProviderStatus[]>([]);
+  const [providerStatuses, setProviderStatuses] = useState<ProviderStatus[]>(
+    [],
+  );
   const [metrics, setMetrics] = useState<MigrationMetrics>({
     totalUsers: 0,
     totalListings: 0,
@@ -50,7 +52,7 @@ export const MigrationDashboard: React.FC = () => {
     totalStorage: 0,
     activeConnections: 0,
     errorRate: 0,
-    avgResponseTime: 0
+    avgResponseTime: 0,
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -59,7 +61,7 @@ export const MigrationDashboard: React.FC = () => {
   useEffect(() => {
     loadProviderStatuses();
     loadMetrics();
-    
+
     const interval = setInterval(() => {
       loadProviderStatuses();
       loadMetrics();
@@ -77,39 +79,39 @@ export const MigrationDashboard: React.FC = () => {
       const firebaseAuthAvailable = isFirebaseAvailable();
 
       statuses.push({
-        name: 'Authentication',
+        name: "Authentication",
         provider: authProvider,
         available: firebaseAuthAvailable,
-        icon: <Users className="w-5 h-5" />
+        icon: <Users className="w-5 h-5" />,
       });
 
       statuses.push({
-        name: 'Database',
-        provider: 'firebase',
+        name: "Database",
+        provider: "firebase",
         available: firebaseAuthAvailable,
-        icon: <Database className="w-5 h-5" />
+        icon: <Database className="w-5 h-5" />,
       });
 
       statuses.push({
-        name: 'Storage',
-        provider: 'firebase',
+        name: "Storage",
+        provider: "firebase",
         available: firebaseAuthAvailable,
-        icon: <HardDrive className="w-5 h-5" />
+        icon: <HardDrive className="w-5 h-5" />,
       });
 
       const functionHealth = await checkFunctionHealth();
       statuses.push({
-        name: 'Functions',
-        provider: 'firebase',
+        name: "Functions",
+        provider: "firebase",
         available: functionHealth.healthy,
         healthy: functionHealth.healthy,
         latency: functionHealth.latency,
-        icon: <Cloud className="w-5 h-5" />
+        icon: <Cloud className="w-5 h-5" />,
       });
 
       setProviderStatuses(statuses);
     } catch (error) {
-      console.error('Error loading provider statuses:', error);
+      console.error("Error loading provider statuses:", error);
     } finally {
       setLoading(false);
     }
@@ -125,10 +127,10 @@ export const MigrationDashboard: React.FC = () => {
         totalStorage: 1234567890, // bytes
         activeConnections: 89,
         errorRate: 0.02,
-        avgResponseTime: 145
+        avgResponseTime: 145,
       });
     } catch (error) {
-      console.error('Error loading metrics:', error);
+      console.error("Error loading metrics:", error);
     }
   };
 
@@ -141,10 +143,10 @@ export const MigrationDashboard: React.FC = () => {
   };
 
   const getStatusColor = (status: ProviderStatus) => {
-    if (!status.available) return 'text-red-500';
-    if (status.healthy === false) return 'text-yellow-500';
-    if (status.healthy === true) return 'text-green-500';
-    return 'text-green-500';
+    if (!status.available) return "text-red-500";
+    if (status.healthy === false) return "text-yellow-500";
+    if (status.healthy === true) return "text-green-500";
+    return "text-green-500";
   };
 
   const getStatusIcon = (status: ProviderStatus) => {
@@ -155,11 +157,11 @@ export const MigrationDashboard: React.FC = () => {
   };
 
   const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 B';
+    if (bytes === 0) return "0 B";
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const sizes = ["B", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const formatNumber = (num: number) => {
@@ -184,7 +186,9 @@ export const MigrationDashboard: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Migration Dashboard</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Migration Dashboard
+              </h1>
               <p className="text-gray-600 mt-1">
                 Firebase Migration Status & Monitoring
               </p>
@@ -198,7 +202,9 @@ export const MigrationDashboard: React.FC = () => {
                 disabled={refreshing}
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
               >
-                <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`}
+                />
                 <span>Refresh</span>
               </button>
             </div>
@@ -211,11 +217,11 @@ export const MigrationDashboard: React.FC = () => {
             <div key={index} className="bg-white rounded-lg shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  <div className={getStatusColor(status)}>
-                    {status.icon}
-                  </div>
+                  <div className={getStatusColor(status)}>{status.icon}</div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">{status.name}</h3>
+                    <h3 className="font-semibold text-gray-900">
+                      {status.name}
+                    </h3>
                     <p className="text-sm text-gray-500">{status.provider}</p>
                   </div>
                 </div>
@@ -227,7 +233,11 @@ export const MigrationDashboard: React.FC = () => {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Status:</span>
                   <span className={getStatusColor(status)}>
-                    {status.available ? (status.healthy === false ? 'Degraded' : 'Healthy') : 'Unavailable'}
+                    {status.available
+                      ? status.healthy === false
+                        ? "Degraded"
+                        : "Healthy"
+                      : "Unavailable"}
                   </span>
                 </div>
                 {status.latency && (
@@ -263,7 +273,9 @@ export const MigrationDashboard: React.FC = () => {
               <div className="flex items-center space-x-3">
                 <Package className="w-8 h-8 text-green-600" />
                 <div>
-                  <h3 className="font-semibold text-gray-900">Total Listings</h3>
+                  <h3 className="font-semibold text-gray-900">
+                    Total Listings
+                  </h3>
                   <p className="text-sm text-gray-500">Active listings</p>
                 </div>
               </div>
@@ -278,8 +290,12 @@ export const MigrationDashboard: React.FC = () => {
               <div className="flex items-center space-x-3">
                 <CreditCard className="w-8 h-8 text-purple-600" />
                 <div>
-                  <h3 className="font-semibold text-gray-900">Total Payments</h3>
-                  <p className="text-sm text-gray-500">Processed transactions</p>
+                  <h3 className="font-semibold text-gray-900">
+                    Total Payments
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Processed transactions
+                  </p>
                 </div>
               </div>
             </div>
@@ -308,15 +324,15 @@ export const MigrationDashboard: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Active Connections</h3>
+              <h3 className="font-semibold text-gray-900">
+                Active Connections
+              </h3>
               <Activity className="w-5 h-5 text-blue-600" />
             </div>
             <div className="text-3xl font-bold text-gray-900 mb-2">
               {metrics.activeConnections}
             </div>
-            <div className="text-sm text-gray-500">
-              Current active users
-            </div>
+            <div className="text-sm text-gray-500">Current active users</div>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6">
@@ -327,9 +343,7 @@ export const MigrationDashboard: React.FC = () => {
             <div className="text-3xl font-bold text-gray-900 mb-2">
               {(metrics.errorRate * 100).toFixed(2)}%
             </div>
-            <div className="text-sm text-gray-500">
-              Last 24 hours
-            </div>
+            <div className="text-sm text-gray-500">Last 24 hours</div>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6">
@@ -340,15 +354,15 @@ export const MigrationDashboard: React.FC = () => {
             <div className="text-3xl font-bold text-gray-900 mb-2">
               {metrics.avgResponseTime}ms
             </div>
-            <div className="text-sm text-gray-500">
-              API response time
-            </div>
+            <div className="text-sm text-gray-500">API response time</div>
           </div>
         </div>
 
         {/* Migration Progress */}
         <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Migration Progress</h3>
+          <h3 className="font-semibold text-gray-900 mb-4">
+            Migration Progress
+          </h3>
           <div className="space-y-4">
             <div>
               <div className="flex justify-between text-sm mb-2">
@@ -356,7 +370,10 @@ export const MigrationDashboard: React.FC = () => {
                 <span className="text-green-600 font-medium">Complete</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-green-600 h-2 rounded-full" style={{ width: '100%' }}></div>
+                <div
+                  className="bg-green-600 h-2 rounded-full"
+                  style={{ width: "100%" }}
+                ></div>
               </div>
             </div>
             <div>
@@ -365,7 +382,10 @@ export const MigrationDashboard: React.FC = () => {
                 <span className="text-green-600 font-medium">Complete</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-green-600 h-2 rounded-full" style={{ width: '100%' }}></div>
+                <div
+                  className="bg-green-600 h-2 rounded-full"
+                  style={{ width: "100%" }}
+                ></div>
               </div>
             </div>
             <div>
@@ -374,7 +394,10 @@ export const MigrationDashboard: React.FC = () => {
                 <span className="text-green-600 font-medium">Complete</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-green-600 h-2 rounded-full" style={{ width: '100%' }}></div>
+                <div
+                  className="bg-green-600 h-2 rounded-full"
+                  style={{ width: "100%" }}
+                ></div>
               </div>
             </div>
             <div>
@@ -383,7 +406,10 @@ export const MigrationDashboard: React.FC = () => {
                 <span className="text-green-600 font-medium">Complete</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-green-600 h-2 rounded-full" style={{ width: '100%' }}></div>
+                <div
+                  className="bg-green-600 h-2 rounded-full"
+                  style={{ width: "100%" }}
+                ></div>
               </div>
             </div>
             <div>
@@ -392,7 +418,10 @@ export const MigrationDashboard: React.FC = () => {
                 <span className="text-yellow-600 font-medium">In Progress</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
-                <div className="bg-yellow-600 h-2 rounded-full" style={{ width: '75%' }}></div>
+                <div
+                  className="bg-yellow-600 h-2 rounded-full"
+                  style={{ width: "75%" }}
+                ></div>
               </div>
             </div>
           </div>

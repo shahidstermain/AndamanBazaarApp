@@ -1,6 +1,7 @@
 # AndamanBazaar Comprehensive Test Plan
 
 ## Test Coverage Target
+
 - **Minimum 90% code coverage across all modules**
 - **100% coverage for critical security and authentication flows**
 - **85% coverage for UI components and user interactions**
@@ -8,7 +9,9 @@
 ## Test Categories
 
 ### 1. Unit Tests (40% of total tests)
+
 **Components to Test:**
+
 - Authentication flows (login, logout, session management)
 - Form validation and input sanitization
 - Data transformation utilities
@@ -19,7 +22,9 @@
 **Tools:** Vitest, React Testing Library, @testing-library/user-event
 
 ### 2. Integration Tests (30% of total tests)
+
 **API Flows to Test:**
+
 - User registration and authentication
 - Listing creation, editing, and deletion
 - Chat functionality and real-time messaging
@@ -31,7 +36,9 @@
 **Tools:** Vitest with MSW (Mock Service Worker) for API mocking
 
 ### 3. End-to-End Tests (20% of total tests)
+
 **User Journeys to Test:**
+
 - Complete user registration and login flow
 - Create and publish a listing
 - Search and browse listings
@@ -43,7 +50,9 @@
 **Tools:** Playwright for cross-browser testing
 
 ### 4. Security Tests (10% of total tests)
+
 **Security Scenarios:**
+
 - SQL injection attempts
 - XSS attack prevention
 - CSRF protection validation
@@ -58,6 +67,7 @@
 ## Test Environment Setup
 
 ### Development Environment
+
 ```bash
 npm run test          # Run all unit and integration tests
 npm run test:ui       # Run tests with Vitest UI
@@ -65,6 +75,7 @@ npm run test:coverage # Generate coverage report
 ```
 
 ### CI/CD Environment
+
 - Tests run on every pull request
 - Coverage reports generated and stored
 - Security scans performed on deployment
@@ -72,33 +83,35 @@ npm run test:coverage # Generate coverage report
 
 ## Browser Compatibility Matrix
 
-| Browser | Versions | Test Priority |
-|---------|----------|---------------|
-| Chrome  | Latest 2 | Critical |
-| Firefox | Latest 2 | Critical |
-| Safari  | Latest 2 | High |
-| Edge    | Latest 2 | High |
-| Mobile Safari | iOS 15+ | Critical |
-| Chrome Mobile | Android 10+ | Critical |
+| Browser       | Versions    | Test Priority |
+| ------------- | ----------- | ------------- |
+| Chrome        | Latest 2    | Critical      |
+| Firefox       | Latest 2    | Critical      |
+| Safari        | Latest 2    | High          |
+| Edge          | Latest 2    | High          |
+| Mobile Safari | iOS 15+     | Critical      |
+| Chrome Mobile | Android 10+ | Critical      |
 
 ## Device Testing Matrix
 
-| Device Category | Screen Sizes | Test Priority |
-|-----------------|--------------|---------------|
-| Mobile Phones   | 320px - 768px | Critical |
-| Tablets         | 768px - 1024px | High |
-| Desktop         | 1024px - 1920px | Critical |
-| Ultra-wide      | 1920px+ | Medium |
+| Device Category | Screen Sizes    | Test Priority |
+| --------------- | --------------- | ------------- |
+| Mobile Phones   | 320px - 768px   | Critical      |
+| Tablets         | 768px - 1024px  | High          |
+| Desktop         | 1024px - 1920px | Critical      |
+| Ultra-wide      | 1920px+         | Medium        |
 
 ## Performance Benchmarks
 
 ### Core Web Vitals Targets
+
 - **Largest Contentful Paint (LCP):** < 2.5s
 - **First Input Delay (FID):** < 100ms
 - **Cumulative Layout Shift (CLS):** < 0.1
 - **Time to Interactive (TTI):** < 3.5s
 
 ### API Response Times
+
 - **Authentication endpoints:** < 500ms
 - **Listing queries:** < 300ms
 - **Search operations:** < 500ms
@@ -108,6 +121,7 @@ npm run test:coverage # Generate coverage report
 ## Accessibility Requirements
 
 ### WCAG 2.1 Level AA Compliance
+
 - **Keyboard navigation:** All interactive elements accessible via keyboard
 - **Screen reader support:** Proper ARIA labels and semantic HTML
 - **Color contrast:** Minimum 4.5:1 ratio for normal text, 3:1 for large text
@@ -116,6 +130,7 @@ npm run test:coverage # Generate coverage report
 - **Form labels:** All form inputs have associated labels
 
 ### Testing Tools
+
 - axe-core for automated accessibility testing
 - Manual keyboard navigation testing
 - Screen reader testing with NVDA/JAWS
@@ -124,6 +139,7 @@ npm run test:coverage # Generate coverage report
 ## Security Testing Checklist
 
 ### Authentication & Authorization
+
 - [ ] Password strength requirements enforced
 - [ ] Account lockout after failed attempts
 - [ ] JWT token expiration and refresh
@@ -131,6 +147,7 @@ npm run test:coverage # Generate coverage report
 - [ ] Session management security
 
 ### Data Protection
+
 - [ ] Input sanitization on all user inputs
 - [ ] SQL injection prevention
 - [ ] XSS protection headers
@@ -138,6 +155,7 @@ npm run test:coverage # Generate coverage report
 - [ ] Rate limiting on all public endpoints
 
 ### File Upload Security
+
 - [ ] File type validation
 - [ ] File size limits enforced
 - [ ] Malicious file detection
@@ -145,6 +163,7 @@ npm run test:coverage # Generate coverage report
 - [ ] Image processing security
 
 ### Payment Security
+
 - [ ] PCI DSS compliance for payment processing
 - [ ] Secure token handling
 - [ ] Payment validation and verification
@@ -153,12 +172,14 @@ npm run test:coverage # Generate coverage report
 ## Test Data Management
 
 ### Test User Accounts
+
 - Standard user accounts for different roles
 - Test listings with various categories and conditions
 - Sample chat conversations
 - Test payment methods (sandbox)
 
 ### Test Scenarios
+
 - Edge cases (empty states, maximum lengths)
 - Boundary conditions (price limits, character limits)
 - Error conditions (network failures, server errors)
@@ -167,17 +188,20 @@ npm run test:coverage # Generate coverage report
 ## Test Execution Schedule
 
 ### Daily (Development)
+
 - Unit tests on code changes
 - Integration tests for new features
 - Accessibility quick checks
 
 ### Weekly
+
 - Full test suite execution
 - Performance benchmarks
 - Security vulnerability scans
 - Cross-browser compatibility tests
 
 ### Monthly
+
 - End-to-end user journey testing
 - Full accessibility audit
 - Performance optimization review
@@ -186,6 +210,7 @@ npm run test:coverage # Generate coverage report
 ## Success Criteria
 
 ### Pass Criteria
+
 - All critical user flows work without errors
 - No security vulnerabilities rated High or Critical
 - Performance metrics meet or exceed targets
@@ -193,6 +218,7 @@ npm run test:coverage # Generate coverage report
 - 90%+ code coverage maintained
 
 ### Fail Criteria
+
 - Any critical security vulnerability
 - Core user journeys broken
 - Performance metrics 20% below targets
@@ -202,6 +228,7 @@ npm run test:coverage # Generate coverage report
 ## Reporting and Documentation
 
 ### Test Reports Include
+
 - Test execution summary
 - Pass/fail counts with severity levels
 - Code coverage metrics
@@ -212,6 +239,7 @@ npm run test:coverage # Generate coverage report
 - Device testing results
 
 ### Issue Classification
+
 - **Critical:** System unusable, security breach
 - **High:** Major functionality broken
 - **Medium:** Minor functionality issues
@@ -220,12 +248,14 @@ npm run test:coverage # Generate coverage report
 ## Continuous Improvement
 
 ### Test Maintenance
+
 - Regular test case review and updates
 - Test data refresh and cleanup
 - Test environment optimization
 - Tool updates and upgrades
 
 ### Metrics Tracking
+
 - Test execution time trends
 - Bug discovery rates
 - Customer-reported issues
@@ -234,6 +264,7 @@ npm run test:coverage # Generate coverage report
 ## Resources and Tools
 
 ### Testing Frameworks
+
 - **Unit Testing:** Vitest, React Testing Library
 - **Integration Testing:** Vitest with MSW
 - **E2E Testing:** Playwright
@@ -242,6 +273,7 @@ npm run test:coverage # Generate coverage report
 - **Accessibility Testing:** axe-core, Lighthouse
 
 ### Monitoring and Analytics
+
 - Error tracking with Sentry
 - Performance monitoring
 - User behavior analytics

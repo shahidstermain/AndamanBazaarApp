@@ -181,7 +181,11 @@ export const LeadFormModal = ({
           <h2 id="lead-form-title" className="text-xl font-bold">
             Request Booking
           </h2>
-          <button type="button" onClick={onClose} className="rounded-md px-2 py-1 hover:bg-slate-100">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md px-2 py-1 hover:bg-slate-100"
+          >
             Close
           </button>
         </div>
@@ -355,7 +359,9 @@ export const LeadFormModal = ({
                   </label>
                 ))}
               </div>
-              {errors.activities && <p className="mt-1 text-sm text-red-600">{errors.activities}</p>}
+              {errors.activities && (
+                <p className="mt-1 text-sm text-red-600">{errors.activities}</p>
+              )}
             </fieldset>
 
             <div>

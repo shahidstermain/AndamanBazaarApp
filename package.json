@@ -14,7 +14,7 @@
     "test:e2e": "playwright test",
     "test:security": "vitest run tests/security",
     "test:accessibility": "vitest run tests/accessibility --passWithNoTests",
-    "test:performance": "lighthouse http://localhost:5173 --output=html --output-path=./reports/performance.html",
+    "test:performance": "lighthouse http://localhost:5173 --output=html --output-path=./reports/performance.html --chrome-flags=\"--headless --no-sandbox --disable-gpu\"",
     "test:load": "k6 run tests/load/k6-script.js",
     "test:smoke": "playwright test tests/e2e/smoke.spec.ts",
     "test:visual": "playwright test tests/e2e/visual.spec.ts",
@@ -147,6 +147,7 @@
   "overrides": {
     "vite-plugin-pwa": {
       "vite": "$vite"
-    }
+    },
+    "axios": "^1.15.0"
   }
 }

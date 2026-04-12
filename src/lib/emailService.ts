@@ -1,8 +1,14 @@
 // 🌴 Andaman Bazaar Email Service
 // All email API keys stay in Cloud Functions only — never exposed to frontend (AGENTS.md rule)
 
-import { auth } from './firebase';
-import { emailTemplates, emailTriggers, getEmailTemplate, renderEmailContent, EmailData } from './emailTemplates';
+import { auth } from "./firebase";
+import {
+  emailTemplates,
+  emailTriggers,
+  getEmailTemplate,
+  renderEmailContent,
+  EmailData,
+} from "./emailTemplates";
 
 export type { EmailData };
 
@@ -15,7 +21,7 @@ export interface EmailMessage {
 // Get Firebase auth token for Cloud Function calls
 const getAuthToken = async (): Promise<string> => {
   const user = auth.currentUser;
-  if (!user) throw new Error('User not authenticated');
+  if (!user) throw new Error("User not authenticated");
   return await user.getIdToken();
 };
 
@@ -24,28 +30,28 @@ export const sendEmail = async (message: EmailMessage): Promise<boolean> => {
   try {
     const fnUrl = import.meta.env.VITE_FIREBASE_SEND_EMAIL_FUNCTION;
     if (!fnUrl) {
-      console.error('VITE_FIREBASE_SEND_EMAIL_FUNCTION not configured');
+      console.error("VITE_FIREBASE_SEND_EMAIL_FUNCTION not configured");
       return false;
     }
 
     const token = await getAuthToken();
     const response = await fetch(fnUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(message),
     });
 
     if (!response.ok) {
-      console.error('Email Cloud Function error:', response.statusText);
+      console.error("Email Cloud Function error:", response.statusText);
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error('sendEmail error:', error);
+    console.error("sendEmail error:", error);
     return false;
   }
 };
@@ -54,14 +60,14 @@ export const sendEmail = async (message: EmailMessage): Promise<boolean> => {
 export const sendTemplateEmail = async (
   templateName: keyof typeof emailTemplates,
   to: string,
-  data: EmailData = {}
+  data: EmailData = {},
 ): Promise<boolean> => {
   try {
     const template = getEmailTemplate(templateName, data);
     const html = renderEmailContent(template, data);
     return await sendEmail({ to, subject: template.subject, html });
   } catch (error) {
-    console.error('sendTemplateEmail error:', error);
+    console.error("sendTemplateEmail error:", error);
     return false;
   }
 };
@@ -70,7 +76,7 @@ export const sendTemplateEmail = async (
 export const triggerEmail = async (
   trigger: keyof typeof emailTriggers,
   to: string,
-  data: EmailData = {}
+  data: EmailData = {},
 ): Promise<boolean> => {
   try {
     const templateName = emailTriggers[trigger] as keyof typeof emailTemplates;
@@ -80,7 +86,7 @@ export const triggerEmail = async (
     }
     return await sendTemplateEmail(templateName, to, data);
   } catch (error) {
-    console.error('triggerEmail error:', error);
+    console.error("triggerEmail error:", error);
     return false;
   }
 };

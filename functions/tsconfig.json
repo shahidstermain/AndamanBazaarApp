@@ -2,9 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "commonjs",
-    "lib": [
-      "ES2022"
-    ],
+    "lib": ["ES2022"],
     "moduleResolution": "node",
     "strict": true,
     "esModuleInterop": true,
@@ -13,16 +11,9 @@
     "sourceMap": true,
     "rootDir": "src",
     "outDir": "lib",
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
   "compileOnSave": true,
-  "include": [
-    "src/**/*.ts"
-  ],
-  "exclude": [
-    "lib",
-    "node_modules"
-  ]
+  "include": ["src/**/*.ts"],
+  "exclude": ["lib", "node_modules"]
 }

@@ -53,6 +53,7 @@ This checklist ensures zero-downtime migration when cutting over DNS for andaman
 ### Phase 1: Preparation (T-24 hours)
 
 #### DNS TTL Reduction
+
 ```bash
 # Lower TTL to 300 seconds (5 minutes) 24 hours before migration
 # This allows for fast cutover and rollback
@@ -79,6 +80,7 @@ TTL: 300
 - [ ] Wait 24 hours for TTL propagation (T-24h to T-0h)
 
 #### Pre-Migration Testing
+
 - [ ] Verify staging environment works on staging.andamanbazaar.in
 - [ ] Test all critical user flows on staging
 - [ ] Verify payment processing in sandbox mode
@@ -90,6 +92,7 @@ TTL: 300
 ### Phase 2: Migration Execution (T-0)
 
 #### Step 1: Deploy Production Build
+
 ```bash
 # Deploy latest production build
 npm ci
@@ -106,6 +109,7 @@ firebase hosting:sites:get --site andamanbazaar-in
 - [ ] All pages loading correctly
 
 #### Step 2: Final Pre-Cutover Check
+
 ```bash
 # Test health endpoint
 curl -sf https://andamanbazaar-in.web.app/health.json
@@ -125,6 +129,7 @@ echo "✅ Critical pages accessible"
 #### Step 3: Execute DNS Cutover
 
 **Option A: Apex Domain (andamanbazaar.in)**
+
 ```
 # BEFORE (current hosting)
 Name: @
@@ -141,6 +146,7 @@ Value: 199.36.158.100
 ```
 
 **Option B: www Subdomain**
+
 ```
 # BEFORE (if using www)
 Name: www
@@ -155,6 +161,7 @@ Value: andamanbazaar-in.web.app
 ```
 
 **Option C: Apex + www (Recommended)**
+
 ```
 # Apex domain
 Name: @
@@ -182,6 +189,7 @@ Value: andamanbazaar-in--staging.web.app
 ### Phase 3: Verification (T+0 to T+30 minutes)
 
 #### DNS Propagation Check
+
 ```bash
 # Check DNS propagation (run every 5 minutes)
 # This may show old and new IPs during propagation
@@ -201,6 +209,7 @@ dig @208.67.222.222 andamanbazaar.in A +short
 - [ ] Propagation confirmed across multiple DNS servers
 
 #### Application Verification
+
 ```bash
 # Test main domain
 curl -sf https://andamanbazaar.in/health.json
@@ -221,6 +230,7 @@ echo "✅ Staging working"
 - [ ] SSL certificate valid (no browser warnings)
 
 #### Critical Functionality Tests
+
 - [ ] Homepage loads without errors
 - [ ] User can log in
 - [ ] User can create a listing
@@ -230,6 +240,7 @@ echo "✅ Staging working"
 - [ ] Mobile responsiveness verified
 
 #### Monitor for Issues
+
 ```bash
 # Set up continuous monitoring for 30 minutes
 while true; do
@@ -248,6 +259,7 @@ done
 ### Phase 4: Post-Migration (T+30 minutes to T+24 hours)
 
 #### Restore Normal TTL
+
 ```
 # After successful migration (T+24 hours), restore normal TTL
 Name: @
@@ -265,12 +277,14 @@ TTL: 3600
 - [ ] Save DNS changes
 
 #### Cleanup
+
 - [ ] Update documentation with new hosting information
 - [ ] Notify team of successful migration
 - [ ] Update monitoring dashboards
 - [ ] Archive old hosting configuration
 
 #### Monitoring (24-48 hours)
+
 - [ ] Monitor error rates continuously
 - [ ] Watch for DNS-related issues
 - [ ] Check SSL certificate auto-renewal
@@ -325,11 +339,13 @@ Next Steps:
 ## DNS Configuration Reference
 
 ### Firebase Hosting IPs
+
 ```
 199.36.158.100
 ```
 
 ### Firebase Hosting CNAMEs
+
 ```
 Production: andamanbazaar-in.web.app
 Staging: andamanbazaar-in--staging.web.app
@@ -338,6 +354,7 @@ Staging: andamanbazaar-in--staging.web.app
 ### Recommended DNS Records
 
 **For Firebase Hosting (Final State):**
+
 ```
 # Apex domain
 Name: @
@@ -373,17 +390,20 @@ Value: [Firebase verification token]
 ## Testing Checklist
 
 ### Pre-Migration
+
 - [ ] Firebase URL works: https://andamanbazaar-in.web.app
 - [ ] Staging URL works: https://andamanbazaar-in--staging.web.app
 - [ ] All critical paths tested on Firebase
 - [ ] Performance acceptable (Lighthouse score > 90)
 
 ### During Migration
+
 - [ ] DNS changes saved successfully
 - [ ] No errors during propagation
 - [ ] Site remains accessible throughout
 
 ### Post-Migration
+
 - [ ] HTTPS working with valid certificate
 - [ ] No mixed content warnings
 - [ ] All assets loading (CSS, JS, images)
@@ -397,22 +417,27 @@ Value: [Firebase verification token]
 ## Common Issues & Solutions
 
 ### Issue: DNS Not Propagating
+
 **Symptoms**: Old IP still resolving after TTL period  
 **Solution**: Clear local DNS cache, check with multiple resolvers
 
 ### Issue: SSL Certificate Error
+
 **Symptoms**: Browser shows certificate warning  
 **Solution**: Wait for Firebase SSL provisioning (can take up to 24 hours for new domains)
 
 ### Issue: 404 Errors
+
 **Symptoms**: SPA routes return 404  
 **Solution**: Verify Firebase rewrites configured in firebase.json
 
 ### Issue: Assets Not Loading
+
 **Symptoms**: CSS/JS 404 or mixed content warnings  
 **Solution**: Check base URL in vite.config.ts, verify all URLs use HTTPS
 
 ### Issue: CORS Errors
+
 **Symptoms**: API calls failing  
 **Solution**: Verify Supabase CORS settings include new domain
 
@@ -439,6 +464,7 @@ Value: [Firebase verification token]
 **Domain Registrar**: [Name] - [Support URL]
 
 **Team Contacts:**
+
 - On-call Engineer: [Contact]
 - DevOps Lead: [Contact]
 - Engineering Manager: [Contact]

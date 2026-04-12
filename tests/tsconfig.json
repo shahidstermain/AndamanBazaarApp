@@ -3,6 +3,12 @@
   "include": ["../src/env.d.ts", "../types.ts", "**/*.ts", "**/*.tsx"],
   "exclude": [],
   "compilerOptions": {
-    "types": ["vitest/globals", "vitest", "node", "@playwright/test", "vite/client"]
+    "types": [
+      "vitest/globals",
+      "vitest",
+      "node",
+      "@playwright/test",
+      "vite/client"
+    ]
   }
 }

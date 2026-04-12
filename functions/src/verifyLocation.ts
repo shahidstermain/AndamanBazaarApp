@@ -1,4 +1,8 @@
-import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
+import {
+  onCall,
+  HttpsError,
+  CallableRequest,
+} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 
 // Ensure Firebase is initialized
@@ -43,14 +47,20 @@ function isWithinAndamanBounds(lat: number, lng: number): boolean {
 }
 
 async function getIpGeolocation(ip: string): Promise<IpGeoResponse | null> {
-  if (!ip || ip === "unknown" || ip.startsWith("127.") || ip.startsWith("192.168.") || ip.startsWith("10.")) {
+  if (
+    !ip ||
+    ip === "unknown" ||
+    ip.startsWith("127.") ||
+    ip.startsWith("192.168.") ||
+    ip.startsWith("10.")
+  ) {
     return null;
   }
 
   try {
     const response = await fetch(
       `https://ip-api.com/json/${ip}?fields=status,country,countryCode,lat,lon,isp`,
-      { signal: AbortSignal.timeout(5000) }
+      { signal: AbortSignal.timeout(5000) },
     );
 
     if (!response.ok) {
@@ -71,7 +81,10 @@ async function getIpGeolocation(ip: string): Promise<IpGeoResponse | null> {
 
 export const verifyLocation = onCall(async (request: CallableRequest) => {
   if (!request.auth) {
-    throw new HttpsError("unauthenticated", "User must be authenticated to verify location.");
+    throw new HttpsError(
+      "unauthenticated",
+      "User must be authenticated to verify location.",
+    );
   }
 
   const uid = request.auth.uid;
@@ -101,38 +114,50 @@ export const verifyLocation = onCall(async (request: CallableRequest) => {
   if (rateLimitDoc.exists) {
     const data = rateLimitDoc.data();
     if (data?.blockedUntil && now < data.blockedUntil) {
-      throw new HttpsError("resource-exhausted", "Too many attempts. Please try again later.");
+      throw new HttpsError(
+        "resource-exhausted",
+        "Too many attempts. Please try again later.",
+      );
     }
-    
+
     // Reset counters if outside hour window
-    if (data?.lastAttemptAt && (now - data.lastAttemptAt > 60 * 60 * 1000)) {
+    if (data?.lastAttemptAt && now - data.lastAttemptAt > 60 * 60 * 1000) {
       await rateLimitRef.update({ attempts: 0 });
     } else if (data && data.attempts >= RATE_LIMIT_CONFIG.maxAttemptsPerHour) {
       // Block for configured hours
-      const blockDuration = RATE_LIMIT_CONFIG.blockDurationHours * 60 * 60 * 1000;
+      const blockDuration =
+        RATE_LIMIT_CONFIG.blockDurationHours * 60 * 60 * 1000;
       await rateLimitRef.update({ blockedUntil: now + blockDuration });
-      
+
       await db.collection("audit_logs").add({
         user_id: uid,
         action: "location_verification_rate_limited",
         status: "blocked",
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
       });
-      
-      throw new HttpsError("resource-exhausted", "Too many attempts. Please try again later.");
+
+      throw new HttpsError(
+        "resource-exhausted",
+        "Too many attempts. Please try again later.",
+      );
     }
   }
 
   // Record an attempt
-  await rateLimitRef.set({
-    attempts: admin.firestore.FieldValue.increment(1),
-    lastAttemptAt: now
-  }, { merge: true });
+  await rateLimitRef.set(
+    {
+      attempts: admin.firestore.FieldValue.increment(1),
+      lastAttemptAt: now,
+    },
+    { merge: true },
+  );
 
   // Extract IP
   const forwarded = request.rawRequest?.headers["x-forwarded-for"] as string;
   const realIp = request.rawRequest?.headers["x-real-ip"] as string;
-  const clientIp = forwarded ? forwarded.split(",")[0].trim() : (realIp || request.rawRequest?.ip || "unknown");
+  const clientIp = forwarded
+    ? forwarded.split(",")[0].trim()
+    : realIp || request.rawRequest?.ip || "unknown";
 
   // Get IP Geolocation
   const ipGeoData = await getIpGeolocation(clientIp);
@@ -151,7 +176,8 @@ export const verifyLocation = onCall(async (request: CallableRequest) => {
       ipWarning = "IP address is not from India";
     } else {
       const ipDistanceFromGps = Math.sqrt(
-        Math.pow(ipGeoData.lat - latitude, 2) + Math.pow(ipGeoData.lon - longitude, 2)
+        Math.pow(ipGeoData.lat - latitude, 2) +
+          Math.pow(ipGeoData.lon - longitude, 2),
       );
       if (ipDistanceFromGps > 10) {
         ipWarning = "IP location differs significantly from GPS coordinates";
@@ -164,16 +190,22 @@ export const verifyLocation = onCall(async (request: CallableRequest) => {
 
   if (isVerified) {
     // Update profile
-    await db.collection("profiles").doc(uid).set({
-      is_location_verified: true,
-      location_verified_at: timestamp,
-      location_data: {
-        lat: latitude,
-        lng: longitude,
-        ip: clientIp,
-        country: ipGeoData?.countryCode || null
-      }
-    }, { merge: true });
+    await db
+      .collection("profiles")
+      .doc(uid)
+      .set(
+        {
+          is_location_verified: true,
+          location_verified_at: timestamp,
+          location_data: {
+            lat: latitude,
+            lng: longitude,
+            ip: clientIp,
+            country: ipGeoData?.countryCode || null,
+          },
+        },
+        { merge: true },
+      );
 
     // Success Audit Log
     await db.collection("audit_logs").add({
@@ -181,7 +213,13 @@ export const verifyLocation = onCall(async (request: CallableRequest) => {
       action: "location_verification_success",
       status: "success",
       created_at: timestamp,
-      metadata: { latitude, longitude, ip: clientIp, ip_country: ipGeoData?.countryCode, ip_warning: ipWarning }
+      metadata: {
+        latitude,
+        longitude,
+        ip: clientIp,
+        ip_country: ipGeoData?.countryCode,
+        ip_warning: ipWarning,
+      },
     });
 
     // Reset rate limits on success
@@ -192,7 +230,9 @@ export const verifyLocation = onCall(async (request: CallableRequest) => {
       verified: true,
       message: "Island residency verified successfully!",
       warning: ipWarning,
-      expiresAt: new Date(now + VERIFICATION_EXPIRATION_DAYS * 24 * 60 * 60 * 1000).toISOString(),
+      expiresAt: new Date(
+        now + VERIFICATION_EXPIRATION_DAYS * 24 * 60 * 60 * 1000,
+      ).toISOString(),
     };
   } else {
     const failureReason = !isWithinAndaman
@@ -205,14 +245,20 @@ export const verifyLocation = onCall(async (request: CallableRequest) => {
       action: "location_verification_failed",
       status: "failed",
       created_at: timestamp,
-      metadata: { latitude, longitude, ip: clientIp, ip_country: ipGeoData?.countryCode, reason: failureReason }
+      metadata: {
+        latitude,
+        longitude,
+        ip: clientIp,
+        ip_country: ipGeoData?.countryCode,
+        reason: failureReason,
+      },
     });
 
     return {
       success: false,
       verified: false,
       error: failureReason,
-      code: !isWithinAndaman ? "OUTSIDE_GEOFENCE" : "IP_CHECK_FAILED"
+      code: !isWithinAndaman ? "OUTSIDE_GEOFENCE" : "IP_CHECK_FAILED",
     };
   }
 });

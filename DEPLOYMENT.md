@@ -28,49 +28,46 @@ Firebase Hosting provides global CDN, SSL certificates, and seamless deployment 
 
 1. **Login to Firebase**:
 
-    ```bash
-    firebase login
-    ```
+   ```bash
+   firebase login
+   ```
 
 2. **Initialize Hosting**:
 
-    ```bash
-    firebase init hosting
-    ```
+   ```bash
+   firebase init hosting
+   ```
 
-    Configuration options:
-    - Select your project: Choose existing or create new
-    - Public directory: `dist`
-    - Configure as single-page app: `Yes`
-    - Set up automatic builds: `Yes` (Optional)
-    - Overwrite index.html: `No`
+   Configuration options:
+   - Select your project: Choose existing or create new
+   - Public directory: `dist`
+   - Configure as single-page app: `Yes`
+   - Set up automatic builds: `Yes` (Optional)
+   - Overwrite index.html: `No`
 
 3. **Build and Deploy**:
 
-    ```bash
-    npm run build
-    npm run firebase-deploy
-    ```
+   ```bash
+   npm run build
+   npm run firebase-deploy
+   ```
 
 4. **Custom Domain (Optional)**:
 
-    ```bash
-    firebase hosting:sites:create andamanbazaar-web
-    firebase hosting:channel:deploy live andamanbazaar-web
-    ```
+   ```bash
+   firebase hosting:sites:create andamanbazaar-web
+   firebase hosting:channel:deploy live andamanbazaar-web
+   ```
 
 ### Firebase Configuration Files
 
 **firebase.json** (auto-generated):
+
 ```json
 {
   "hosting": {
     "public": "dist",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
         "source": "**",
@@ -121,45 +118,46 @@ Alternative deployment option for shared hosting environments.
 
 1. **Build the application**:
 
-    ```bash
-    npm run build
-    ```
+   ```bash
+   npm run build
+   ```
 
 2. **Upload files**:
 
-    ```bash
-    # Using lftp (recommended)
-    lftp -u username,password -e "mirror -R dist/ /public_html/; quit" ftp.yourdomain.com
-    
-    # Using deploy script
-    npm run ftp-deploy
-    ```
+   ```bash
+   # Using lftp (recommended)
+   lftp -u username,password -e "mirror -R dist/ /public_html/; quit" ftp.yourdomain.com
+
+   # Using deploy script
+   npm run ftp-deploy
+   ```
 
 3. **Configure .htaccess** (already included):
 
-    ```apache
-    # SPA routing
-    <IfModule mod_rewrite.c>
-      RewriteEngine On
-      RewriteBase /
-      RewriteRule ^index\.html$ - [L]
-      RewriteCond %{REQUEST_FILENAME} !-f
-      RewriteCond %{REQUEST_FILENAME} !-d
-      RewriteRule . /index.html [L]
-    </IfModule>
-    
-    # Security headers
-    <IfModule mod_headers.c>
-      Header always set X-Frame-Options DENY
-      Header always set X-Content-Type-Options nosniff
-      Header always set X-XSS-Protection "1; mode=block"
-      Header always set Referrer-Policy "strict-origin-when-cross-origin"
-    </IfModule>
-    ```
+   ```apache
+   # SPA routing
+   <IfModule mod_rewrite.c>
+     RewriteEngine On
+     RewriteBase /
+     RewriteRule ^index\.html$ - [L]
+     RewriteCond %{REQUEST_FILENAME} !-f
+     RewriteCond %{REQUEST_FILENAME} !-d
+     RewriteRule . /index.html [L]
+   </IfModule>
+
+   # Security headers
+   <IfModule mod_headers.c>
+     Header always set X-Frame-Options DENY
+     Header always set X-Content-Type-Options nosniff
+     Header always set X-XSS-Protection "1; mode=block"
+     Header always set Referrer-Policy "strict-origin-when-cross-origin"
+   </IfModule>
+   ```
 
 ### Automated SFTP Deployment
 
 **deploy-sftp-auto.sh**:
+
 ```bash
 #!/bin/bash
 
@@ -177,6 +175,7 @@ echo "Deployment completed!"
 ```
 
 Make it executable:
+
 ```bash
 chmod +x deploy-sftp-auto.sh
 ./deploy-sftp-auto.sh
@@ -221,7 +220,7 @@ CMD ["nginx", "-g", "daemon off;"]
 ### docker-compose.yml
 
 ```yaml
-version: '3.8'
+version: "3.8"
 
 services:
   app:
@@ -278,6 +277,7 @@ VITE_GA_MEASUREMENT_ID=G-XXXXXXXXXX
 ### Environment-Specific Configurations
 
 #### Development (.env.development)
+
 ```bash
 VITE_SUPABASE_URL=http://localhost:54321
 VITE_SUPABASE_ANON_KEY=your_local_anon_key
@@ -285,6 +285,7 @@ VITE_CASHFREE_ENVIRONMENT=TEST
 ```
 
 #### Production (.env.production)
+
 ```bash
 VITE_SUPABASE_URL=https://prod-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your_prod_anon_key
@@ -298,6 +299,7 @@ VITE_CASHFREE_ENVIRONMENT=PROD
 ### GitHub Actions Workflow
 
 **.github/workflows/deploy.yml**:
+
 ```yaml
 name: Deploy to Production
 
@@ -314,15 +316,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
-      
+          node-version: "18"
+          cache: "npm"
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Run tests
         run: npm run test:unit
-      
+
       - name: Build application
         run: npm run build
 
@@ -332,12 +334,12 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Firebase
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
           channelId: live
           projectId: your-project-id
         env:
@@ -349,7 +351,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Deploy to FTP
         uses: SamKirkland/FTP-Deploy-Action@4.3.0
         with:
@@ -378,6 +380,7 @@ jobs:
    - Add your domain (e.g., andamanbazaar.in)
 
 2. **Update DNS records**:
+
    ```
    A record: @ → 199.36.158.100 (Firebase Hosting IP)
    CNAME record: www → ghs.googlehosted.com
@@ -410,8 +413,8 @@ Add error tracking to your app:
 ```typescript
 // src/lib/analytics.ts
 export const trackError = (error: Error, context?: any) => {
-  console.error('App Error:', error, context);
-  
+  console.error("App Error:", error, context);
+
   // Send to error tracking service
   if (import.meta.env.PROD) {
     // Firebase Crashlytics or Sentry
@@ -419,11 +422,11 @@ export const trackError = (error: Error, context?: any) => {
 };
 
 export const trackEvent = (eventName: string, params?: any) => {
-  console.log('Event:', eventName, params);
-  
+  console.log("Event:", eventName, params);
+
   // Google Analytics
   if (window.gtag) {
-    window.gtag('event', eventName, params);
+    window.gtag("event", eventName, params);
   }
 };
 ```
@@ -433,13 +436,15 @@ export const trackEvent = (eventName: string, params?: any) => {
 ```typescript
 // src/lib/performance.ts
 export const measurePageLoad = () => {
-  if ('performance' in window) {
-    const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+  if ("performance" in window) {
+    const navigation = performance.getEntriesByType(
+      "navigation",
+    )[0] as PerformanceNavigationTiming;
     const loadTime = navigation.loadEventEnd - navigation.loadEventStart;
-    
-    trackEvent('page_load_time', { 
+
+    trackEvent("page_load_time", {
       duration: Math.round(loadTime),
-      page: window.location.pathname 
+      page: window.location.pathname,
     });
   }
 };
@@ -452,6 +457,7 @@ export const measurePageLoad = () => {
 ### Common Issues
 
 #### 1. Build Fails
+
 ```bash
 # Clear cache
 rm -rf node_modules package-lock.json
@@ -462,6 +468,7 @@ npm run type-check
 ```
 
 #### 2. Deployment Fails
+
 ```bash
 # Check Firebase login
 firebase login:list
@@ -471,13 +478,15 @@ npm run build && npm run preview
 ```
 
 #### 3. Routing Issues
+
 - Ensure SPA routing is configured
 - Check .htaccess or nginx.conf
 - Verify 404 handling
 
 #### 4. Environment Variables
+
 - Double-check variable names
-- Ensure VITE_ prefix for frontend variables
+- Ensure VITE\_ prefix for frontend variables
 - Verify Firebase environment variables are set
 
 ### Debug Commands
@@ -521,4 +530,4 @@ For deployment issues:
 
 ---
 
-*Last updated: March 7, 2026*
+_Last updated: March 7, 2026_

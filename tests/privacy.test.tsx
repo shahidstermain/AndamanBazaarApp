@@ -1,14 +1,14 @@
-import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-import { PrivacyPolicy } from '../src/pages/PrivacyPolicy';
+import React from "react";
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { PrivacyPolicy } from "../src/pages/PrivacyPolicy";
 
-describe('PrivacyPolicy', () => {
-  it('renders the main heading', () => {
+describe("PrivacyPolicy", () => {
+  it("renders the main heading", () => {
     render(
       <MemoryRouter>
         <PrivacyPolicy />
-      </MemoryRouter>
+      </MemoryRouter>,
     );
     const heading = screen.getByText(/Privacy Policy/i);
     expect(heading).toBeInTheDocument();

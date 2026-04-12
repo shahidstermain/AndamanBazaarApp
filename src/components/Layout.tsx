@@ -1,15 +1,19 @@
-
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Logo } from './Logo';
-import { OfflineBanner } from './OfflineBanner';
-import { useNotifications } from '../hooks/useNotifications';
-import { getUserChats, subscribeToUserChats } from '../lib/database';
-import { getCurrentUser } from '../lib/auth';
+import React, { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { Logo } from "./Logo";
+import { OfflineBanner } from "./OfflineBanner";
+import { useNotifications } from "../hooks/useNotifications";
+import { getUserChats, subscribeToUserChats } from "../lib/database";
+import { getCurrentUser } from "../lib/auth";
 import {
-  Home, Search, PlusCircle, MessageCircle, User as UserIcon,
-  BadgeCheck, Bell
-} from 'lucide-react';
+  Home,
+  Search,
+  PlusCircle,
+  MessageCircle,
+  User as UserIcon,
+  BadgeCheck,
+  Bell,
+} from "lucide-react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -24,8 +28,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   useEffect(() => {
@@ -43,7 +47,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
           setUnreadCount(count);
         }
       } catch (error) {
-        console.error('Error fetching unread count:', error);
+        console.error("Error fetching unread count:", error);
       }
     };
 
@@ -51,30 +55,37 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
 
     const unsubscribe = subscribeToUserChats(user.id, fetchUnread);
 
-    return () => { 
+    return () => {
       if (unsubscribe) unsubscribe();
     };
   }, [user]);
 
   const isActive = (path: string) =>
-    path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
+    path === "/"
+      ? location.pathname === "/"
+      : location.pathname.startsWith(path);
 
   return (
     <div className="min-h-screen flex flex-col bg-warm-50 font-sans text-midnight-700">
       {/* <OfflineBanner /> */}
 
       {/* ── HEADER ── */}
-      <header className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled
-        ? 'bg-white/90 backdrop-blur-xl border-b border-warm-200 py-3 shadow-card'
-        : 'bg-transparent py-4'
-        }`}>
+      <header
+        className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+          scrolled
+            ? "bg-white/90 backdrop-blur-xl border-b border-warm-200 py-3 shadow-card"
+            : "bg-transparent py-4"
+        }`}
+      >
         <div className="app-container flex items-center justify-between">
-
           {/* Desktop Left Nav */}
           <div className="hidden md:flex flex-1 items-center gap-6">
-            <NavLink to="/listings" active={isActive('/listings')}>Explore</NavLink>
+            <NavLink to="/listings" active={isActive("/listings")}>
+              Explore
+            </NavLink>
             <NavLink to="/listings?verified=true" active={false}>
-              <BadgeCheck size={14} className="inline mr-1 text-teal-500" />Verified
+              <BadgeCheck size={14} className="inline mr-1 text-teal-500" />
+              Verified
             </NavLink>
           </div>
 
@@ -105,7 +116,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
                   <MessageCircle size={22} />
                   {unreadCount > 0 && (
                     <span className="notif-dot">
-                      {unreadCount > 9 ? '' : ''}
+                      {unreadCount > 9 ? "" : ""}
                     </span>
                   )}
                 </Link>
@@ -133,36 +144,33 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
       </header>
 
       {/* ── MAIN CONTENT ── */}
-      <main className="flex-grow pt-20 md:pt-24 page-enter">
-        {children}
-      </main>
+      <main className="flex-grow pt-20 md:pt-24 page-enter">{children}</main>
 
       {/* ── BOTTOM NAV (Mobile Only) — Stitch-Inspired ── */}
       <nav className="md:hidden fixed bottom-0 left-0 w-full z-[9999] safe-bottom">
         <div className="bottom-nav relative pb-1">
-
           {/* Home */}
-          <TabItem to="/" label="Home" active={isActive('/')}>
-            <Home size={22} strokeWidth={isActive('/') ? 2.5 : 2} />
+          <TabItem to="/" label="Home" active={isActive("/")}>
+            <Home size={22} strokeWidth={isActive("/") ? 2.5 : 2} />
           </TabItem>
 
           {/* Search */}
-          <TabItem 
-            to="/listings" 
-            label="Search" 
-            active={isActive('/listings')}
+          <TabItem
+            to="/listings"
+            label="Search"
+            active={isActive("/listings")}
             onClick={(e) => {
-              if (isActive('/listings')) {
+              if (isActive("/listings")) {
                 e.preventDefault();
-                const searchInput = document.getElementById('search-input');
+                const searchInput = document.getElementById("search-input");
                 if (searchInput) {
                   searchInput.focus();
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }
               }
             }}
           >
-            <Search size={22} strokeWidth={isActive('/listings') ? 2.5 : 2} />
+            <Search size={22} strokeWidth={isActive("/listings") ? 2.5 : 2} />
           </TabItem>
 
           {/* SELL — center coral FAB */}
@@ -177,12 +185,15 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
           </Link>
 
           {/* Chats */}
-          <TabItem to="/chats" label="Chats" active={isActive('/chats')}>
+          <TabItem to="/chats" label="Chats" active={isActive("/chats")}>
             <div className="relative">
-              <MessageCircle size={22} strokeWidth={isActive('/chats') ? 2.5 : 2} />
+              <MessageCircle
+                size={22}
+                strokeWidth={isActive("/chats") ? 2.5 : 2}
+              />
               {unreadCount > 0 && (
                 <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 bg-coral-500 text-white text-[8px] font-black rounded-full border-2 border-white flex items-center justify-center px-0.5">
-                  {unreadCount > 9 ? '9+' : unreadCount}
+                  {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}
             </div>
@@ -190,13 +201,15 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
 
           {/* Profile */}
           <TabItem
-            to={user ? '/profile' : '/auth'}
-            label={user ? 'Profile' : 'Sign In'}
-            active={isActive('/profile') || isActive('/auth')}
+            to={user ? "/profile" : "/auth"}
+            label={user ? "Profile" : "Sign In"}
+            active={isActive("/profile") || isActive("/auth")}
           >
-            <UserIcon size={22} strokeWidth={isActive('/profile') || isActive('/auth') ? 2.5 : 2} />
+            <UserIcon
+              size={22}
+              strokeWidth={isActive("/profile") || isActive("/auth") ? 2.5 : 2}
+            />
           </TabItem>
-
         </div>
       </nav>
 
@@ -208,43 +221,146 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
               <div className="bg-teal-gradient p-1.5 rounded-lg">
                 <Logo size={22} className="text-white fill-white" />
               </div>
-              <span className="font-heading font-black text-lg text-white">AndamanBazaar</span>
+              <span className="font-heading font-black text-lg text-white">
+                AndamanBazaar
+              </span>
             </div>
             <p className="text-sm text-warm-400 leading-relaxed">
-              Buy & Sell locally in Andaman — no mainland scams.
-              Built by islanders, for islanders. 🏝️
+              Buy & Sell locally in Andaman — no mainland scams. Built by
+              islanders, for islanders. 🏝️
             </p>
           </div>
 
           <div>
-            <h4 className="font-black text-sandy-400 mb-4 text-[11px] uppercase tracking-widest">Marketplace</h4>
+            <h4 className="font-black text-sandy-400 mb-4 text-[11px] uppercase tracking-widest">
+              Marketplace
+            </h4>
             <ul className="space-y-2 text-sm text-warm-400">
-              <li><Link to="/listings" className="hover:text-white transition-colors">Browse All Listings</Link></li>
-              <li><Link to="/post" className="hover:text-white transition-colors">Sell an Item</Link></li>
-              <li><Link to="/listings?category=fresh-catch" className="hover:text-white transition-colors">🐟 Fresh Catch</Link></li>
-              <li><Link to="/listings?category=experiences" className="hover:text-white transition-colors">🤿 Experiences</Link></li>
+              <li>
+                <Link
+                  to="/listings"
+                  className="hover:text-white transition-colors"
+                >
+                  Browse All Listings
+                </Link>
+              </li>
+              <li>
+                <Link to="/post" className="hover:text-white transition-colors">
+                  Sell an Item
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/listings?category=fresh-catch"
+                  className="hover:text-white transition-colors"
+                >
+                  🐟 Fresh Catch
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/listings?category=experiences"
+                  className="hover:text-white transition-colors"
+                >
+                  🤿 Experiences
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-black text-sandy-400 mb-4 text-[11px] uppercase tracking-widest">Island Locations</h4>
+            <h4 className="font-black text-sandy-400 mb-4 text-[11px] uppercase tracking-widest">
+              Island Locations
+            </h4>
             <ul className="space-y-2 text-sm text-warm-400">
-              <li><Link to="/listings?q=Port+Blair" className="hover:text-white transition-colors">Port Blair</Link></li>
-              <li><Link to="/listings?q=Havelock" className="hover:text-white transition-colors">Havelock (Swaraj Dweep)</Link></li>
-              <li><Link to="/listings?q=Neil" className="hover:text-white transition-colors">Neil (Shaheed Dweep)</Link></li>
-              <li><Link to="/listings?q=Diglipur" className="hover:text-white transition-colors">Diglipur</Link></li>
-              <li><Link to="/listings?q=Little+Andaman" className="hover:text-white transition-colors">Little Andaman</Link></li>
+              <li>
+                <Link
+                  to="/listings?q=Port+Blair"
+                  className="hover:text-white transition-colors"
+                >
+                  Port Blair
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/listings?q=Havelock"
+                  className="hover:text-white transition-colors"
+                >
+                  Havelock (Swaraj Dweep)
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/listings?q=Neil"
+                  className="hover:text-white transition-colors"
+                >
+                  Neil (Shaheed Dweep)
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/listings?q=Diglipur"
+                  className="hover:text-white transition-colors"
+                >
+                  Diglipur
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/listings?q=Little+Andaman"
+                  className="hover:text-white transition-colors"
+                >
+                  Little Andaman
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-black text-sandy-400 mb-4 text-[11px] uppercase tracking-widest">Company</h4>
+            <h4 className="font-black text-sandy-400 mb-4 text-[11px] uppercase tracking-widest">
+              Company
+            </h4>
             <ul className="space-y-2 text-sm text-warm-400">
-              <li><Link to="/about" className="hover:text-white transition-colors">About Us</Link></li>
-              <li><Link to="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
-              <li><Link to="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
-              <li><Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
-              <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li>
+                <Link
+                  to="/about"
+                  className="hover:text-white transition-colors"
+                >
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/pricing"
+                  className="hover:text-white transition-colors"
+                >
+                  Pricing
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/contact"
+                  className="hover:text-white transition-colors"
+                >
+                  Contact Us
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/terms"
+                  className="hover:text-white transition-colors"
+                >
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/privacy"
+                  className="hover:text-white transition-colors"
+                >
+                  Privacy Policy
+                </Link>
+              </li>
             </ul>
             <div className="mt-6 pt-5 border-t border-warm-600/20">
               <div className="flex items-center gap-3 mb-2">
@@ -253,7 +369,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
                 </div>
                 <div>
                   <p className="text-sm text-warm-200 font-bold leading-tight">
-                    Built by{' '}
+                    Built by{" "}
                     <a
                       href="https://shahidster.tech"
                       target="_blank"
@@ -263,39 +379,52 @@ export const Layout: React.FC<LayoutProps> = ({ children, user }) => {
                       Shahid Moosa
                     </a>
                   </p>
-                  <p className="text-[10px] text-warm-400/60 tracking-wide">Sole Proprietor · Andaman Islands</p>
+                  <p className="text-[10px] text-warm-400/60 tracking-wide">
+                    Sole Proprietor · Andaman Islands
+                  </p>
                 </div>
               </div>
-              <p className="text-[10px] text-warm-400/40 mt-3">© {new Date().getFullYear()} AndamanBazaar · Made with 🌊 on the islands</p>
+              <p className="text-[10px] text-warm-400/40 mt-3">
+                © {new Date().getFullYear()} AndamanBazaar · Made with 🌊 on the
+                islands
+              </p>
             </div>
           </div>
         </div>
       </footer>
-
     </div>
   );
 };
 
 // ── Helper sub-components ──
-const NavLink: React.FC<{ to: string; active: boolean; children: React.ReactNode }> = ({ to, active, children }) => (
+const NavLink: React.FC<{
+  to: string;
+  active: boolean;
+  children: React.ReactNode;
+}> = ({ to, active, children }) => (
   <Link
     to={to}
-    className={`text-sm font-bold transition-all ${active
-      ? 'text-teal-600 underline underline-offset-4 decoration-2 decoration-teal-400'
-      : 'text-warm-400 hover:text-midnight-700'
-      }`}
+    className={`text-sm font-bold transition-all ${
+      active
+        ? "text-teal-600 underline underline-offset-4 decoration-2 decoration-teal-400"
+        : "text-warm-400 hover:text-midnight-700"
+    }`}
   >
     {children}
   </Link>
 );
 
-const TabItem: React.FC<{ to: string; label: string; active: boolean; onClick?: (e: React.MouseEvent) => void; children: React.ReactNode }> = ({
-  to, label, active, onClick, children
-}) => (
+const TabItem: React.FC<{
+  to: string;
+  label: string;
+  active: boolean;
+  onClick?: (e: React.MouseEvent) => void;
+  children: React.ReactNode;
+}> = ({ to, label, active, onClick, children }) => (
   <Link
     to={to}
     onClick={onClick}
-    className={`nav-item ${active ? 'active' : ''} active:scale-90 transition-transform`}
+    className={`nav-item ${active ? "active" : ""} active:scale-90 transition-transform`}
     aria-label={label}
   >
     {children}

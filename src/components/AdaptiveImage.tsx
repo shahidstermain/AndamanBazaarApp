@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
-import { cn } from '@/lib/utils';
-import { useAdaptiveImage, AdaptiveImageOptions } from '@/hooks/useAdaptiveImages';
-import { Loader2, Wifi, WifiOff, ImageOff } from 'lucide-react';
+import React, { useState } from "react";
+import { cn } from "@/lib/utils";
+import {
+  useAdaptiveImage,
+  AdaptiveImageOptions,
+} from "@/hooks/useAdaptiveImages";
+import { Loader2, Wifi, WifiOff, ImageOff } from "lucide-react";
 
 interface AdaptiveImageProps extends AdaptiveImageOptions {
-  aspectRatio?: 'square' | 'portrait' | 'landscape' | 'auto';
-  objectFit?: 'cover' | 'contain';
+  aspectRatio?: "square" | "portrait" | "landscape" | "auto";
+  objectFit?: "cover" | "contain";
   showUpgradeHint?: boolean;
 }
 
@@ -16,8 +19,8 @@ export const AdaptiveImage: React.FC<AdaptiveImageProps> = ({
   fullUrl,
   alt,
   className,
-  aspectRatio = 'auto',
-  objectFit = 'cover',
+  aspectRatio = "auto",
+  objectFit = "cover",
   showUpgradeHint = true,
   priority = false,
 }) => {
@@ -41,10 +44,10 @@ export const AdaptiveImage: React.FC<AdaptiveImageProps> = ({
   const [showFullRes, setShowFullRes] = useState(false);
 
   const aspectClasses = {
-    square: 'aspect-square',
-    portrait: 'aspect-[3/4]',
-    landscape: 'aspect-[4/3]',
-    auto: '',
+    square: "aspect-square",
+    portrait: "aspect-[3/4]",
+    landscape: "aspect-[4/3]",
+    auto: "",
   };
 
   // Check if current image is not full resolution
@@ -62,9 +65,9 @@ export const AdaptiveImage: React.FC<AdaptiveImageProps> = ({
     return (
       <div
         className={cn(
-          'bg-gray-100 flex items-center justify-center',
+          "bg-gray-100 flex items-center justify-center",
           aspectClasses[aspectRatio],
-          className
+          className,
         )}
       >
         <div className="text-center p-4">
@@ -78,10 +81,10 @@ export const AdaptiveImage: React.FC<AdaptiveImageProps> = ({
   return (
     <div
       className={cn(
-        'relative overflow-hidden',
+        "relative overflow-hidden",
         aspectClasses[aspectRatio],
-        canUpgrade && !showFullRes && 'cursor-pointer',
-        className
+        canUpgrade && !showFullRes && "cursor-pointer",
+        className,
       )}
       onClick={handleClick}
     >
@@ -96,21 +99,21 @@ export const AdaptiveImage: React.FC<AdaptiveImageProps> = ({
       <img
         src={src}
         alt={alt}
-        loading={priority ? 'eager' : 'lazy'}
+        loading={priority ? "eager" : "lazy"}
         decoding="async"
         onLoad={handleLoad}
         onError={handleError}
         className={cn(
-          'w-full h-full transition-opacity duration-300',
-          objectFit === 'cover' ? 'object-cover' : 'object-contain',
-          isLoading ? 'opacity-0' : 'opacity-100'
+          "w-full h-full transition-opacity duration-300",
+          objectFit === "cover" ? "object-cover" : "object-contain",
+          isLoading ? "opacity-0" : "opacity-100",
         )}
       />
 
       {/* Connection speed indicator */}
-      {showUpgradeHint && speed !== '4g' && speed !== 'unknown' && (
+      {showUpgradeHint && speed !== "4g" && speed !== "unknown" && (
         <div className="absolute top-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
-          {speed === 'slow-2g' || speed === '2g' ? (
+          {speed === "slow-2g" || speed === "2g" ? (
             <>
               <WifiOff className="w-3 h-3" />
               <span>Slow connection - compressed</span>
@@ -156,11 +159,11 @@ export const ImageUploadProgress: React.FC<ImageUploadProgressProps> = ({
   compressing,
 }) => {
   const formatSize = (bytes: number) => {
-    if (bytes === 0) return '0 B';
+    if (bytes === 0) return "0 B";
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB'];
+    const sizes = ["B", "KB", "MB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
   };
 
   const formatTime = (seconds: number) => {
@@ -175,7 +178,9 @@ export const ImageUploadProgress: React.FC<ImageUploadProgressProps> = ({
       {/* File info */}
       <div className="flex items-center justify-between text-sm">
         <span className="font-medium truncate max-w-[200px]">{file.name}</span>
-        <span className="text-gray-500">{formatSize(compressedFile?.size || file.size)}</span>
+        <span className="text-gray-500">
+          {formatSize(compressedFile?.size || file.size)}
+        </span>
       </div>
 
       {/* Compression info */}

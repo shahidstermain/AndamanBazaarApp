@@ -1,4 +1,8 @@
-import { onCall, HttpsError, CallableRequest } from "firebase-functions/v2/https";
+import {
+  onCall,
+  HttpsError,
+  CallableRequest,
+} from "firebase-functions/v2/https";
 import * as admin from "firebase-admin";
 import { Cashfree } from "cashfree-pg";
 
@@ -7,7 +11,10 @@ if (!admin.apps.length) {
   admin.initializeApp();
 }
 
-const TIERS: Record<string, { amount_inr: number; duration_days: number; label: string }> = {
+const TIERS: Record<
+  string,
+  { amount_inr: number; duration_days: number; label: string }
+> = {
   spark: { amount_inr: 49, duration_days: 3, label: "Spark ⚡" },
   boost: { amount_inr: 99, duration_days: 7, label: "Boost 🚀" },
   power: { amount_inr: 199, duration_days: 30, label: "Power 💎" },
@@ -15,7 +22,10 @@ const TIERS: Record<string, { amount_inr: number; duration_days: number; label: 
 
 export const createBoostOrder = onCall(async (request: CallableRequest) => {
   if (!request.auth) {
-    throw new HttpsError("unauthenticated", "User must be authenticated to create a boost order.");
+    throw new HttpsError(
+      "unauthenticated",
+      "User must be authenticated to create a boost order.",
+    );
   }
 
   const uid = request.auth.uid;
@@ -26,11 +36,17 @@ export const createBoostOrder = onCall(async (request: CallableRequest) => {
   const { listing_id, tier: tierKey } = request.data;
 
   if (!listing_id || !tierKey) {
-    throw new HttpsError("invalid-argument", "listing_id and tier are required.");
+    throw new HttpsError(
+      "invalid-argument",
+      "listing_id and tier are required.",
+    );
   }
 
   if (!Object.prototype.hasOwnProperty.call(TIERS, tierKey)) {
-    throw new HttpsError("invalid-argument", "Invalid tier. Choose: spark, boost, or power.");
+    throw new HttpsError(
+      "invalid-argument",
+      "Invalid tier. Choose: spark, boost, or power.",
+    );
   }
   const tier = TIERS[tierKey];
 
@@ -39,18 +55,24 @@ export const createBoostOrder = onCall(async (request: CallableRequest) => {
   // 1. Verify listing ownership
   const listingRef = db.collection("listings").doc(listing_id);
   const listingDoc = await listingRef.get();
-  
+
   if (!listingDoc.exists) {
     throw new HttpsError("not-found", "Listing not found.");
   }
 
   const listing = listingDoc.data();
   if (listing?.user_id !== uid) {
-    throw new HttpsError("permission-denied", "You can only boost your own listings.");
+    throw new HttpsError(
+      "permission-denied",
+      "You can only boost your own listings.",
+    );
   }
 
   if (listing?.status !== "active") {
-    throw new HttpsError("failed-precondition", "Only active listings can be boosted.");
+    throw new HttpsError(
+      "failed-precondition",
+      "Only active listings can be boosted.",
+    );
   }
 
   // 2. Check for existing pending boost and atomically create new one
@@ -63,7 +85,8 @@ export const createBoostOrder = onCall(async (request: CallableRequest) => {
   let boostDocRef!: admin.firestore.DocumentReference;
 
   await db.runTransaction(async (transaction) => {
-    const existingBoostsSnapshot = await db.collection("listing_boosts")
+    const existingBoostsSnapshot = await db
+      .collection("listing_boosts")
       .where("listing_id", "==", listing_id)
       .where("status", "==", "pending")
       .limit(1)
@@ -73,7 +96,7 @@ export const createBoostOrder = onCall(async (request: CallableRequest) => {
       // Expire old pending boost to avoid duplicates
       transaction.update(existingBoostsSnapshot.docs[0].ref, {
         status: "failed",
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       });
     }
 
@@ -90,7 +113,7 @@ export const createBoostOrder = onCall(async (request: CallableRequest) => {
       status: "pending",
       cashfree_order_id: orderId,
       payment_method: "upi",
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     };
     transaction.set(newBoostRef, boostData);
   });
@@ -98,9 +121,10 @@ export const createBoostOrder = onCall(async (request: CallableRequest) => {
   // 5. Initialize Cashfree
   (Cashfree as any).XClientId = process.env.CASHFREE_APP_ID || "";
   (Cashfree as any).XClientSecret = process.env.CASHFREE_SECRET_KEY || "";
-  (Cashfree as any).XEnvironment = process.env.CASHFREE_ENV === "production"
-    ? (Cashfree as any).Environment.PRODUCTION
-    : (Cashfree as any).Environment.SANDBOX;
+  (Cashfree as any).XEnvironment =
+    process.env.CASHFREE_ENV === "production"
+      ? (Cashfree as any).Environment.PRODUCTION
+      : (Cashfree as any).Environment.SANDBOX;
 
   // 6. Create Cashfree Order
   const APP_URL = process.env.FRONTEND_ORIGIN || "https://www.andamanbazaar.in";
@@ -108,7 +132,7 @@ export const createBoostOrder = onCall(async (request: CallableRequest) => {
   const webhookUrl = `${process.env.FUNCTIONS_WEBHOOK_URL || "https://us-central1-" + process.env.GCLOUD_PROJECT + ".cloudfunctions.net/cashfreeWebhook"}`;
 
   const customerPhone = user?.phone || "9999999999";
-  
+
   const cashfreePayload = {
     order_id: orderId,
     order_amount: tier.amount_inr,
@@ -134,14 +158,26 @@ export const createBoostOrder = onCall(async (request: CallableRequest) => {
 
   let cashfreeData: any;
   try {
-    const response = await (Cashfree as any).PGCreateOrder("2023-08-01", cashfreePayload as any);
+    const response = await (Cashfree as any).PGCreateOrder(
+      "2023-08-01",
+      cashfreePayload as any,
+    );
     cashfreeData = response.data;
   } catch (error: any) {
-    console.error("Cashfree order creation failed:", error.response?.data || error);
+    console.error(
+      "Cashfree order creation failed:",
+      error.response?.data || error,
+    );
 
     // Mark the boost as failed
-    await boostDocRef.update({ status: "failed", updated_at: new Date().toISOString() });
-    throw new HttpsError("internal", "Payment gateway error. Please try again.");
+    await boostDocRef.update({
+      status: "failed",
+      updated_at: new Date().toISOString(),
+    });
+    throw new HttpsError(
+      "internal",
+      "Payment gateway error. Please try again.",
+    );
   }
 
   // 8. Update boost record with payment session ID (keep cf_order_id separate from cashfree_payment_id)
@@ -157,7 +193,7 @@ export const createBoostOrder = onCall(async (request: CallableRequest) => {
     event_type: "order_created",
     cashfree_order_id: orderId,
     raw_payload: cashfreeData,
-    created_at: admin.firestore.FieldValue.serverTimestamp()
+    created_at: admin.firestore.FieldValue.serverTimestamp(),
   });
 
   // 10. Return payment link to frontend

@@ -184,8 +184,13 @@ export async function processInvoiceGeneration(boost_id: string) {
   if (existingInvoiceDoc.exists) {
     const existingInvoice = existingInvoiceDoc.data()!;
     // Only short-circuit if the invoice is fully materialized (has a PDF URL)
-    if (existingInvoice.invoice_pdf_url && existingInvoice.invoice_status === "complete") {
-      console.log(`Invoice already exists for boost ${boost_id}: ${existingInvoice.invoice_number}`);
+    if (
+      existingInvoice.invoice_pdf_url &&
+      existingInvoice.invoice_status === "complete"
+    ) {
+      console.log(
+        `Invoice already exists for boost ${boost_id}: ${existingInvoice.invoice_number}`,
+      );
       return {
         success: true,
         invoice_id: deterministicInvoiceId,
@@ -208,7 +213,10 @@ export async function processInvoiceGeneration(boost_id: string) {
   const profile = profileDoc.data();
 
   // 3. Fetch listing title
-  const listingDoc = await db.collection("listings").doc(boost.listing_id).get();
+  const listingDoc = await db
+    .collection("listings")
+    .doc(boost.listing_id)
+    .get();
   const listing = listingDoc.data();
 
   // 4. Fetch user email from auth (with fallback to profile if auth user is missing)
@@ -221,7 +229,10 @@ export async function processInvoiceGeneration(boost_id: string) {
     authEmail = authUser?.email || undefined;
     authPhone = authUser?.phoneNumber || undefined;
   } catch (authErr) {
-    console.warn(`Could not fetch auth user for ${boost.user_id}, falling back to profile data:`, authErr);
+    console.warn(
+      `Could not fetch auth user for ${boost.user_id}, falling back to profile data:`,
+      authErr,
+    );
   }
 
   const customerName = profile?.name || authDisplayName || "AndamanBazaar User";
@@ -250,7 +261,7 @@ export async function processInvoiceGeneration(boost_id: string) {
     cashfree_payment_id: boost.cashfree_payment_id || null,
     paid_at: boost.featured_from || new Date().toISOString(),
     invoice_status: "pending",
-    created_at: admin.firestore.FieldValue.serverTimestamp()
+    created_at: admin.firestore.FieldValue.serverTimestamp(),
   };
 
   // Use set with merge: false so concurrent retries hit an already-exists error rather than duplicate
@@ -269,12 +280,12 @@ export async function processInvoiceGeneration(boost_id: string) {
   const fileName = `invoices/${boost.user_id}/${invoiceNumber}.html`;
   const bucket = admin.storage().bucket();
   const file = bucket.file(fileName);
-  
+
   await file.save(invoiceHtml, {
     contentType: "text/html",
     metadata: {
       cacheControl: "public, max-age=31536000",
-    }
+    },
   });
 
   // 8. Get Download URL
@@ -283,7 +294,10 @@ export async function processInvoiceGeneration(boost_id: string) {
   const pdfUrl = file.publicUrl();
 
   // 9. Update invoice with PDF URL and mark as complete
-  await invoiceRef.update({ invoice_pdf_url: pdfUrl, invoice_status: "complete" });
+  await invoiceRef.update({
+    invoice_pdf_url: pdfUrl,
+    invoice_status: "complete",
+  });
 
   // 11. Audit log
   await db.collection("payment_audit_log").add({
@@ -295,7 +309,7 @@ export async function processInvoiceGeneration(boost_id: string) {
       invoice_number: invoiceNumber,
       amount: boost.amount_inr,
     },
-    created_at: admin.firestore.FieldValue.serverTimestamp()
+    created_at: admin.firestore.FieldValue.serverTimestamp(),
   });
 
   console.log(`📄 Invoice generated: ${invoiceNumber} for boost ${boost_id}`);

@@ -1,9 +1,9 @@
-import { Profile, Listing } from '../types';
-export * from '../types';
+import { Profile, Listing } from "../types";
+export * from "../types";
 
 // ===== Admin & Reports Types =====
 
-export type AppRole = 'admin' | 'moderator' | 'user';
+export type AppRole = "admin" | "moderator" | "user";
 
 export interface UserRole {
   id: string;
@@ -12,8 +12,14 @@ export interface UserRole {
   created_at: string;
 }
 
-export type ReportStatus = 'pending' | 'reviewed' | 'resolved' | 'dismissed';
-export type ReportReason = 'scam' | 'offensive' | 'duplicate' | 'wrong_category' | 'sold' | 'other';
+export type ReportStatus = "pending" | "reviewed" | "resolved" | "dismissed";
+export type ReportReason =
+  | "scam"
+  | "offensive"
+  | "duplicate"
+  | "wrong_category"
+  | "sold"
+  | "other";
 
 export interface Report {
   id: string;

@@ -164,8 +164,8 @@ The application has a solid foundation with good security practices in many area
 - **File**: `src/lib/supabase.ts:18-21`
   ```ts
   export const supabase = createClient(
-    supabaseUrl || 'https://placeholder.supabase.co',
-    supabaseAnonKey || 'placeholder-anon-key'
+    supabaseUrl || "https://placeholder.supabase.co",
+    supabaseAnonKey || "placeholder-anon-key",
   );
   ```
 - **Issue**: If env vars are missing, the client silently initializes with placeholder values instead of failing hard. This could mask configuration errors in deployment.
@@ -194,15 +194,16 @@ The application has a solid foundation with good security practices in many area
 
 ### Summary: Generally Well-Implemented
 
-| Function | Auth | Input Validation | Idempotency | Audit Log | Rating |
-|---|---|---|---|---|---|
-| `create-boost-order` | ✅ JWT + ownership | ✅ | ✅ pending check | ✅ | 9/10 |
-| `cashfree-webhook` | ✅ Signature + timestamp | ✅ | ✅ | ✅ | 9/10 |
-| `verify-location` | ✅ JWT | ✅ bounds + IP | ✅ rate limit | ✅ | 9/10 |
-| `generate-invoice` | ✅ Service role | ✅ | ✅ | ✅ | 8/10 |
-| `send-invoice-email` | ✅ Service role | ✅ | ✅ | ✅ | 8/10 |
+| Function             | Auth                     | Input Validation | Idempotency      | Audit Log | Rating |
+| -------------------- | ------------------------ | ---------------- | ---------------- | --------- | ------ |
+| `create-boost-order` | ✅ JWT + ownership       | ✅               | ✅ pending check | ✅        | 9/10   |
+| `cashfree-webhook`   | ✅ Signature + timestamp | ✅               | ✅               | ✅        | 9/10   |
+| `verify-location`    | ✅ JWT                   | ✅ bounds + IP   | ✅ rate limit    | ✅        | 9/10   |
+| `generate-invoice`   | ✅ Service role          | ✅               | ✅               | ✅        | 8/10   |
+| `send-invoice-email` | ✅ Service role          | ✅               | ✅               | ✅        | 8/10   |
 
 ### Minor Edge Function Notes:
+
 - **`generate-invoice`**: Uses `SUPABASE_SERVICE_ROLE_KEY` correctly. Consider adding a timeout for the Supabase Storage upload.
 - **`send-invoice-email`**: Has a good fallback when `RESEND_API_KEY` is not set (logs instead of crashing). Consider adding retry logic for transient email failures.
 - **`verify-location`**: Good IP cross-check, but the external IP geolocation service could be a single point of failure. Consider caching or graceful degradation.
@@ -214,35 +215,35 @@ The application has a solid foundation with good security practices in many area
 
 ### Tables Identified (Public Schema)
 
-| Table | RLS | SELECT | INSERT | UPDATE | DELETE | Notes |
-|---|---|---|---|---|---|---|
-| `profiles` | ✅ | ✅ public | — trigger | ✅ owner | — | No self-insert policy (trigger handles it) |
-| `listings` | ✅ | ✅ filtered | ✅ owner | ✅ owner | ⚠️ see C2 | DELETE policy re-added in 015 |
-| `listing_images` | ✅ | ✅ public | ✅ owner | — | ✅ owner | Good ownership check via JOIN |
-| `favorites` | ✅ | ✅ owner | ✅ owner | — | ✅ owner | Clean |
-| `chats` | ✅ | ✅ participant | ⚠️ see C3 | ✅ participant | — | INSERT policy weakened in 015 |
-| `messages` | ✅ | ✅ participant | ✅ participant | — | — | Soft-delete via function only |
-| `reports` | ✅ | ✅ admin/mod | ✅ reporter | ✅ admin/mod | — | Clean |
-| `user_roles` | ✅ | ✅ own+admin | — trigger | — | — | Clean |
-| `listing_boosts` | ✅ | ✅ owner | — svc role | — svc role | — | Service role handles writes |
-| `invoices` | ✅ | ✅ owner | — svc role | — svc role | — | Clean |
-| `payment_audit_log` | ✅ | — svc only | — svc only | — | — | Clean, append-only |
-| `audit_logs` | ✅ | ✅ owner | ⚠️ see C4 | — | — | INSERT too permissive |
-| `security_events` | ✅ | ❌ no policy | — svc only | — | — | See M3 |
-| `rate_limits` | ✅ | ✅ own prefix | — svc only | — | — | Pattern-based match |
-| `user_interactions` | ✅ | ✅ owner | ✅ owner | — | — | Clean |
-| `recommendations_cache` | ✅ | ✅ owner | — svc only | — | — | Clean |
-| `trending_listings` | ✅ | ✅ public | — svc only | — | — | Clean |
-| `listing_views` | ✅ | ✅ public | ✅ authed | — | — | Clean |
-| `chat_typing_events` | ✅ | ✅ participant | ✅ owner | — | — | Clean |
+| Table                   | RLS | SELECT         | INSERT         | UPDATE         | DELETE    | Notes                                      |
+| ----------------------- | --- | -------------- | -------------- | -------------- | --------- | ------------------------------------------ |
+| `profiles`              | ✅  | ✅ public      | — trigger      | ✅ owner       | —         | No self-insert policy (trigger handles it) |
+| `listings`              | ✅  | ✅ filtered    | ✅ owner       | ✅ owner       | ⚠️ see C2 | DELETE policy re-added in 015              |
+| `listing_images`        | ✅  | ✅ public      | ✅ owner       | —              | ✅ owner  | Good ownership check via JOIN              |
+| `favorites`             | ✅  | ✅ owner       | ✅ owner       | —              | ✅ owner  | Clean                                      |
+| `chats`                 | ✅  | ✅ participant | ⚠️ see C3      | ✅ participant | —         | INSERT policy weakened in 015              |
+| `messages`              | ✅  | ✅ participant | ✅ participant | —              | —         | Soft-delete via function only              |
+| `reports`               | ✅  | ✅ admin/mod   | ✅ reporter    | ✅ admin/mod   | —         | Clean                                      |
+| `user_roles`            | ✅  | ✅ own+admin   | — trigger      | —              | —         | Clean                                      |
+| `listing_boosts`        | ✅  | ✅ owner       | — svc role     | — svc role     | —         | Service role handles writes                |
+| `invoices`              | ✅  | ✅ owner       | — svc role     | — svc role     | —         | Clean                                      |
+| `payment_audit_log`     | ✅  | — svc only     | — svc only     | —              | —         | Clean, append-only                         |
+| `audit_logs`            | ✅  | ✅ owner       | ⚠️ see C4      | —              | —         | INSERT too permissive                      |
+| `security_events`       | ✅  | ❌ no policy   | — svc only     | —              | —         | See M3                                     |
+| `rate_limits`           | ✅  | ✅ own prefix  | — svc only     | —              | —         | Pattern-based match                        |
+| `user_interactions`     | ✅  | ✅ owner       | ✅ owner       | —              | —         | Clean                                      |
+| `recommendations_cache` | ✅  | ✅ owner       | — svc only     | —              | —         | Clean                                      |
+| `trending_listings`     | ✅  | ✅ public      | — svc only     | —              | —         | Clean                                      |
+| `listing_views`         | ✅  | ✅ public      | ✅ authed      | —              | —         | Clean                                      |
+| `chat_typing_events`    | ✅  | ✅ participant | ✅ owner       | —              | —         | Clean                                      |
 
 ### Functions with Missing `search_path`
 
-| Function | Migration | Status |
-|---|---|---|
-| `bump_listing()` | 017 | ❌ Missing |
-| `set_message_delivered()` | 002 | ❌ Missing (not SECURITY DEFINER, but still best practice) |
-| `update_chat_activity()` | 002 | ❌ Missing |
+| Function                  | Migration | Status                                                     |
+| ------------------------- | --------- | ---------------------------------------------------------- |
+| `bump_listing()`          | 017       | ❌ Missing                                                 |
+| `set_message_delivered()` | 002       | ❌ Missing (not SECURITY DEFINER, but still best practice) |
+| `update_chat_activity()`  | 002       | ❌ Missing                                                 |
 
 ---
 
@@ -250,33 +251,33 @@ The application has a solid foundation with good security practices in many area
 
 ### Immediate (Before Production Traffic)
 
-| # | Finding | Effort | Impact |
-|---|---|---|---|
-| 1 | **C1**: Move Gemini API key to Edge Function | Medium | Critical — key exposure |
-| 2 | **C2**: Remove listings DELETE policy from 015 | Trivial | Critical — data loss |
-| 3 | **C3**: Restore seller validation in chat INSERT policy | Trivial | Critical — impersonation |
-| 4 | **H1**: Add path restriction to `listing-images` upload | Trivial | High — file overwrites |
-| 5 | **H5**: Fix NULL comparison in profile audit trigger | Trivial | High — silent audit gaps |
-| 6 | **M2**: Add `search_path` to `bump_listing()` | Trivial | Medium — security best practice |
+| #   | Finding                                                 | Effort  | Impact                          |
+| --- | ------------------------------------------------------- | ------- | ------------------------------- |
+| 1   | **C1**: Move Gemini API key to Edge Function            | Medium  | Critical — key exposure         |
+| 2   | **C2**: Remove listings DELETE policy from 015          | Trivial | Critical — data loss            |
+| 3   | **C3**: Restore seller validation in chat INSERT policy | Trivial | Critical — impersonation        |
+| 4   | **H1**: Add path restriction to `listing-images` upload | Trivial | High — file overwrites          |
+| 5   | **H5**: Fix NULL comparison in profile audit trigger    | Trivial | High — silent audit gaps        |
+| 6   | **M2**: Add `search_path` to `bump_listing()`           | Trivial | Medium — security best practice |
 
 ### Short-Term (Within 2 Weeks)
 
-| # | Finding | Effort | Impact |
-|---|---|---|---|
-| 7 | **C4**: Restrict or remove audit_logs INSERT policy | Low | Critical — log integrity |
-| 8 | **H2**: Consolidate migration directories | Medium | High — operational risk |
-| 9 | **H3/H4**: Verify canonical function versions in production | Low | High — correctness |
-| 10 | **M6**: Fail hard on missing Supabase env vars | Trivial | Medium — debuggability |
-| 11 | **M7**: Clean up `env.d.ts` | Trivial | Low — DX |
+| #   | Finding                                                     | Effort  | Impact                   |
+| --- | ----------------------------------------------------------- | ------- | ------------------------ |
+| 7   | **C4**: Restrict or remove audit_logs INSERT policy         | Low     | Critical — log integrity |
+| 8   | **H2**: Consolidate migration directories                   | Medium  | High — operational risk  |
+| 9   | **H3/H4**: Verify canonical function versions in production | Low     | High — correctness       |
+| 10  | **M6**: Fail hard on missing Supabase env vars              | Trivial | Medium — debuggability   |
+| 11  | **M7**: Clean up `env.d.ts`                                 | Trivial | Low — DX                 |
 
 ### Medium-Term (Within 1 Month)
 
-| # | Finding | Effort | Impact |
-|---|---|---|---|
-| 12 | **M8**: Add rollback SQL to all migrations | Medium | Medium — operational safety |
-| 13 | **M9**: Add archiving before permanent deletion | Low | Medium — data recovery |
-| 14 | **M3**: Add admin SELECT policy for security_events | Trivial | Medium — incident response |
-| 15 | **M4**: Decide on invoice numbering strategy | Low | Low — cosmetic |
+| #   | Finding                                             | Effort  | Impact                      |
+| --- | --------------------------------------------------- | ------- | --------------------------- |
+| 12  | **M8**: Add rollback SQL to all migrations          | Medium  | Medium — operational safety |
+| 13  | **M9**: Add archiving before permanent deletion     | Low     | Medium — data recovery      |
+| 14  | **M3**: Add admin SELECT policy for security_events | Trivial | Medium — incident response  |
+| 15  | **M4**: Decide on invoice numbering strategy        | Low     | Low — cosmetic              |
 
 ---
 
@@ -297,4 +298,4 @@ The following areas are well-implemented and should be preserved:
 
 ---
 
-*End of Audit Report*
+_End of Audit Report_

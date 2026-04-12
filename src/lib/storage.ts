@@ -1,5 +1,12 @@
-import { storage as firebaseStorage } from './firebase';
-import { ref, uploadBytes, getDownloadURL, deleteObject, listAll, getMetadata } from 'firebase/storage';
+import { storage as firebaseStorage } from "./firebase";
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+  listAll,
+  getMetadata,
+} from "firebase/storage";
 
 // ===== STORAGE PROVIDER TYPES =====
 
@@ -30,56 +37,62 @@ export const uploadFile = async (
   options?: {
     metadata?: Record<string, any>;
     contentType?: string;
-  }
+  },
 ): Promise<UploadResult> => {
   try {
     const storageRef = ref(firebaseStorage, path);
     const metadata = {
       contentType: options?.contentType || file.type,
-      customMetadata: options?.metadata || {}
+      customMetadata: options?.metadata || {},
     };
     const snapshot = await uploadBytes(storageRef, file, metadata);
     const url = await getDownloadURL(snapshot.ref);
-    return { url, path, name: file.name, size: file.size, contentType: file.type };
+    return {
+      url,
+      path,
+      name: file.name,
+      size: file.size,
+      contentType: file.type,
+    };
   } catch (error) {
-    console.error('Error uploading file:', error);
+    console.error("Error uploading file:", error);
     throw error;
   }
 };
 
 export const uploadListingImages = async (
   files: File[],
-  listingId: string
+  listingId: string,
 ): Promise<UploadResult[]> => {
   const uploadPromises = files.map(async (file, index) => {
     const timestamp = Date.now();
     const path = `listing-images/${listingId}/${timestamp}-${index}-${file.name}`;
-    
+
     return await uploadFile(file, path, {
       metadata: {
         listingId,
         imageIndex: index.toString(),
-        uploadedAt: new Date().toISOString()
-      }
+        uploadedAt: new Date().toISOString(),
+      },
     });
   });
-  
+
   return await Promise.all(uploadPromises);
 };
 
 export const uploadUserAvatar = async (
   file: File,
-  userId: string
+  userId: string,
 ): Promise<UploadResult> => {
   const timestamp = Date.now();
   const path = `avatars/${userId}/${timestamp}-${file.name}`;
-  
+
   return await uploadFile(file, path, {
     metadata: {
       userId,
       uploadedAt: new Date().toISOString(),
-      type: 'avatar'
-    }
+      type: "avatar",
+    },
   });
 };
 
@@ -90,23 +103,23 @@ export const getFileUrl = async (path: string): Promise<string> => {
     const storageRef = ref(firebaseStorage, path);
     return await getDownloadURL(storageRef);
   } catch (error) {
-    console.error('Error getting file URL:', error);
+    console.error("Error getting file URL:", error);
     throw error;
   }
 };
 
 export const getListingImageUrl = async (
   listingId: string,
-  imageId: string
+  imageId: string,
 ): Promise<string> => {
   // Try different path patterns
   const paths = [
     `listing-images/${listingId}/${imageId}`,
     `listing-images/${listingId}/${imageId}.webp`,
     `listing-images/${listingId}/${imageId}.jpg`,
-    `listing-images/${listingId}/${imageId}.png`
+    `listing-images/${listingId}/${imageId}.png`,
   ];
-  
+
   for (const path of paths) {
     try {
       return await getFileUrl(path);
@@ -115,7 +128,7 @@ export const getListingImageUrl = async (
       continue;
     }
   }
-  
+
   throw new Error(`Image not found for listing ${listingId}, image ${imageId}`);
 };
 
@@ -126,9 +139,9 @@ export const getUserAvatarUrl = async (userId: string): Promise<string> => {
     `avatars/${userId}/avatar.webp`,
     `avatars/${userId}/avatar.jpg`,
     `avatars/${userId}/avatar.png`,
-    `avatars/${userId}/profile`
+    `avatars/${userId}/profile`,
   ];
-  
+
   for (const path of paths) {
     try {
       return await getFileUrl(path);
@@ -137,7 +150,7 @@ export const getUserAvatarUrl = async (userId: string): Promise<string> => {
       continue;
     }
   }
-  
+
   // Return default avatar if none found
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`;
 };
@@ -149,7 +162,7 @@ export const deleteFile = async (path: string): Promise<void> => {
     const storageRef = ref(firebaseStorage, path);
     await deleteObject(storageRef);
   } catch (error) {
-    console.error('Error deleting file:', error);
+    console.error("Error deleting file:", error);
     throw error;
   }
 };
@@ -158,9 +171,9 @@ export const deleteListingImages = async (listingId: string): Promise<void> => {
   try {
     const folderRef = ref(firebaseStorage, `listing-images/${listingId}`);
     const { items } = await listAll(folderRef);
-    await Promise.all(items.map(item => deleteObject(item)));
+    await Promise.all(items.map((item) => deleteObject(item)));
   } catch (error) {
-    console.error('Error deleting listing images:', error);
+    console.error("Error deleting listing images:", error);
     throw error;
   }
 };
@@ -175,12 +188,14 @@ export const getFileMetadata = async (path: string): Promise<StorageFile> => {
       name: metadata.name,
       path,
       size: metadata.size,
-      contentType: metadata.contentType || 'application/octet-stream',
-      createdAt: metadata.timeCreated ? new Date(metadata.timeCreated) : undefined,
-      updatedAt: metadata.updated ? new Date(metadata.updated) : undefined
+      contentType: metadata.contentType || "application/octet-stream",
+      createdAt: metadata.timeCreated
+        ? new Date(metadata.timeCreated)
+        : undefined,
+      updatedAt: metadata.updated ? new Date(metadata.updated) : undefined,
     };
   } catch (error) {
-    console.error('Error getting file metadata:', error);
+    console.error("Error getting file metadata:", error);
     throw error;
   }
 };
@@ -189,38 +204,39 @@ export const getFileMetadata = async (path: string): Promise<StorageFile> => {
 
 export const migrateListingImages = async (
   listingId: string,
-  images: Array<{ id: string; url: string }>
+  images: Array<{ id: string; url: string }>,
 ): Promise<Array<{ id: string; url: string; path: string }>> => {
   const migratedImages = [];
-  
+
   for (const image of images) {
     try {
       // LEGACY MIGRATION: Detect pre-Firebase (Supabase) storage URLs from the original platform.
       // These utilities exist solely to migrate old content to Firebase Storage.
       // Once all legacy data has been migrated, these functions can be removed.
-      const isLegacyStorageUrl = image.url.includes('supabase') && image.url.includes('/storage/');
-      
+      const isLegacyStorageUrl =
+        image.url.includes("supabase") && image.url.includes("/storage/");
+
       if (isLegacyStorageUrl) {
         // Download from legacy storage and re-upload to Firebase
         const response = await fetch(image.url);
         const blob = await response.blob();
         const file = new File([blob], image.id, { type: blob.type });
-        
+
         // Upload to Firebase
         const path = `listing-images/${listingId}/${image.id}`;
         const uploadResult = await uploadFile(file, path);
-        
+
         migratedImages.push({
           id: image.id,
           url: uploadResult.url,
-          path: uploadResult.path
+          path: uploadResult.path,
         });
       } else {
         // Already a Firebase URL or external URL
         migratedImages.push({
           id: image.id,
           url: image.url,
-          path: '' // No path for external URLs
+          path: "", // No path for external URLs
         });
       }
     } catch (error) {
@@ -229,32 +245,33 @@ export const migrateListingImages = async (
       migratedImages.push({
         id: image.id,
         url: image.url,
-        path: ''
+        path: "",
       });
     }
   }
-  
+
   return migratedImages;
 };
 
 export const migrateUserAvatar = async (
   userId: string,
-  avatarUrl: string
+  avatarUrl: string,
 ): Promise<string> => {
   try {
     // LEGACY MIGRATION: Detect pre-Firebase (Supabase) storage URLs from the original platform.
     // Remove once all user avatars have been migrated to Firebase Storage.
-    const isLegacyStorageUrl = avatarUrl.includes('supabase') && avatarUrl.includes('/storage/');
-    
+    const isLegacyStorageUrl =
+      avatarUrl.includes("supabase") && avatarUrl.includes("/storage/");
+
     if (isLegacyStorageUrl) {
       // Download from legacy storage and re-upload to Firebase
       const response = await fetch(avatarUrl);
       const blob = await response.blob();
-      const file = new File([blob], 'avatar', { type: blob.type });
-      
+      const file = new File([blob], "avatar", { type: blob.type });
+
       // Upload to Firebase
       const uploadResult = await uploadUserAvatar(file, userId);
-      
+
       return uploadResult.url;
     } else {
       // Already a Firebase URL or external URL
@@ -270,17 +287,15 @@ export const migrateUserAvatar = async (
 // ===== BATCH OPERATIONS =====
 
 export const batchUploadFiles = async (
-  files: Array<{ file: File; path: string }>
+  files: Array<{ file: File; path: string }>,
 ): Promise<UploadResult[]> => {
-  const uploadPromises = files.map(({ file, path }) => 
-    uploadFile(file, path)
-  );
-  
+  const uploadPromises = files.map(({ file, path }) => uploadFile(file, path));
+
   return await Promise.all(uploadPromises);
 };
 
 export const batchDeleteFiles = async (paths: string[]): Promise<void> => {
-  const deletePromises = paths.map(path => deleteFile(path));
+  const deletePromises = paths.map((path) => deleteFile(path));
   await Promise.all(deletePromises);
 };
 

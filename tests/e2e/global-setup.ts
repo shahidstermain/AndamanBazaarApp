@@ -1,4 +1,4 @@
-import { FullConfig } from '@playwright/test'
+import { FullConfig } from "@playwright/test";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function globalSetup(_config: FullConfig): Promise<void> {
@@ -6,4 +6,4 @@ async function globalSetup(_config: FullConfig): Promise<void> {
   // Add any one-time setup logic here (e.g., seed test data, start services).
 }
 
-export default globalSetup
+export default globalSetup;

@@ -117,23 +117,24 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
       retry: 3,
-      refetchOnWindowFocus: false
-    }
-  }
+      refetchOnWindowFocus: false,
+    },
+  },
 });
 
 // Client State (Context)
 interface AppContextType {
   user: User | null;
   notifications: Notification[];
-  theme: 'light' | 'dark';
+  theme: "light" | "dark";
   setNotifications: (notifications: Notification[]) => void;
 }
 
 // Global State Example
 export const useAppContext = () => {
   const context = useContext(AppContext);
-  if (!context) throw new Error('useAppContext must be used within AppProvider');
+  if (!context)
+    throw new Error("useAppContext must be used within AppProvider");
   return context;
 };
 ```
@@ -144,11 +145,11 @@ export const useAppContext = () => {
 // Protected Routes
 const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
   const { user, loading } = useAuth();
-  
+
   if (loading) return <LoadingSpinner />;
   if (!user) return <Navigate to="/auth" replace />;
   if (requiredRole && user.role !== requiredRole) return <Navigate to="/unauthorized" replace />;
-  
+
   return children;
 };
 
@@ -179,14 +180,14 @@ const supabase = createClient(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
-      detectSessionInUrl: true
+      detectSessionInUrl: true,
     },
     realtime: {
       params: {
-        eventsPerSecond: 10
-      }
-    }
-  }
+        eventsPerSecond: 10,
+      },
+    },
+  },
 );
 
 // Database Connection Pool
@@ -244,27 +245,29 @@ export default async function handler(req: Request) {
 class ListingRepository {
   async findById(id: string): Promise<Listing | null> {
     const { data, error } = await supabase
-      .from('listings')
-      .select(`
+      .from("listings")
+      .select(
+        `
         *,
         user:users(id, full_name, avatar_url, trust_level),
         images:listing_images(id, image_url, sort_order),
         category:categories(id, name, icon)
-      `)
-      .eq('id', id)
+      `,
+      )
+      .eq("id", id)
       .single();
-    
+
     if (error) throw error;
     return data;
   }
 
   async create(listing: CreateListingData): Promise<Listing> {
     const { data, error } = await supabase
-      .from('listings')
+      .from("listings")
       .insert(listing)
       .select()
       .single();
-    
+
     if (error) throw error;
     return data;
   }
@@ -274,23 +277,28 @@ class ListingRepository {
 class ListingService {
   constructor(private repository: ListingRepository) {}
 
-  async createListing(data: CreateListingData, userId: string): Promise<Listing> {
+  async createListing(
+    data: CreateListingData,
+    userId: string,
+  ): Promise<Listing> {
     // Business logic validation
     const validatedData = await this.validateListingData(data);
-    
+
     // Create listing
     const listing = await this.repository.create({
       ...validatedData,
-      user_id: userId
+      user_id: userId,
     });
 
     // Trigger notifications
     await this.notifyNewListing(listing);
-    
+
     return listing;
   }
 
-  private async validateListingData(data: CreateListingData): Promise<CreateListingData> {
+  private async validateListingData(
+    data: CreateListingData,
+  ): Promise<CreateListingData> {
     // Validation logic
     return data;
   }
@@ -384,7 +392,7 @@ CREATE POLICY "Admins can manage all listings" ON listings
 CREATE POLICY "Chat participants can view chat" ON chats
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM chat_participants 
+      SELECT 1 FROM chat_participants
       WHERE chat_id = chats.id AND user_id = auth.uid()
     )
   );
@@ -392,7 +400,7 @@ CREATE POLICY "Chat participants can view chat" ON chats
 CREATE POLICY "Chat participants can view messages" ON messages
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM chat_participants 
+      SELECT 1 FROM chat_participants
       WHERE chat_id = messages.chat_id AND user_id = auth.uid()
     )
   );
@@ -405,8 +413,8 @@ CREATE POLICY "Chat participants can view messages" ON messages
 CREATE OR REPLACE FUNCTION increment_views(listing_id UUID)
 RETURNS void AS $$
 BEGIN
-  UPDATE listings 
-  SET views_count = views_count + 1 
+  UPDATE listings
+  SET views_count = views_count + 1
   WHERE id = listing_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -420,12 +428,12 @@ BEGIN
   -- Create chat
   INSERT INTO chats (id) VALUES (gen_random_uuid())
   RETURNING id INTO chat_id;
-  
+
   -- Add participants
   INSERT INTO chat_participants (chat_id, user_id) VALUES
     (chat_id, user1_id),
     (chat_id, user2_id);
-  
+
   RETURN chat_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -441,17 +449,17 @@ BEGIN
   SELECT last_bumped_at INTO last_bumped
   FROM listings
   WHERE id = listing_id AND user_id = auth.uid();
-  
+
   -- Verify 7-day cooldown
   IF last_bumped IS NOT NULL AND last_bumped > NOW() - seven_days THEN
     RETURN false;
   END IF;
-  
+
   -- Update bump time
   UPDATE listings
   SET last_bumped_at = NOW()
   WHERE id = listing_id AND user_id = auth.uid();
-  
+
   RETURN true;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -522,23 +530,23 @@ const rateLimits = {
 // Sensitive Data Handling
 const sensitiveData = {
   users: {
-    encrypted: ['phone'],
-    hashed: ['email'],
-    public: ['full_name', 'avatar_url', 'trust_level']
+    encrypted: ["phone"],
+    hashed: ["email"],
+    public: ["full_name", "avatar_url", "trust_level"],
   },
   listings: {
-    public: ['title', 'description', 'price', 'category', 'city'],
-    protected: ['user_id', 'created_at'],
-    private: []
-  }
+    public: ["title", "description", "price", "category", "city"],
+    protected: ["user_id", "created_at"],
+    private: [],
+  },
 };
 
 // GDPR Compliance
 const gdprFeatures = {
-  dataPortability: 'users can export their data',
-  rightToErasure: 'users can delete their account and data',
-  consentManagement: 'explicit consent for data processing',
-  dataMinimization: 'only collect necessary data'
+  dataPortability: "users can export their data",
+  rightToErasure: "users can delete their account and data",
+  consentManagement: "explicit consent for data processing",
+  dataMinimization: "only collect necessary data",
 };
 ```
 
@@ -553,33 +561,33 @@ const gdprFeatures = {
 interface CacheStrategy {
   // L1: Browser Cache
   browser: {
-    staticAssets: '1 year',
-    apiResponses: '5 minutes',
-    userSession: '7 days'
+    staticAssets: "1 year";
+    apiResponses: "5 minutes";
+    userSession: "7 days";
   };
-  
+
   // L2: CDN Cache (Firebase Hosting)
   cdn: {
-    html: 'no-cache',
-    css: '1 year',
-    js: '1 year',
-    images: '1 year',
-    api: 'no-cache'
+    html: "no-cache";
+    css: "1 year";
+    js: "1 year";
+    images: "1 year";
+    api: "no-cache";
   };
-  
+
   // L3: Application Cache (React Query)
   application: {
-    listings: '5 minutes',
-    userProfile: '10 minutes',
-    categories: '1 hour',
-    messages: 'real-time'
+    listings: "5 minutes";
+    userProfile: "10 minutes";
+    categories: "1 hour";
+    messages: "real-time";
   };
-  
+
   // L4: Database Cache (Supabase)
   database: {
-    queryResults: 'automatic',
-    connectionPool: 'managed',
-    readReplicas: 'automatic'
+    queryResults: "automatic";
+    connectionPool: "managed";
+    readReplicas: "automatic";
   };
 }
 ```
@@ -593,18 +601,18 @@ const imageOptimization = {
     maxWidth: 1920,
     maxHeight: 1080,
     quality: 80,
-    format: 'webp',
+    format: "webp",
     thumbnails: [
       { width: 400, height: 300, quality: 70 },
-      { width: 200, height: 150, quality: 60 }
-    ]
+      { width: 200, height: 150, quality: 60 },
+    ],
   },
   delivery: {
     lazyLoading: true,
     progressiveLoading: true,
     webpSupport: true,
-    cdnDelivery: true
-  }
+    cdnDelivery: true,
+  },
 };
 ```
 
@@ -617,24 +625,24 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom'],
-          router: ['react-router-dom'],
-          ui: ['@headlessui/react', 'lucide-react'],
-          utils: ['date-fns', 'clsx']
-        }
-      }
+          vendor: ["react", "react-dom"],
+          router: ["react-router-dom"],
+          ui: ["@headlessui/react", "lucide-react"],
+          utils: ["date-fns", "clsx"],
+        },
+      },
     },
-    minify: 'terser',
-    sourcemap: true
+    minify: "terser",
+    sourcemap: true,
   },
   plugins: [
     vitePWA({
-      registerType: 'autoUpdate',
+      registerType: "autoUpdate",
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
-      }
-    })
-  ]
+        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+      },
+    }),
+  ],
 });
 ```
 
@@ -648,29 +656,29 @@ export default defineConfig({
 // Auto-scaling Configuration
 const scalingConfig = {
   frontend: {
-    platform: 'Firebase Hosting',
-    scaling: 'automatic',
-    regions: ['global'],
-    cdn: 'built-in'
+    platform: "Firebase Hosting",
+    scaling: "automatic",
+    regions: ["global"],
+    cdn: "built-in",
   },
   backend: {
-    platform: 'Supabase',
-    database: 'PostgreSQL with auto-scaling',
-    compute: 'Edge Functions (auto-scaling)',
-    storage: 'Supabase Storage (auto-scaling)'
+    platform: "Supabase",
+    database: "PostgreSQL with auto-scaling",
+    compute: "Edge Functions (auto-scaling)",
+    storage: "Supabase Storage (auto-scaling)",
   },
   monitoring: {
-    metrics: 'built-in',
-    alerts: 'configured',
-    logging: 'structured'
-  }
+    metrics: "built-in",
+    alerts: "configured",
+    logging: "structured",
+  },
 };
 
 // Load Balancing
 const loadBalancing = {
-  database: 'read replicas + connection pooling',
-  api: 'edge functions global distribution',
-  static: 'firebase cdn global distribution'
+  database: "read replicas + connection pooling",
+  api: "edge functions global distribution",
+  static: "firebase cdn global distribution",
 };
 ```
 
@@ -680,20 +688,20 @@ const loadBalancing = {
 // Performance Metrics
 const performanceMetrics = {
   webVitals: {
-    LCP: '< 2.5s', // Largest Contentful Paint
-    FID: '< 100ms', // First Input Delay
-    CLS: '< 0.1'   // Cumulative Layout Shift
+    LCP: "< 2.5s", // Largest Contentful Paint
+    FID: "< 100ms", // First Input Delay
+    CLS: "< 0.1", // Cumulative Layout Shift
   },
   api: {
-    responseTime: '< 200ms (p95)',
-    errorRate: '< 1%',
-    throughput: '1000+ req/min'
+    responseTime: "< 200ms (p95)",
+    errorRate: "< 1%",
+    throughput: "1000+ req/min",
   },
   database: {
-    queryTime: '< 50ms (p95)',
-    connectionPool: '80% utilization',
-    indexUsage: '95%+'
-  }
+    queryTime: "< 50ms (p95)",
+    connectionPool: "80% utilization",
+    indexUsage: "95%+",
+  },
 };
 ```
 
@@ -720,15 +728,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
-      
+          node-version: "18"
+          cache: "npm"
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Run tests
         run: npm run test:all
-      
+
       - name: Build application
         run: npm run build
 
@@ -738,12 +746,12 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Deploy to Firebase
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
           channelId: live
           projectId: andamanbazaar-prod
 ```
@@ -754,26 +762,26 @@ jobs:
 // Environment Configuration
 const environments = {
   development: {
-    database: 'local Supabase',
-    api: 'localhost:54321',
-    hosting: 'localhost:5173',
-    logging: 'verbose',
-    debugging: 'enabled'
+    database: "local Supabase",
+    api: "localhost:54321",
+    hosting: "localhost:5173",
+    logging: "verbose",
+    debugging: "enabled",
   },
   staging: {
-    database: 'Supabase staging',
-    api: 'staging-api.andamanbazaar.in',
-    hosting: 'staging.andamanbazaar.in',
-    logging: 'info',
-    debugging: 'enabled'
+    database: "Supabase staging",
+    api: "staging-api.andamanbazaar.in",
+    hosting: "staging.andamanbazaar.in",
+    logging: "info",
+    debugging: "enabled",
   },
   production: {
-    database: 'Supabase production',
-    api: 'api.andamanbazaar.in',
-    hosting: 'andamanbazaar.in',
-    logging: 'error',
-    debugging: 'disabled'
-  }
+    database: "Supabase production",
+    api: "api.andamanbazaar.in",
+    hosting: "andamanbazaar.in",
+    logging: "error",
+    debugging: "disabled",
+  },
 };
 ```
 
@@ -784,11 +792,7 @@ const environments = {
 {
   "hosting": {
     "public": "dist",
-    "ignore": [
-      "firebase.json",
-      "**/.*",
-      "**/node_modules/**"
-    ],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
         "source": "**",
@@ -856,23 +860,23 @@ src/features/
 // Testing Strategy
 const testingStrategy = {
   unit: {
-    framework: 'Vitest',
-    coverage: '90%+',
-    tests: 'fast, isolated',
-    mocking: 'msw + vi'
+    framework: "Vitest",
+    coverage: "90%+",
+    tests: "fast, isolated",
+    mocking: "msw + vi",
   },
   integration: {
-    framework: 'Vitest + Supabase',
-    database: 'test database',
-    api: 'real endpoints',
-    cleanup: 'automatic'
+    framework: "Vitest + Supabase",
+    database: "test database",
+    api: "real endpoints",
+    cleanup: "automatic",
   },
   e2e: {
-    framework: 'Playwright',
-    browsers: ['chromium', 'firefox', 'webkit'],
-    devices: ['desktop', 'mobile', 'tablet'],
-    ci: 'parallel execution'
-  }
+    framework: "Playwright",
+    browsers: ["chromium", "firefox", "webkit"],
+    devices: ["desktop", "mobile", "tablet"],
+    ci: "parallel execution",
+  },
 };
 ```
 
@@ -886,23 +890,23 @@ const testingStrategy = {
 // Monitoring Setup
 const monitoring = {
   frontend: {
-    errorTracking: 'Sentry (planned)',
-    performance: 'Web Vitals',
-    analytics: 'Google Analytics 4',
-    userBehavior: 'Hotjar (planned)'
+    errorTracking: "Sentry (planned)",
+    performance: "Web Vitals",
+    analytics: "Google Analytics 4",
+    userBehavior: "Hotjar (planned)",
   },
   backend: {
-    logs: 'Supabase Logs',
-    metrics: 'Supabase Metrics',
-    alerts: 'Email + Slack',
-    healthChecks: 'custom endpoints'
+    logs: "Supabase Logs",
+    metrics: "Supabase Metrics",
+    alerts: "Email + Slack",
+    healthChecks: "custom endpoints",
   },
   infrastructure: {
-    uptime: 'UptimeRobot',
-    performance: 'Lighthouse CI',
-    security: 'Snyk + npm audit',
-    dependencies: 'Dependabot'
-  }
+    uptime: "UptimeRobot",
+    performance: "Lighthouse CI",
+    security: "Snyk + npm audit",
+    dependencies: "Dependabot",
+  },
 };
 ```
 
@@ -911,11 +915,11 @@ const monitoring = {
 ```typescript
 // Health Check Endpoints
 const healthChecks = {
-  frontend: '/health',
-  database: 'supabase health check',
-  api: '/api/health',
-  cdn: 'firebase hosting status',
-  edgeFunctions: 'supabase functions health'
+  frontend: "/health",
+  database: "supabase health check",
+  api: "/api/health",
+  cdn: "firebase hosting status",
+  edgeFunctions: "supabase functions health",
 };
 
 // Health Check Implementation
@@ -924,16 +928,18 @@ export const healthCheck = async () => {
     checkDatabase(),
     checkAuth(),
     checkStorage(),
-    checkEdgeFunctions()
+    checkEdgeFunctions(),
   ]);
-  
+
   return {
-    status: checks.every(check => check.status === 'fulfilled') ? 'healthy' : 'degraded',
+    status: checks.every((check) => check.status === "fulfilled")
+      ? "healthy"
+      : "degraded",
     checks: checks.map((check, index) => ({
-      name: ['database', 'auth', 'storage', 'edgeFunctions'][index],
+      name: ["database", "auth", "storage", "edgeFunctions"][index],
       status: check.status,
-      error: check.status === 'rejected' ? check.reason : null
-    }))
+      error: check.status === "rejected" ? check.reason : null,
+    })),
   };
 };
 ```
@@ -943,18 +949,21 @@ export const healthCheck = async () => {
 ## 🔄 Future Architecture Plans
 
 ### Phase 1 Enhancements (Q2 2026)
+
 - [ ] Microservices migration for specific features
 - [ ] Advanced caching with Redis
 - [ ] Real-time analytics dashboard
 - [ ] Mobile app (React Native)
 
 ### Phase 2 Enhancements (Q3 2026)
+
 - [ ] GraphQL API layer
 - [ ] Event-driven architecture
 - [ ] Advanced search with Elasticsearch
 - [ ] AI-powered recommendations
 
 ### Phase 3 Enhancements (Q4 2026)
+
 - [ ] Multi-region deployment
 - [ ] Advanced security features
 - [ ] API gateway implementation
@@ -980,4 +989,4 @@ export const healthCheck = async () => {
 
 ---
 
-*Last updated: March 7, 2026*
+_Last updated: March 7, 2026_

@@ -91,12 +91,12 @@ Run these migrations in the following order:
 ### Verify Tables Created
 
 ```sql
-SELECT table_name 
-FROM information_schema.tables 
-WHERE table_schema = 'public' 
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
   AND table_name IN (
-    'user_interactions', 
-    'recommendations_cache', 
+    'user_interactions',
+    'recommendations_cache',
     'trending_listings',
     'rate_limits',
     'audit_logs',
@@ -108,9 +108,9 @@ WHERE table_schema = 'public'
 ### Verify Functions Created
 
 ```sql
-SELECT routine_name 
-FROM information_schema.routines 
-WHERE routine_schema = 'public' 
+SELECT routine_name
+FROM information_schema.routines
+WHERE routine_schema = 'public'
   AND routine_name IN (
     'check_rate_limit',
     'log_audit_event',
@@ -156,7 +156,7 @@ DROP FUNCTION IF EXISTS audit_profile_changes;
 
 ```sql
 -- Remove new columns
-ALTER TABLE public.messages 
+ALTER TABLE public.messages
   DROP COLUMN IF EXISTS delivered_at,
   DROP COLUMN IF EXISTS read_at,
   DROP COLUMN IF EXISTS reactions,

@@ -15,14 +15,14 @@ export interface Profile {
   verification_blocked_until?: string;
   total_listings: number;
   successful_sales: number;
-  trust_level: 'newbie' | 'verified' | 'legend' | 'official';
+  trust_level: "newbie" | "verified" | "legend" | "official";
   is_official?: boolean;
   response_rate?: number;
   avg_response_hours?: number;
   created_at: string;
   // Operator verification fields
   operator_business_address?: string;
-  operator_verification_status?: 'pending' | 'verified' | 'rejected';
+  operator_verification_status?: "pending" | "verified" | "rejected";
   operator_id_document_url?: string;
 }
 
@@ -41,10 +41,20 @@ export interface Subcategory {
   slug: string;
 }
 
-export type ItemCondition = 'new' | 'like_new' | 'good' | 'fair';
-export type ItemAge = '<1m' | '1-6m' | '6-12m' | '1-2y' | '2-5y' | '5y+';
-export type ListingStatus = 'draft' | 'pending_review' | 'active' | 'sold' | 'expired' | 'deleted';
-export type ModerationStatus = 'auto_approved' | 'pending_review' | 'approved' | 'rejected';
+export type ItemCondition = "new" | "like_new" | "good" | "fair";
+export type ItemAge = "<1m" | "1-6m" | "6-12m" | "1-2y" | "2-5y" | "5y+";
+export type ListingStatus =
+  | "draft"
+  | "pending_review"
+  | "active"
+  | "sold"
+  | "expired"
+  | "deleted";
+export type ModerationStatus =
+  | "auto_approved"
+  | "pending_review"
+  | "approved"
+  | "rejected";
 
 export interface ContactPreferences {
   chat: boolean;
@@ -113,7 +123,7 @@ export interface Listing {
 
   // Freshness metadata
   last_active_at?: string;
-  availability_status?: 'available' | 'sold_recently' | 'inactive';
+  availability_status?: "available" | "sold_recently" | "inactive";
   response_rate?: number; // 0-100
   avg_response_hours?: number;
 }
@@ -166,9 +176,9 @@ export interface Message {
   is_read: boolean;
   created_at: string;
   // New Offer Fields
-  type?: 'text' | 'offer' | 'system';
+  type?: "text" | "offer" | "system";
   offerAmount?: number;
-  offerStatus?: 'pending' | 'accepted' | 'rejected';
+  offerStatus?: "pending" | "accepted" | "rejected";
   // Firebase compatibility
   senderId?: string;
   isRead?: boolean;
@@ -221,8 +231,13 @@ export interface AiSuggestion {
 
 // ===== Boost / Featured Ad Types =====
 
-export type BoostTierKey = 'spark' | 'boost' | 'power';
-export type BoostStatus = 'pending' | 'paid' | 'expired' | 'failed' | 'refunded';
+export type BoostTierKey = "spark" | "boost" | "power";
+export type BoostStatus =
+  | "pending"
+  | "paid"
+  | "expired"
+  | "failed"
+  | "refunded";
 
 export interface ListingBoost {
   id: string;
@@ -243,8 +258,21 @@ export interface ListingBoost {
 
 // ===== Activities Marketplace Types =====
 
-export type Island = 'Port Blair' | 'Havelock' | 'Neil Island' | 'Baratang' | 'Diglipur' | 'Long Island';
-export type ActivityType = 'Scuba Diving' | 'Snorkeling' | 'Trekking' | 'History' | 'Leisure' | 'Water Sports' | 'Beaches';
+export type Island =
+  | "Port Blair"
+  | "Havelock"
+  | "Neil Island"
+  | "Baratang"
+  | "Diglipur"
+  | "Long Island";
+export type ActivityType =
+  | "Scuba Diving"
+  | "Snorkeling"
+  | "Trekking"
+  | "History"
+  | "Leisure"
+  | "Water Sports"
+  | "Beaches";
 
 export interface Activity {
   id: string;
@@ -255,11 +283,11 @@ export interface Activity {
   durationMinutes: number;
   rating: number;
   reviewCount: number;
-  difficulty: 'Easy' | 'Moderate' | 'Hard';
+  difficulty: "Easy" | "Moderate" | "Hard";
   familyFriendly: boolean;
   requiresSwimming: boolean;
   trustScore?: number;
-  trustBadge?: 'Low' | 'Good' | 'Trusted' | 'Premium';
+  trustBadge?: "Low" | "Good" | "Trusted" | "Premium";
   season: string[];
   location: { lat: number; lng: number };
   operatorId?: string;
@@ -284,8 +312,8 @@ export interface ActivityFilterParams {
 export interface UserPreferences {
   budget: number;
   interests: ActivityType[];
-  persona: 'Adventure' | 'Relaxation' | 'Culture' | 'Luxury';
-  groupType: 'solo' | 'couple' | 'family' | 'group';
+  persona: "Adventure" | "Relaxation" | "Culture" | "Luxury";
+  groupType: "solo" | "couple" | "family" | "group";
 }
 
 export interface ReviewRatings {

@@ -34,6 +34,7 @@
 **Status**: Fail
 
 **Notes**:
+
 - `src/pages/Home.tsx` contains multiple links to `/create`.
 - `src/App.tsx` does not define `/create`; the create/edit flow is on `/post`.
 
@@ -47,6 +48,7 @@
 **Status**: Caveat
 
 **Notes**:
+
 - UI exists and filtering logic is implemented in `src/pages/Listings.tsx`.
 - Final release check should confirm category slugs match real stored values.
 
@@ -62,6 +64,7 @@
 **Status**: Pass with caveat
 
 **Notes**:
+
 - Listing detail structure is release-capable.
 - Payment-related boost success handling remains a blocker.
 
@@ -79,6 +82,7 @@
 **Status**: Caveat
 
 **Notes**:
+
 - `AuthView.tsx` uses `window.location.origin` for `redirectTo` and `emailRedirectTo`.
 - Production is only safe after matching Supabase auth callback allowlist with deployed domains.
 
@@ -106,6 +110,7 @@
 **Status**: Pass with caveat
 
 **Notes**:
+
 - Upload loop currently skips failed image uploads and continues; that is survivable but should be tested against real storage policy behavior.
 
 ### Search and Filtering
@@ -143,6 +148,7 @@
 **Status**: Fail
 
 **Blocking Notes**:
+
 - `src/pages/BoostSuccess.tsx` reads `listing_boosts` directly from the client.
 - If status is still pending after retry, it sets `success` anyway.
 - Existing tests in `tests/BoostSuccess.test.tsx` explicitly validate this false-positive behavior.
@@ -159,6 +165,7 @@
 **Status**: Caveat
 
 **Notes**:
+
 - No dynamic metadata handling was found in `src/`.
 - This is not a hard functional blocker, but it is a release-quality gap.
 
@@ -172,6 +179,7 @@
 **Status**: Fail
 
 **Blocking Notes**:
+
 - `robots.txt` references `https://andamanbazaar.in/sitemap.xml`.
 - `sitemap.xml` still uses `https://andamanbazaar.com/...` URLs.
 
@@ -204,6 +212,7 @@
 **Status**: Caveat
 
 **Notes**:
+
 - `ErrorBoundary.tsx` logs to console and explicitly says external reporting is future work.
 - There is no evidence of Sentry, LogRocket, or equivalent browser error collection.
 
@@ -216,6 +225,7 @@
 **Status**: Fail
 
 **Blocking Notes**:
+
 - `/create` links are broken.
 - `apple-touch-icon.png`, `favicon-32x32.png`, `favicon-16x16.png`, and `safari-pinned-tab.svg` were referenced but not found under `public/`.
 

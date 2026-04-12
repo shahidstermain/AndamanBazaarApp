@@ -7,6 +7,7 @@
 ## Phase 1: Welcome & Trust Building (First 30 seconds)
 
 ### Screen: Welcome Modal
+
 **Headline:** "Welcome to AndamanBazaar — Islanders Trust Islanders"
 
 **Subtext:** "Sell to real neighbours, not anonymous internet strangers. No mainland scams, no shipping headaches."
@@ -24,9 +25,11 @@
 **Progress Indicator:** Step 1 of 3
 
 **Copy:**
+
 > "Andaman mein sab jaante hain sab ko — phir bhi ek acchi profile helps buyers trust you faster. Complete profiles sell 3x faster."
 
 **Required Fields:**
+
 1. **Profile Photo** — "Add your photo — buyers trust real faces"
    - Hint: "Selfie works! Just make sure your face is clearly visible."
    - Trust Badge Preview: Shows "Verified" badge placeholder
@@ -43,6 +46,7 @@
    - Badge: "📍 Location Set"
 
 **Trust Score Preview:**
+
 ```
 Your Trust Profile
 ━━━━━━━━━━━━━━━━━━
@@ -65,11 +69,13 @@ Trust Level: Newbie → Verified (2 more steps)
 **Progress Indicator:** Step 2 of 3
 
 **Copy:**
+
 > "Perfect! Now let's post your first item. Quick listings get more views — detailed listings get more buyers."
 
 **Quick Post Flow (2-step):**
 
 ### Step A: What are you selling?
+
 - **Photo Upload** (Required)
   - "Add up to 5 photos — first photo is your cover"
   - Drag & drop or camera icon
@@ -88,6 +94,7 @@ Trust Level: Newbie → Verified (2 more steps)
 **CTA:** "Next: Add Details"
 
 ### Step B: Details & Location
+
 - **Description** (Optional)
   - Placeholder: "Describe your item — condition, reason for selling, any defects"
   - Character counter: 0/500
@@ -100,6 +107,7 @@ Trust Level: Newbie → Verified (2 more steps)
   - Schedule: "Available from [date]"
 
 **Trust Nudge:**
+
 > "💡 Tip: Listings with descriptions get 40% more inquiries. Add a few details!"
 
 **CTA:** "Post Listing" (primary), "Save as Draft" (secondary)
@@ -115,9 +123,11 @@ Trust Level: Newbie → Verified (2 more steps)
 **Celebration Animation:** Confetti + listing card preview
 
 **Copy:**
+
 > "🎉 Your listing is LIVE! Islanders can now see it."
 
 **Listing Stats Preview:**
+
 ```
 Your Listing Performance
 ━━━━━━━━━━━━━━━━━━━━━━━
@@ -129,6 +139,7 @@ Your Listing Performance
 ```
 
 **Trust Progress Update:**
+
 ```
 Your Trust Profile
 ━━━━━━━━━━━━━━━━━━
@@ -141,6 +152,7 @@ Trust Level: Newbie → Verified (complete!)
 ```
 
 **CTAs:**
+
 1. "View My Listing" (primary)
 2. "Post Another Item" (secondary)
 3. "Boost This Listing" (teal highlight)
@@ -152,15 +164,18 @@ Trust Level: Newbie → Verified (complete!)
 ### Trust Score System
 
 **Newbie (0-1 completed)**
+
 - Badge: Gray circle
 - Benefits: Basic visibility
 
 **Verified (2-3 completed)**
+
 - Badge: Teal checkmark
 - Requirements: Phone + Location + (Photo OR First Listing)
 - Benefits: Higher search ranking, "Verified" badge on listings
 
 **Trusted Seller (4+ completed)**
+
 - Badge: Gold star
 - Requirements: All profile fields + 5+ successful sales + 4.5+ rating
 - Benefits: Top placement, "Trusted Seller" badge, priority support
@@ -168,12 +183,15 @@ Trust Level: Newbie → Verified (complete!)
 ### Trust-Building Prompts (In-App)
 
 **After 1st sale:**
+
 > "Congratulations on your first sale! 🎉 Add a profile photo to become a Verified Seller."
 
 **After 5th sale:**
+
 > "You're on a roll! 5 successful sales — you're building real trust in the community."
 
 **After buyer leaves review:**
+
 > "You got a ⭐⭐⭐⭐⭐ review! Trust score updated."
 
 ---
@@ -181,6 +199,7 @@ Trust Level: Newbie → Verified (complete!)
 ## Conversion Optimization Notes
 
 ### Friction Points Removed:
+
 1. ✓ No email verification required (phone only)
 2. ✓ No mandatory description (optional field)
 3. ✓ No category drill-down (quick chips)
@@ -188,6 +207,7 @@ Trust Level: Newbie → Verified (complete!)
 5. ✓ Location auto-filled from profile
 
 ### Trust Signals Throughout:
+
 1. ✓ "Islanders trust Islanders" messaging
 2. ✓ Trust badge previews
 3. ✓ Progress indicators
@@ -195,6 +215,7 @@ Trust Level: Newbie → Verified (complete!)
 5. ✓ Local flavor copy (builds connection)
 
 ### CTAs Optimized:
+
 - Primary CTAs: Action-oriented, teal color
 - Secondary CTAs: Ghost buttons, non-competing
 - Tertiary options: Links, not buttons
@@ -214,11 +235,13 @@ Trust Level: Newbie → Verified (complete!)
 ## A/B Test Variants
 
 ### Variant A: Trust-First
+
 - Lead with trust messaging
 - Show trust badge previews early
 - Emphasize "Verified" status
 
 ### Variant B: Speed-First
+
 - Lead with "Post in 60 seconds"
 - Minimize required fields
 - Defer profile completion
@@ -240,5 +263,5 @@ Trust Level: Newbie → Verified (complete!)
 
 ---
 
-*Last updated: March 2026*
-*Version: 1.0*
+_Last updated: March 2026_
+_Version: 1.0_

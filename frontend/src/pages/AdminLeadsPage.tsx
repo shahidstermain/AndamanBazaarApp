@@ -65,9 +65,7 @@ export const AdminLeadsPage = () => {
   const updateStatus = async (leadId: string, status: LeadStatus) => {
     try {
       await api.updateLeadStatus(leadId, status, auth);
-      setLeads((prev) =>
-        prev.map((lead) => (lead.id === leadId ? { ...lead, status } : lead)),
-      );
+      setLeads((prev) => prev.map((lead) => (lead.id === leadId ? { ...lead, status } : lead)));
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : "Failed to update lead");
     }
@@ -138,7 +136,10 @@ export const AdminLeadsPage = () => {
             </p>
           )}
 
-          <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 font-semibold text-white">
+          <button
+            type="submit"
+            className="rounded-md bg-blue-600 px-4 py-2 font-semibold text-white"
+          >
             Enter Admin Dashboard
           </button>
         </form>
@@ -156,7 +157,11 @@ export const AdminLeadsPage = () => {
             Confirmed: {summary.confirmed}
           </p>
         </div>
-        <button type="button" onClick={logout} className="rounded-md border bg-white px-3 py-2 text-sm">
+        <button
+          type="button"
+          onClick={logout}
+          className="rounded-md border bg-white px-3 py-2 text-sm"
+        >
           Logout
         </button>
       </header>
@@ -215,7 +220,9 @@ export const AdminLeadsPage = () => {
                 <td className="px-3 py-2">
                   <select
                     value={lead.status}
-                    onChange={(event) => void updateStatus(lead.id, event.target.value as LeadStatus)}
+                    onChange={(event) =>
+                      void updateStatus(lead.id, event.target.value as LeadStatus)
+                    }
                     className="rounded-md border px-2 py-1"
                     aria-label={`Set status for ${lead.name}`}
                   >

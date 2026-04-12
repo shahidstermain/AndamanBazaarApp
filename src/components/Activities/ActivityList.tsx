@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { ActivityCard } from './ActivityCard';
-import { Activity } from '../../types';
-import { SearchX, ArrowUpDown } from 'lucide-react';
+import React, { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
+import { ActivityCard } from "./ActivityCard";
+import { Activity } from "../../types";
+import { SearchX, ArrowUpDown } from "lucide-react";
 
-type SortOption = 'match' | 'price_asc' | 'rating_desc' | 'duration_asc';
+type SortOption = "match" | "price_asc" | "rating_desc" | "duration_asc";
 
 interface ActivityListProps {
   activities: (Activity & { matchScore: number })[];
@@ -25,19 +25,22 @@ const SkeletonCard = () => (
   </div>
 );
 
-export const ActivityList: React.FC<ActivityListProps> = ({ activities, isLoading }) => {
-  const [sortBy, setSortBy] = useState<SortOption>('match');
+export const ActivityList: React.FC<ActivityListProps> = ({
+  activities,
+  isLoading,
+}) => {
+  const [sortBy, setSortBy] = useState<SortOption>("match");
 
   const sortedActivities = useMemo(() => {
     return [...activities].sort((a, b) => {
       switch (sortBy) {
-        case 'price_asc':
+        case "price_asc":
           return a.price - b.price;
-        case 'rating_desc':
+        case "rating_desc":
           return b.rating - a.rating;
-        case 'duration_asc':
+        case "duration_asc":
           return a.durationMinutes - b.durationMinutes;
-        case 'match':
+        case "match":
         default:
           return b.matchScore - a.matchScore;
       }
@@ -63,9 +66,12 @@ export const ActivityList: React.FC<ActivityListProps> = ({ activities, isLoadin
         <div className="w-24 h-24 bg-warm-50 rounded-[32px] flex items-center justify-center mb-6">
           <SearchX size={40} className="text-warm-300" />
         </div>
-        <h3 className="text-2xl font-black text-midnight-900 mb-2">No activities match your filters</h3>
+        <h3 className="text-2xl font-black text-midnight-900 mb-2">
+          No activities match your filters
+        </h3>
         <p className="text-warm-500 font-bold max-w-xs">
-          Try adjusting your budget, duration, or interests to discover more amazing experiences.
+          Try adjusting your budget, duration, or interests to discover more
+          amazing experiences.
         </p>
       </div>
     );
@@ -76,12 +82,16 @@ export const ActivityList: React.FC<ActivityListProps> = ({ activities, isLoadin
       {/* Sort Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h3 className="text-lg font-black text-midnight-900 tracking-wide">
-          {activities.length} {activities.length === 1 ? 'Activity' : 'Activities'} Found
+          {activities.length}{" "}
+          {activities.length === 1 ? "Activity" : "Activities"} Found
         </h3>
-        
+
         <div className="relative group">
           <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-warm-200 cursor-pointer shadow-sm hover:border-teal-500 transition-colors">
-            <ArrowUpDown size={16} className="text-warm-500 group-hover:text-teal-600" />
+            <ArrowUpDown
+              size={16}
+              className="text-warm-500 group-hover:text-teal-600"
+            />
             <select
               value={sortBy}
               title="Sort activities"
@@ -100,8 +110,15 @@ export const ActivityList: React.FC<ActivityListProps> = ({ activities, isLoadin
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {sortedActivities.map((activity) => (
-          <Link key={activity.id} to={`/activities/${activity.id}`} className="animate-fade-in transition-all block">
-            <ActivityCard activity={activity} matchScore={activity.matchScore} />
+          <Link
+            key={activity.id}
+            to={`/activities/${activity.id}`}
+            className="animate-fade-in transition-all block"
+          >
+            <ActivityCard
+              activity={activity}
+              matchScore={activity.matchScore}
+            />
           </Link>
         ))}
       </div>

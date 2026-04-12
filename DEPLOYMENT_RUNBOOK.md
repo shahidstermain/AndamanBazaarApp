@@ -13,6 +13,7 @@
 ## Architecture Overview
 
 ### Application Type
+
 - **Frontend**: Vite + React SPA (Single Page Application)
 - **Build Output**: Static files in `dist/` directory
 - **Backend**: Firebase (Native integration - auth, database, storage, functions)
@@ -20,14 +21,14 @@
 
 ### Hosting Strategy
 
-| Component | Platform | Purpose |
-|-----------|----------|---------|
-| Frontend | Firebase Hosting | Global CDN, SSL, SPA routing |
-| Database | Cloud Firestore | NoSQL document database |
-| Auth | Firebase Auth | User identity & session management |
-| Storage | Cloud Storage for Firebase | Image & file hosting |
-| Functions | Cloud Functions for Firebase | Serverless business logic |
-| Payments | Cashfree | Payment gateway (via Cloud Functions) |
+| Component | Platform                     | Purpose                               |
+| --------- | ---------------------------- | ------------------------------------- |
+| Frontend  | Firebase Hosting             | Global CDN, SSL, SPA routing          |
+| Database  | Cloud Firestore              | NoSQL document database               |
+| Auth      | Firebase Auth                | User identity & session management    |
+| Storage   | Cloud Storage for Firebase   | Image & file hosting                  |
+| Functions | Cloud Functions for Firebase | Serverless business logic             |
+| Payments  | Cashfree                     | Payment gateway (via Cloud Functions) |
 
 ---
 
@@ -36,15 +37,18 @@
 ### Environment Setup
 
 #### 1. Configure GitHub Secrets
+
 Navigate to Settings > Secrets and variables > Actions, add:
 
 **Firebase Configuration:**
+
 ```
 FIREBASE_PROJECT_ID=your-project-id
 FIREBASE_SERVICE_ACCOUNT=<JSON service account key>
 ```
 
 **Application Secrets (Build-time):**
+
 ```
 VITE_FIREBASE_API_KEY=xxx
 VITE_FIREBASE_AUTH_DOMAIN=xxx
@@ -55,6 +59,7 @@ VITE_FIREBASE_APP_ID=xxx
 ```
 
 #### 2. Firebase CLI Setup
+
 ```bash
 # Install Firebase CLI
 npm install -g firebase-tools
@@ -67,7 +72,9 @@ firebase use your-project-id
 ```
 
 #### 3. Domain Configuration
+
 In Firebase Console:
+
 1. Go to Hosting > Custom domains
 2. Add `andamanbazaar.in`
 3. Add `www.andamanbazaar.in` (redirect to apex)
@@ -111,11 +118,13 @@ firebase deploy --only hosting,functions
 ### Step-by-Step
 
 1. **Install Dependencies**
+
    ```bash
    npm ci
    ```
 
 2. **Run Quality Checks**
+
    ```bash
    npm run lint          # ESLint
    npx tsc --noEmit      # TypeScript
@@ -132,11 +141,13 @@ firebase deploy --only hosting,functions
 ## Health Checks
 
 ### Endpoint
+
 ```
 GET /health.json
 ```
 
 ### Response
+
 ```json
 {
   "status": "healthy",
@@ -167,12 +178,14 @@ After each production deployment:
 ### Build Failures
 
 **TypeScript errors:**
+
 ```bash
 npx tsc --noEmit
 # Fix all type errors before deploying
 ```
 
 **ESLint errors:**
+
 ```bash
 npm run lint -- --fix
 ```
@@ -180,11 +193,13 @@ npm run lint -- --fix
 ### Runtime Issues
 
 **Blank page after deployment:**
+
 - Check browser console for errors.
 - Verify environment variables are correctly baked into the build.
 - Confirm Firebase configuration in `src/lib/firebase.ts`.
 
 **Function errors:**
+
 - Check Firebase console logs for Cloud Functions.
 - Verify environment variables for functions are set via `firebase functions:secrets:set`.
 

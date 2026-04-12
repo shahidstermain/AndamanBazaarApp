@@ -25,24 +25,26 @@ AndamanBazaar uses Supabase Auth for authentication and authorization. All API c
 ```typescript
 // 1. Sign up
 const { data, error } = await supabase.auth.signUp({
-  email: 'user@example.com',
-  password: 'securePassword123',
+  email: "user@example.com",
+  password: "securePassword123",
   options: {
     data: {
-      full_name: 'John Doe',
-      phone: '+919876543210'
-    }
-  }
+      full_name: "John Doe",
+      phone: "+919876543210",
+    },
+  },
 });
 
 // 2. Sign in
 const { data, error } = await supabase.auth.signInWithPassword({
-  email: 'user@example.com',
-  password: 'securePassword123'
+  email: "user@example.com",
+  password: "securePassword123",
 });
 
 // 3. Get current user
-const { data: { user } } = await supabase.auth.getUser();
+const {
+  data: { user },
+} = await supabase.auth.getUser();
 
 // 4. Sign out
 const { error } = await supabase.auth.signOut();
@@ -75,6 +77,7 @@ const { error } = await supabase.auth.signOut();
 ### Core Tables
 
 #### users
+
 ```sql
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -92,6 +95,7 @@ CREATE TABLE users (
 ```
 
 #### listings
+
 ```sql
 CREATE TABLE listings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -112,6 +116,7 @@ CREATE TABLE listings (
 ```
 
 #### categories
+
 ```sql
 CREATE TABLE categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -125,6 +130,7 @@ CREATE TABLE categories (
 ```
 
 #### listing_images
+
 ```sql
 CREATE TABLE listing_images (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -136,6 +142,7 @@ CREATE TABLE listing_images (
 ```
 
 #### chats
+
 ```sql
 CREATE TABLE chats (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -145,6 +152,7 @@ CREATE TABLE chats (
 ```
 
 #### messages
+
 ```sql
 CREATE TABLE messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -159,6 +167,7 @@ CREATE TABLE messages (
 ```
 
 #### chat_participants
+
 ```sql
 CREATE TABLE chat_participants (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -171,6 +180,7 @@ CREATE TABLE chat_participants (
 ```
 
 #### favorites
+
 ```sql
 CREATE TABLE favorites (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -182,6 +192,7 @@ CREATE TABLE favorites (
 ```
 
 #### boosts
+
 ```sql
 CREATE TABLE boosts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -198,6 +209,7 @@ CREATE TABLE boosts (
 ```
 
 #### reports
+
 ```sql
 CREATE TABLE reports (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -220,11 +232,13 @@ CREATE TABLE reports (
 ### Listings API
 
 #### Get Listings
+
 ```typescript
 // Get all listings with filters
 const { data, error } = await supabase
-  .from('listings')
-  .select(`
+  .from("listings")
+  .select(
+    `
     *,
     user:users(
       id,
@@ -242,18 +256,21 @@ const { data, error } = await supabase
       name,
       icon
     )
-  `)
-  .eq('status', 'active')
-  .eq('is_featured', false)
-  .order('created_at', { ascending: false })
+  `,
+  )
+  .eq("status", "active")
+  .eq("is_featured", false)
+  .order("created_at", { ascending: false })
   .limit(20);
 ```
 
 #### Get Featured Listings
+
 ```typescript
 const { data, error } = await supabase
-  .from('listings')
-  .select(`
+  .from("listings")
+  .select(
+    `
     *,
     user:users(
       id,
@@ -271,18 +288,21 @@ const { data, error } = await supabase
       name,
       icon
     )
-  `)
-  .eq('status', 'active')
-  .eq('is_featured', true)
-  .order('created_at', { ascending: false })
+  `,
+  )
+  .eq("status", "active")
+  .eq("is_featured", true)
+  .order("created_at", { ascending: false })
   .limit(10);
 ```
 
 #### Get Single Listing
+
 ```typescript
 const { data, error } = await supabase
-  .from('listings')
-  .select(`
+  .from("listings")
+  .select(
+    `
     *,
     user:users(
       id,
@@ -301,68 +321,75 @@ const { data, error } = await supabase
       name,
       icon
     )
-  `)
-  .eq('id', listingId)
+  `,
+  )
+  .eq("id", listingId)
   .single();
 ```
 
 #### Create Listing
+
 ```typescript
 const { data, error } = await supabase
-  .from('listings')
+  .from("listings")
   .insert({
-    title: 'Fresh Fish - Tuna',
-    description: 'Freshly caught tuna from Port Blair',
+    title: "Fresh Fish - Tuna",
+    description: "Freshly caught tuna from Port Blair",
     price: 500,
-    category_id: 'category-uuid',
-    city: 'Port Blair',
-    condition: 'good'
+    category_id: "category-uuid",
+    city: "Port Blair",
+    condition: "good",
   })
   .select()
   .single();
 ```
 
 #### Update Listing
+
 ```typescript
 const { data, error } = await supabase
-  .from('listings')
+  .from("listings")
   .update({
-    title: 'Updated Title',
-    price: 600
+    title: "Updated Title",
+    price: 600,
   })
-  .eq('id', listingId)
-  .eq('user_id', userId) // RLS ensures user can only update their own
+  .eq("id", listingId)
+  .eq("user_id", userId) // RLS ensures user can only update their own
   .select()
   .single();
 ```
 
 #### Mark as Sold
+
 ```typescript
 const { data, error } = await supabase
-  .from('listings')
+  .from("listings")
   .update({
-    status: 'sold'
+    status: "sold",
   })
-  .eq('id', listingId)
-  .eq('user_id', userId)
+  .eq("id", listingId)
+  .eq("user_id", userId)
   .select()
   .single();
 ```
 
 #### Increment Views
+
 ```typescript
-const { data, error } = await supabase.rpc('increment_views', {
-  listing_id: listingId
+const { data, error } = await supabase.rpc("increment_views", {
+  listing_id: listingId,
 });
 ```
 
 ### Search API
 
 #### Search Listings
+
 ```typescript
 const { data, error } = await supabase
-  .from('listings')
-  .select(`
+  .from("listings")
+  .select(
+    `
     *,
     user:users(
       id,
@@ -380,19 +407,22 @@ const { data, error } = await supabase
       name,
       icon
     )
-  `)
-  .eq('status', 'active')
-  .ilike('title', `%${searchQuery}%`)
+  `,
+  )
+  .eq("status", "active")
+  .ilike("title", `%${searchQuery}%`)
   .or(`description.ilike.%${searchQuery}%`)
-  .order('created_at', { ascending: false })
+  .order("created_at", { ascending: false })
   .limit(20);
 ```
 
 #### Filter by Category
+
 ```typescript
 const { data, error } = await supabase
-  .from('listings')
-  .select(`
+  .from("listings")
+  .select(
+    `
     *,
     user:users(
       id,
@@ -410,17 +440,20 @@ const { data, error } = await supabase
       name,
       icon
     )
-  `)
-  .eq('status', 'active')
-  .eq('category_id', categoryId)
-  .order('created_at', { ascending: false });
+  `,
+  )
+  .eq("status", "active")
+  .eq("category_id", categoryId)
+  .order("created_at", { ascending: false });
 ```
 
 #### Filter by Location
+
 ```typescript
 const { data, error } = await supabase
-  .from('listings')
-  .select(`
+  .from("listings")
+  .select(
+    `
     *,
     user:users(
       id,
@@ -438,19 +471,22 @@ const { data, error } = await supabase
       name,
       icon
     )
-  `)
-  .eq('status', 'active')
-  .eq('city', city)
-  .order('created_at', { ascending: false });
+  `,
+  )
+  .eq("status", "active")
+  .eq("city", city)
+  .order("created_at", { ascending: false });
 ```
 
 ### Chat API
 
 #### Get User Chats
+
 ```typescript
 const { data, error } = await supabase
-  .from('chat_participants')
-  .select(`
+  .from("chat_participants")
+  .select(
+    `
     chat_id,
     joined_at,
     last_read_at,
@@ -466,56 +502,63 @@ const { data, error } = await supabase
         )
       )
     )
-  `)
-  .eq('user_id', userId)
-  .order('updated_at', { ascending: false });
+  `,
+  )
+  .eq("user_id", userId)
+  .order("updated_at", { ascending: false });
 ```
 
 #### Get Chat Messages
+
 ```typescript
 const { data, error } = await supabase
-  .from('messages')
-  .select(`
+  .from("messages")
+  .select(
+    `
     *,
     sender:users(
       full_name,
       avatar_url
     )
-  `)
-  .eq('chat_id', chatId)
-  .order('created_at', { ascending: true });
+  `,
+  )
+  .eq("chat_id", chatId)
+  .order("created_at", { ascending: true });
 ```
 
 #### Send Message
+
 ```typescript
 const { data, error } = await supabase
-  .from('messages')
+  .from("messages")
   .insert({
     chat_id: chatId,
     sender_id: userId,
-    content: 'Hello, is this item still available?'
+    content: "Hello, is this item still available?",
   })
   .select()
   .single();
 ```
 
 #### Create Chat
+
 ```typescript
-const { data, error } = await supabase
-  .rpc('create_chat', {
-    user1_id: currentUserId,
-    user2_id: otherUserId,
-    listing_id: listingId
-  });
+const { data, error } = await supabase.rpc("create_chat", {
+  user1_id: currentUserId,
+  user2_id: otherUserId,
+  listing_id: listingId,
+});
 ```
 
 ### Favorites API
 
 #### Get User Favorites
+
 ```typescript
 const { data, error } = await supabase
-  .from('favorites')
-  .select(`
+  .from("favorites")
+  .select(
+    `
     *,
     listings(
       *,
@@ -536,37 +579,40 @@ const { data, error } = await supabase
         icon
       )
     )
-  `)
-  .eq('user_id', userId)
-  .order('created_at', { ascending: false });
+  `,
+  )
+  .eq("user_id", userId)
+  .order("created_at", { ascending: false });
 ```
 
 #### Add to Favorites
+
 ```typescript
-const { data, error } = await supabase
-  .from('favorites')
-  .insert({
-    user_id: userId,
-    listing_id: listingId
-  });
+const { data, error } = await supabase.from("favorites").insert({
+  user_id: userId,
+  listing_id: listingId,
+});
 ```
 
 #### Remove from Favorites
+
 ```typescript
 const { data, error } = await supabase
-  .from('favorites')
+  .from("favorites")
   .delete()
-  .eq('user_id', userId)
-  .eq('listing_id', listingId);
+  .eq("user_id", userId)
+  .eq("listing_id", listingId);
 ```
 
 ### User Profile API
 
 #### Get User Profile
+
 ```typescript
 const { data, error } = await supabase
-  .from('users')
-  .select(`
+  .from("users")
+  .select(
+    `
     *,
     listings(
       id,
@@ -580,21 +626,23 @@ const { data, error } = await supabase
         sort_order
       )
     )
-  `)
-  .eq('id', userId)
+  `,
+  )
+  .eq("id", userId)
   .single();
 ```
 
 #### Update User Profile
+
 ```typescript
 const { data, error } = await supabase
-  .from('users')
+  .from("users")
   .update({
-    full_name: 'John Doe',
-    phone: '+919876543210',
-    avatar_url: 'https://example.com/avatar.jpg'
+    full_name: "John Doe",
+    phone: "+919876543210",
+    avatar_url: "https://example.com/avatar.jpg",
   })
-  .eq('id', userId)
+  .eq("id", userId)
   .select()
   .single();
 ```
@@ -606,46 +654,48 @@ const { data, error } = await supabase
 ### Payment Processing
 
 #### Cashfree Webhook
+
 ```typescript
 // POST /functions/v1/cashfree-webhook
 // Body: Cashfree webhook payload
 
 export default async function handler(req: Request) {
-  const signature = req.headers.get('x-webhook-signature');
+  const signature = req.headers.get("x-webhook-signature");
   const payload = await req.json();
-  
+
   // Verify webhook signature
   const isValid = verifyWebhookSignature(signature, payload);
-  
+
   if (!isValid) {
-    return new Response('Invalid signature', { status: 401 });
+    return new Response("Invalid signature", { status: 401 });
   }
-  
+
   // Process payment
-  if (payload.type === 'payment.captured') {
+  if (payload.type === "payment.captured") {
     await activateBoost(payload.data.order_id);
   }
-  
-  return new Response('OK', { status: 200 });
+
+  return new Response("OK", { status: 200 });
 }
 ```
 
 #### Generate Invoice
+
 ```typescript
 // POST /functions/v1/generate-invoice
 // Body: { boost_id: string }
 
 export default async function handler(req: Request) {
   const { boost_id } = await req.json();
-  
+
   // Generate invoice PDF
   const invoice = await generateInvoicePDF(boost_id);
-  
+
   return new Response(invoice, {
     headers: {
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': 'attachment; filename="invoice.pdf"'
-    }
+      "Content-Type": "application/pdf",
+      "Content-Disposition": 'attachment; filename="invoice.pdf"',
+    },
   });
 }
 ```
@@ -653,23 +703,24 @@ export default async function handler(req: Request) {
 ### AI Moderation
 
 #### Image Moderation
+
 ```typescript
 // POST /functions/v1/moderate-image
 // Body: { image_url: string }
 
 export default async function handler(req: Request) {
   const { image_url } = await req.json();
-  
+
   // Analyze image with Gemini AI
   const analysis = await analyzeImage(image_url);
-  
+
   // Check for inappropriate content
   const isAppropriate = checkContentAppropriateness(analysis);
-  
+
   return Response.json({
     approved: isAppropriate,
     confidence: analysis.confidence,
-    categories: analysis.categories
+    categories: analysis.categories,
   });
 }
 ```
@@ -679,56 +730,58 @@ export default async function handler(req: Request) {
 ## 📡 Real-time Subscriptions
 
 ### Chat Messages
+
 ```typescript
 // Subscribe to chat messages
 const subscription = supabase
   .channel(`chat:${chatId}`)
-  .on('postgres_changes', 
-    { 
-      event: 'INSERT', 
-      schema: 'public', 
-      table: 'messages',
-      filter: `chat_id=eq.${chatId}`
+  .on(
+    "postgres_changes",
+    {
+      event: "INSERT",
+      schema: "public",
+      table: "messages",
+      filter: `chat_id=eq.${chatId}`,
     },
     (payload) => {
       // Handle new message
-      console.log('New message:', payload.new);
-    }
+      console.log("New message:", payload.new);
+    },
   )
   .subscribe();
 ```
 
 ### Listing Updates
+
 ```typescript
 // Subscribe to listing updates
 const subscription = supabase
-  .channel('listings')
-  .on('postgres_changes',
+  .channel("listings")
+  .on(
+    "postgres_changes",
     {
-      event: '*',
-      schema: 'public',
-      table: 'listings'
+      event: "*",
+      schema: "public",
+      table: "listings",
     },
     (payload) => {
       // Handle listing changes
-      console.log('Listing updated:', payload);
-    }
+      console.log("Listing updated:", payload);
+    },
   )
   .subscribe();
 ```
 
 ### User Status
+
 ```typescript
 // Subscribe to user presence
 const subscription = supabase
-  .channel('presence')
-  .on('presence', 
-    { event: 'sync' }, 
-    () => {
-      // Handle presence updates
-      console.log('Presence updated:', subscription.presenceState());
-    }
-  )
+  .channel("presence")
+  .on("presence", { event: "sync" }, () => {
+    // Handle presence updates
+    console.log("Presence updated:", subscription.presenceState());
+  })
   .subscribe();
 ```
 
@@ -750,42 +803,42 @@ interface APIError {
 
 ### Common Error Codes
 
-| Code | Description | HTTP Status |
-|------|-------------|-------------|
-| `PGRST116` | No rows returned | 404 |
-| `PGRST301` | Relation does not exist | 400 |
-| `PGRST200` | Success | 200 |
-| `JWT_INVALID` | Invalid JWT token | 401 |
-| `JWT_EXPIRED` | JWT token expired | 401 |
-| `RLS_VIOLATION` | Row level security violation | 403 |
-| `RATE_LIMIT` | Rate limit exceeded | 429 |
+| Code            | Description                  | HTTP Status |
+| --------------- | ---------------------------- | ----------- |
+| `PGRST116`      | No rows returned             | 404         |
+| `PGRST301`      | Relation does not exist      | 400         |
+| `PGRST200`      | Success                      | 200         |
+| `JWT_INVALID`   | Invalid JWT token            | 401         |
+| `JWT_EXPIRED`   | JWT token expired            | 401         |
+| `RLS_VIOLATION` | Row level security violation | 403         |
+| `RATE_LIMIT`    | Rate limit exceeded          | 429         |
 
 ### Error Handling Example
 
 ```typescript
 const { data, error } = await supabase
-  .from('listings')
-  .select('*')
-  .eq('id', listingId);
+  .from("listings")
+  .select("*")
+  .eq("id", listingId);
 
 if (error) {
-  console.error('API Error:', error);
-  
+  console.error("API Error:", error);
+
   switch (error.code) {
-    case 'PGRST116':
+    case "PGRST116":
       // Listing not found
-      showToast('Listing not found', 'error');
+      showToast("Listing not found", "error");
       break;
-    case 'JWT_INVALID':
+    case "JWT_INVALID":
       // Authentication required
-      showToast('Please login to continue', 'error');
+      showToast("Please login to continue", "error");
       break;
-    case 'RLS_VIOLATION':
+    case "RLS_VIOLATION":
       // Permission denied
-      showToast('You do not have permission to access this resource', 'error');
+      showToast("You do not have permission to access this resource", "error");
       break;
     default:
-      showToast('An error occurred. Please try again', 'error');
+      showToast("An error occurred. Please try again", "error");
   }
 }
 ```
@@ -796,13 +849,13 @@ if (error) {
 
 ### Rate Limits by Endpoint
 
-| Endpoint | Limit | Time Window |
-|----------|-------|-------------|
-| Create Listing | 10/hour | 1 hour |
-| Send Message | 50/hour | 1 hour |
-| Upload Image | 20/hour | 1 hour |
-| Login Attempts | 5/hour | 1 hour |
-| Search API | 100/minute | 1 minute |
+| Endpoint       | Limit      | Time Window |
+| -------------- | ---------- | ----------- |
+| Create Listing | 10/hour    | 1 hour      |
+| Send Message   | 50/hour    | 1 hour      |
+| Upload Image   | 20/hour    | 1 hour      |
+| Login Attempts | 5/hour     | 1 hour      |
+| Search API     | 100/minute | 1 minute    |
 
 ### Rate Limit Headers
 
@@ -817,10 +870,13 @@ X-RateLimit-Reset: 1640995200
 ```typescript
 const handleRateLimit = (error: any) => {
   if (error.status === 429) {
-    const resetTime = error.headers.get('X-RateLimit-Reset');
+    const resetTime = error.headers.get("X-RateLimit-Reset");
     const waitTime = resetTime ? parseInt(resetTime) - Date.now() : 60000;
-    
-    showToast(`Rate limit exceeded. Please try again in ${Math.ceil(waitTime / 1000)} seconds`, 'warning');
+
+    showToast(
+      `Rate limit exceeded. Please try again in ${Math.ceil(waitTime / 1000)} seconds`,
+      "warning",
+    );
   }
 };
 ```
@@ -866,52 +922,54 @@ supabase stop
 ### React Hook Example
 
 ```typescript
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 // Custom hook for listings
 export const useListings = (filters?: ListingFilters) => {
   return useQuery({
-    queryKey: ['listings', filters],
+    queryKey: ["listings", filters],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('listings')
-        .select(`
+        .from("listings")
+        .select(
+          `
           *,
           user:users(id, full_name, avatar_url, trust_level),
           images:listing_images(id, image_url, sort_order),
           category:categories(id, name, icon)
-        `)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false });
-      
+        `,
+        )
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+
       if (error) throw error;
       return data;
-    }
+    },
   });
 };
 
 // Mutation for creating listing
 export const useCreateListing = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (listing: CreateListingData) => {
       const { data, error } = await supabase
-        .from('listings')
+        .from("listings")
         .insert(listing)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['listings'] });
-      showToast('Listing created successfully', 'success');
+      queryClient.invalidateQueries({ queryKey: ["listings"] });
+      showToast("Listing created successfully", "success");
     },
     onError: (error) => {
-      showToast('Failed to create listing', 'error');
-    }
+      showToast("Failed to create listing", "error");
+    },
   });
 };
 ```
@@ -930,15 +988,18 @@ export interface Database {
           full_name: string | null;
           phone: string | null;
           avatar_url: string | null;
-          trust_level: 'newbie' | 'verified' | 'legend';
+          trust_level: "newbie" | "verified" | "legend";
           is_verified_gps: boolean;
           verification_coordinates: string | null;
           is_admin: boolean;
           created_at: string;
           updated_at: string;
         };
-        Insert: Omit<Database['public']['Tables']['users']['Row'], 'id' | 'created_at' | 'updated_at'>;
-        Update: Partial<Database['public']['Tables']['users']['Insert']>;
+        Insert: Omit<
+          Database["public"]["Tables"]["users"]["Row"],
+          "id" | "created_at" | "updated_at"
+        >;
+        Update: Partial<Database["public"]["Tables"]["users"]["Insert"]>;
       };
       // ... other tables
     };
@@ -955,11 +1016,11 @@ export interface Database {
 ```typescript
 // Log all API requests
 supabase.realtime.onConnect(() => {
-  console.log('Connected to Supabase Realtime');
+  console.log("Connected to Supabase Realtime");
 });
 
 supabase.realtime.onDisconnect(() => {
-  console.log('Disconnected from Supabase Realtime');
+  console.log("Disconnected from Supabase Realtime");
 });
 ```
 
@@ -976,7 +1037,10 @@ const trackAPICall = async (operation: string, fn: () => Promise<any>) => {
     return result;
   } catch (error) {
     const duration = performance.now() - start;
-    console.error(`API Call: ${operation} failed after ${duration.toFixed(2)}ms`, error);
+    console.error(
+      `API Call: ${operation} failed after ${duration.toFixed(2)}ms`,
+      error,
+    );
     throw error;
   }
 };
@@ -984,4 +1048,4 @@ const trackAPICall = async (operation: string, fn: () => Promise<any>) => {
 
 ---
 
-*Last updated: March 7, 2026*
+_Last updated: March 7, 2026_

@@ -3,6 +3,7 @@
 Analysis of production readiness gaps, risks, and migration requirements for AndamanBazaar.
 
 ## 📋 Table of Contents
+
 - [Executive Summary](#executive-summary)
 - [Current Production State](#current-production-state)
 - [Migration Target Architecture](#migration-target-architecture)
@@ -19,6 +20,7 @@ Analysis of production readiness gaps, risks, and migration requirements for And
 ## 🎯 Executive Summary
 
 ### **Current Production Status** ⚠️ **MIXED**
+
 - **Domain**: `andamanbazaar.in` (active)
 - **Hosting**: cPanel/FTP (legacy)
 - **Backend**: Supabase (production-ready)
@@ -26,6 +28,7 @@ Analysis of production readiness gaps, risks, and migration requirements for And
 - **Payments**: Cashfree (sandbox → production needed)
 
 ### **Migration Readiness** ✅ **HIGH**
+
 - **Code Quality**: Production-ready
 - **Architecture**: Well-structured
 - **Dependencies**: Stable
@@ -33,6 +36,7 @@ Analysis of production readiness gaps, risks, and migration requirements for And
 - **Security**: Robust implementation
 
 ### **Critical Path Items** 🔴 **3 BLOCKERS**
+
 1. Firebase project configuration alignment
 2. Production Cashfree credentials
 3. Webhook URL updates
@@ -42,6 +46,7 @@ Analysis of production readiness gaps, risks, and migration requirements for And
 ## 🏭 Current Production State
 
 ### **Current Deployment** ⚠️ **LEGACY**
+
 ```bash
 Current: andamanbazaar.in
 ├── Hosting: cPanel/FTP
@@ -53,6 +58,7 @@ Current: andamanbazaar.in
 ```
 
 **Issues**:
+
 - Manual deployment process
 - No automated testing in production
 - Limited monitoring and alerting
@@ -60,6 +66,7 @@ Current: andamanbazaar.in
 - Performance bottlenecks
 
 ### **Current Backend** ✅ **PRODUCTION READY**
+
 ```bash
 Backend: Supabase
 ├── Database: PostgreSQL (production)
@@ -74,6 +81,7 @@ Backend: Supabase
 **Migration Impact**: None
 
 ### **Current Frontend** ✅ **PRODUCTION READY**
+
 ```bash
 Frontend: React/Vite
 ├── Framework: React 18.3.1 (stable)
@@ -92,6 +100,7 @@ Frontend: React/Vite
 ## 🎯 Migration Target Architecture
 
 ### **Target Deployment** ✅ **FIREBASE APP HOSTING**
+
 ```bash
 Target: andamanbazaar.in
 ├── Hosting: Firebase App Hosting
@@ -103,6 +112,7 @@ Target: andamanbazaar.in
 ```
 
 **Benefits**:
+
 - Automated deployments
 - Global CDN performance
 - Built-in security headers
@@ -110,6 +120,7 @@ Target: andamanbazaar.in
 - Better monitoring
 
 ### **Backend Continuity** ✅ **UNCHANGED**
+
 ```bash
 Backend: Supabase (no changes)
 ├── Database: PostgreSQL
@@ -128,6 +139,7 @@ Backend: Supabase (no changes)
 ### **🔴 CRITICAL GAPS**
 
 #### **1. Firebase Project Misconfiguration** 🔴 **BLOCKER**
+
 ```bash
 Current Environment Variables:
 VITE_FIREBASE_PROJECT_ID=gen-lang-client-0408960446  # WRONG
@@ -143,6 +155,7 @@ VITE_FIREBASE_AUTH_DOMAIN=andamanbazaarfirebase.firebaseapp.com  # CORRECT
 **Time to Fix**: 2 hours
 
 #### **2. Production Cashfree Configuration** 🔴 **BLOCKER**
+
 ```bash
 Current: VITE_CASHFREE_ENV=sandbox
 Target: VITE_CASHFREE_ENV=production
@@ -157,6 +170,7 @@ Missing: Production Cashfree credentials
 **Time to Fix**: 1-2 business days
 
 #### **3. Webhook URL Configuration** 🔴 **BLOCKER**
+
 ```bash
 Current Webhook URL: https://andamanbazaar.in/api/webhook/cashfree
 Target Webhook URL: https://andamanbazaar.in/.netlify/functions/cashfree-webhook
@@ -169,13 +183,14 @@ Target Webhook URL: https://andamanbazaar.in/.netlify/functions/cashfree-webhook
 ### **🟡 MEDIUM GAPS**
 
 #### **4. CI/CD Pipeline Updates** 🟡 **MEDIUM**
+
 ```yaml
 Current: Basic GitHub Actions
 Missing:
-- Firebase deployment step
-- Environment-specific configs
-- Rollback mechanism
-- Production health checks
+  - Firebase deployment step
+  - Environment-specific configs
+  - Rollback mechanism
+  - Production health checks
 ```
 
 **Impact**: Medium - Manual deployment required
@@ -183,6 +198,7 @@ Missing:
 **Time to Fix**: 4 hours
 
 #### **5. Monitoring & Alerting** 🟡 **MEDIUM**
+
 ```bash
 Current: Basic monitoring
 Missing:
@@ -197,6 +213,7 @@ Missing:
 **Time to Fix**: 8 hours
 
 #### **6. SEO Enhancements** 🟡 **MEDIUM**
+
 ```bash
 Current: Basic SEO
 Missing:
@@ -213,6 +230,7 @@ Missing:
 ### **🟢 LOW GAPS**
 
 #### **7. Documentation Updates** 🟢 **LOW**
+
 ```bash
 Current: Basic documentation
 Missing:
@@ -227,6 +245,7 @@ Missing:
 **Time to Fix**: 4 hours
 
 #### **8. Testing Enhancements** 🟢 **LOW**
+
 ```bash
 Current: Good test coverage
 Missing:
@@ -247,6 +266,7 @@ Missing:
 ### **✅ SECURITY STRENGTHS**
 
 #### **Authentication & Authorization**
+
 ```typescript
 // Row Level Security (RLS) enabled on all tables
 // JWT token validation
@@ -258,6 +278,7 @@ Missing:
 **Coverage**: All database operations
 
 #### **Input Validation & Sanitization**
+
 ```typescript
 // Zod schema validation
 // DOMPurify HTML sanitization
@@ -269,6 +290,7 @@ Missing:
 **Coverage**: All user inputs
 
 #### **Payment Security**
+
 ```typescript
 // Webhook signature verification
 // Timestamp validation (replay prevention)
@@ -282,6 +304,7 @@ Missing:
 ### **⚠️ SECURITY CONSIDERATIONS**
 
 #### **Environment Variable Exposure**
+
 ```bash
 # Current: Some secrets in frontend env
 VITE_FIREBASE_API_KEY=AIzaSyClP_DWVESxywrzRD10DF-y2vGnPtRtnFU
@@ -295,6 +318,7 @@ VITE_API_KEY=AIzaSyBX6bCBmaHp4nsL1jurzhjZX48ufAlez4I
 **Recommendation**: Review key exposure
 
 #### **CSP Policy Updates**
+
 ```json
 // Current CSP: Good but could be tighter
 "script-src": "'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com"
@@ -312,6 +336,7 @@ VITE_API_KEY=AIzaSyBX6bCBmaHp4nsL1jurzhjZX48ufAlez4I
 ### **✅ PERFORMANCE STRENGTHS**
 
 #### **Frontend Optimization**
+
 ```bash
 Bundle Size: ~2.5MB (acceptable)
 Lighthouse Score: 85+ (good)
@@ -324,6 +349,7 @@ Image Optimization: Lazy loading
 **Metrics**: Performance scores are healthy
 
 #### **Database Performance**
+
 ```bash
 Supabase: PostgreSQL optimized
 Indexes: Properly configured
@@ -338,6 +364,7 @@ Storage: CDN-backed
 ### **⚠️ PERFORMANCE CONSIDERATIONS**
 
 #### **Bundle Size Optimization**
+
 ```bash
 Current: 2.5MB bundle
 Target: <2MB bundle
@@ -352,6 +379,7 @@ Opportunities:
 **Recommendation**: Implement bundle optimization
 
 #### **CDN Performance**
+
 ```bash
 Current: No CDN (cPanel hosting)
 Target: Firebase global CDN
@@ -368,19 +396,24 @@ Expected Improvement: 40-60% faster load times
 ### **✅ SEO STRENGTHS**
 
 #### **Basic SEO Implementation**
+
 ```html
-<meta name="description" content="Buy and sell locally...">
-<meta property="og:title" content="AndamanBazaar...">
-<meta property="og:image" content="https://andamanbazaar.in/logo512.png">
-<meta name="twitter:card" content="summary_large_image">
+<meta name="description" content="Buy and sell locally..." />
+<meta property="og:title" content="AndamanBazaar..." />
+<meta property="og:image" content="https://andamanbazaar.in/logo512.png" />
+<meta name="twitter:card" content="summary_large_image" />
 ```
 
 **Status**: ✅ **Good**
 **Coverage**: Basic social sharing optimized
 
 #### **Google Verification**
+
 ```html
-<meta name="google-site-verification" content="5gSA0s1rN-0S-I_2iB3-M2_Vz-n2-v_k_dJ_6qD-4c">
+<meta
+  name="google-site-verification"
+  content="5gSA0s1rN-0S-I_2iB3-M2_Vz-n2-v_k_dJ_6qD-4c"
+/>
 ```
 
 **Status**: ✅ **Verified**
@@ -389,6 +422,7 @@ Expected Improvement: 40-60% faster load times
 ### **❌ SEO GAPS**
 
 #### **Missing XML Sitemap**
+
 ```bash
 Current: No sitemap.xml
 Impact: Search engine crawling efficiency
@@ -399,6 +433,7 @@ Fix: Generate dynamic sitemap
 **Priority**: Medium
 
 #### **Robots.txt Optimization**
+
 ```bash
 Current: Basic robots.txt
 Missing: Sitemap reference, crawl delay
@@ -409,6 +444,7 @@ Impact: Search engine crawling control
 **Priority**: Low
 
 #### **Structured Data Enhancements**
+
 ```bash
 Current: Basic structured data
 Missing: Product schema, LocalBusiness schema
@@ -425,6 +461,7 @@ Impact: Rich snippets in search results
 ### **✅ INFRASTRUCTURE STRENGTHS**
 
 #### **Backend Infrastructure**
+
 ```bash
 Supabase: Production-ready
 - Auto-scaling database
@@ -438,6 +475,7 @@ Supabase: Production-ready
 **Reliability**: 99.9% uptime SLA
 
 #### **Development Infrastructure**
+
 ```bash
 Development: Well-structured
 - TypeScript for type safety
@@ -453,6 +491,7 @@ Development: Well-structured
 ### **❌ INFRASTRUCTURE GAPS**
 
 #### **Deployment Infrastructure**
+
 ```bash
 Current: Manual FTP deployment
 Missing:
@@ -467,6 +506,7 @@ Missing:
 **Priority**: High
 
 #### **Monitoring & Observability**
+
 ```bash
 Current: Basic monitoring
 Missing:
@@ -481,6 +521,7 @@ Missing:
 **Priority**: Medium
 
 #### **Backup & Disaster Recovery**
+
 ```bash
 Current: Basic backups
 Missing:
@@ -500,6 +541,7 @@ Missing:
 ### **🔴 HIGH RISKS**
 
 #### **1. Downtime During Migration**
+
 ```bash
 Risk: Production downtime during cutover
 Impact: User experience, revenue loss
@@ -508,12 +550,14 @@ Probability: Medium
 ```
 
 **Mitigation Strategy**:
+
 - Prepare complete Firebase deployment
 - Test in staging environment
 - Schedule maintenance window
 - Prepare rollback plan
 
 #### **2. Payment Processing Interruption**
+
 ```bash
 Risk: Payment webhook failures during migration
 Impact: Revenue loss, user support tickets
@@ -522,12 +566,14 @@ Probability: Medium
 ```
 
 **Mitigation Strategy**:
+
 - Update webhook URLs before migration
 - Test webhook connectivity
 - Monitor payment processing
 - Have manual override ready
 
 #### **3. Data Loss or Corruption**
+
 ```bash
 Risk: Database issues during migration
 Impact: Catastrophic data loss
@@ -536,6 +582,7 @@ Probability: Low
 ```
 
 **Mitigation Strategy**:
+
 - Complete database backup
 - Migration testing in staging
 - Verify data integrity
@@ -544,6 +591,7 @@ Probability: Low
 ### **🟡 MEDIUM RISKS**
 
 #### **4. Performance Degradation**
+
 ```bash
 Risk: Slower load times after migration
 Impact: User experience, SEO
@@ -552,12 +600,14 @@ Probability: Low
 ```
 
 **Mitigation Strategy**:
+
 - Performance benchmarking
 - CDN configuration testing
 - Real-user monitoring
 - Optimization plan
 
 #### **5. SEO Impact**
+
 ```bash
 Risk: Search ranking changes
 Impact: Organic traffic
@@ -566,6 +616,7 @@ Probability: Low
 ```
 
 **Mitigation Strategy**:
+
 - Preserve URL structure
 - Implement 301 redirects if needed
 - Monitor search rankings
@@ -574,6 +625,7 @@ Probability: Low
 ### **🟢 LOW RISKS**
 
 #### **6. Third-party Service Integration**
+
 ```bash
 Risk: API compatibility issues
 Impact: Feature functionality
@@ -582,6 +634,7 @@ Probability: Low
 ```
 
 **Mitigation Strategy**:
+
 - Test all integrations
 - Verify API versions
 - Monitor API responses
@@ -594,6 +647,7 @@ Probability: Low
 ### **🔴 IMMEDIATE ACTIONS (Week 1)**
 
 #### **1. Fix Firebase Project Configuration**
+
 ```bash
 Action: Update environment variables
 Priority: Critical
@@ -602,12 +656,14 @@ Timeline: 2 hours
 ```
 
 **Steps**:
+
 1. Update `.env` with correct Firebase project
 2. Test Firebase connectivity
 3. Update deployment configuration
 4. Verify in staging environment
 
 #### **2. Obtain Production Cashfree Credentials**
+
 ```bash
 Action: Get production API keys
 Priority: Critical
@@ -616,12 +672,14 @@ Timeline: 1-2 business days
 ```
 
 **Steps**:
+
 1. Contact Cashfree support
 2. Complete production onboarding
 3. Update environment variables
 4. Test payment flows
 
 #### **3. Update Webhook Configuration**
+
 ```bash
 Action: Update Cashfree webhook URLs
 Priority: Critical
@@ -630,6 +688,7 @@ Timeline: 1 hour
 ```
 
 **Steps**:
+
 1. Determine new webhook URL
 2. Update Cashfree dashboard
 3. Test webhook connectivity
@@ -638,6 +697,7 @@ Timeline: 1 hour
 ### **🟡 SHORT-TERM ACTIONS (Week 2)**
 
 #### **4. Implement CI/CD Pipeline**
+
 ```bash
 Action: Update GitHub Actions for Firebase
 Priority: High
@@ -646,12 +706,14 @@ Timeline: 4 hours
 ```
 
 **Steps**:
+
 1. Update workflow files
 2. Add Firebase deployment steps
 3. Configure environment-specific builds
 4. Test automated deployment
 
 #### **5. Set Up Monitoring**
+
 ```bash
 Action: Implement error tracking and monitoring
 Priority: High
@@ -660,12 +722,14 @@ Timeline: 8 hours
 ```
 
 **Steps**:
+
 1. Set up Sentry for error tracking
 2. Configure Firebase monitoring
 3. Set up uptime monitoring
 4. Configure alerting
 
 #### **6. SEO Improvements**
+
 ```bash
 Action: Implement missing SEO features
 Priority: Medium
@@ -674,6 +738,7 @@ Timeline: 6 hours
 ```
 
 **Steps**:
+
 1. Generate XML sitemap
 2. Optimize robots.txt
 3. Add structured data
@@ -682,6 +747,7 @@ Timeline: 6 hours
 ### **🟢 MEDIUM-TERM ACTIONS (Week 3-4)**
 
 #### **7. Documentation Updates**
+
 ```bash
 Action: Complete technical documentation
 Priority: Medium
@@ -690,12 +756,14 @@ Timeline: 4 hours
 ```
 
 **Steps**:
+
 1. Update deployment runbook
 2. Create troubleshooting guide
 3. Document API endpoints
 4. Update architecture diagrams
 
 #### **8. Testing Enhancements**
+
 ```bash
 Action: Improve test coverage and automation
 Priority: Low
@@ -704,6 +772,7 @@ Timeline: 6 hours
 ```
 
 **Steps**:
+
 1. Fix E2E test issues
 2. Improve integration tests
 3. Add performance tests
@@ -714,6 +783,7 @@ Timeline: 6 hours
 ## 📊 Migration Timeline
 
 ### **Phase 1: Preparation (Week 1)**
+
 - ✅ Repository audit complete
 - 🔴 Fix Firebase configuration
 - 🔴 Get Cashfree production credentials
@@ -721,6 +791,7 @@ Timeline: 6 hours
 - 🟡 Set up staging environment
 
 ### **Phase 2: Implementation (Week 2)**
+
 - 🟡 Implement CI/CD pipeline
 - 🟡 Set up monitoring and alerting
 - 🟡 SEO improvements
@@ -728,6 +799,7 @@ Timeline: 6 hours
 - 🟡 Security validation
 
 ### **Phase 3: Migration (Week 3)**
+
 - 🔴 Production migration
 - 🔴 Cutover to Firebase hosting
 - 🔴 Payment flow testing
@@ -735,6 +807,7 @@ Timeline: 6 hours
 - 🔴 SEO validation
 
 ### **Phase 4: Optimization (Week 4)**
+
 - 🟢 Documentation updates
 - 🟢 Testing enhancements
 - 🟢 Performance optimization
@@ -746,6 +819,7 @@ Timeline: 6 hours
 ## 🎯 Success Criteria
 
 ### **Technical Success**
+
 - ✅ Zero downtime during migration
 - ✅ All payment flows working
 - ✅ Performance improvement >40%
@@ -753,6 +827,7 @@ Timeline: 6 hours
 - ✅ All tests passing
 
 ### **Business Success**
+
 - ✅ No revenue loss
 - ✅ User experience maintained
 - ✅ SEO rankings maintained
@@ -760,6 +835,7 @@ Timeline: 6 hours
 - ✅ Conversion rate maintained
 
 ### **Operational Success**
+
 - ✅ Automated deployments working
 - ✅ Monitoring and alerting active
 - ✅ Documentation complete
@@ -771,18 +847,21 @@ Timeline: 6 hours
 ## 📈 Expected Benefits
 
 ### **Performance Improvements**
+
 - **Page Load Time**: 40-60% faster
 - **Global CDN**: Better international performance
 - **Caching**: Improved cache hit rates
 - **Scalability**: Auto-scaling capabilities
 
 ### **Operational Benefits**
+
 - **Deployment Time**: 5-10 minutes (vs 30+ minutes manual)
 - **Reliability**: 99.9% uptime SLA
 - **Monitoring**: Real-time visibility
 - **Rollback**: One-click rollback capability
 
 ### **Security Benefits**
+
 - **Headers**: Automatic security headers
 - **SSL**: Managed SSL certificates
 - **Compliance**: Better security posture
@@ -795,6 +874,7 @@ Timeline: 6 hours
 The AndamanBazaar application is well-architected and production-ready. The migration to Firebase App Hosting is straightforward with clear critical path items. All core business logic, security measures, and performance optimizations are already in place. The migration primarily involves deployment configuration updates without affecting the application's core functionality.
 
 **Key Success Factors**:
+
 1. Address critical configuration issues before migration
 2. Test payment flows thoroughly
 3. Implement proper monitoring and alerting

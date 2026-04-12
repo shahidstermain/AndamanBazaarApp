@@ -10,8 +10,18 @@
           "name": "Government Ferry",
           "type": "slow",
           "schedule": [
-            { "days": ["Mon", "Wed", "Fri"], "departure": "06:30", "arrival": "09:00", "duration_hours": 2.5 },
-            { "days": ["Tue", "Thu", "Sat"], "departure": "14:00", "arrival": "16:30", "duration_hours": 2.5 }
+            {
+              "days": ["Mon", "Wed", "Fri"],
+              "departure": "06:30",
+              "arrival": "09:00",
+              "duration_hours": 2.5
+            },
+            {
+              "days": ["Tue", "Thu", "Sat"],
+              "departure": "14:00",
+              "arrival": "16:30",
+              "duration_hours": 2.5
+            }
           ],
           "booking_url": "https://www.andamans.gov.in/ferry-booking"
         },
@@ -19,8 +29,18 @@
           "name": "Makruzz",
           "type": "fast",
           "schedule": [
-            { "days": ["Daily"], "departure": "08:00", "arrival": "09:30", "duration_hours": 1.5 },
-            { "days": ["Daily"], "departure": "13:00", "arrival": "14:30", "duration_hours": 1.5 }
+            {
+              "days": ["Daily"],
+              "departure": "08:00",
+              "arrival": "09:30",
+              "duration_hours": 1.5
+            },
+            {
+              "days": ["Daily"],
+              "departure": "13:00",
+              "arrival": "14:30",
+              "duration_hours": 1.5
+            }
           ],
           "booking_url": "https://www.makruzz.com"
         },
@@ -28,8 +48,18 @@
           "name": "Green Ocean",
           "type": "fast",
           "schedule": [
-            { "days": ["Daily"], "departure": "07:00", "arrival": "08:30", "duration_hours": 1.5 },
-            { "days": ["Daily"], "departure": "14:00", "arrival": "15:30", "duration_hours": 1.5 }
+            {
+              "days": ["Daily"],
+              "departure": "07:00",
+              "arrival": "08:30",
+              "duration_hours": 1.5
+            },
+            {
+              "days": ["Daily"],
+              "departure": "14:00",
+              "arrival": "15:30",
+              "duration_hours": 1.5
+            }
           ],
           "booking_url": "https://www.greenoceanseaways.com"
         }
@@ -45,7 +75,12 @@
           "name": "Government Ferry",
           "type": "slow",
           "schedule": [
-            { "days": ["Mon", "Wed", "Fri"], "departure": "10:00", "arrival": "11:30", "duration_hours": 1.5 }
+            {
+              "days": ["Mon", "Wed", "Fri"],
+              "departure": "10:00",
+              "arrival": "11:30",
+              "duration_hours": 1.5
+            }
           ],
           "booking_url": "https://www.andamans.gov.in/ferry-booking"
         },
@@ -53,7 +88,12 @@
           "name": "Makruzz",
           "type": "fast",
           "schedule": [
-            { "days": ["Daily"], "departure": "10:30", "arrival": "11:15", "duration_hours": 0.75 }
+            {
+              "days": ["Daily"],
+              "departure": "10:30",
+              "arrival": "11:15",
+              "duration_hours": 0.75
+            }
           ],
           "booking_url": "https://www.makruzz.com"
         }
@@ -69,7 +109,12 @@
           "name": "Government Ferry",
           "type": "slow",
           "schedule": [
-            { "days": ["Tue", "Thu", "Sat"], "departure": "07:00", "arrival": "09:30", "duration_hours": 2.5 }
+            {
+              "days": ["Tue", "Thu", "Sat"],
+              "departure": "07:00",
+              "arrival": "09:30",
+              "duration_hours": 2.5
+            }
           ],
           "booking_url": "https://www.andamans.gov.in/ferry-booking"
         }
@@ -85,7 +130,12 @@
           "name": "Government Ferry",
           "type": "slow",
           "schedule": [
-            { "days": ["Mon", "Thu"], "departure": "06:00", "arrival": "10:00", "duration_hours": 4 }
+            {
+              "days": ["Mon", "Thu"],
+              "departure": "06:00",
+              "arrival": "10:00",
+              "duration_hours": 4
+            }
           ],
           "booking_url": "https://www.andamans.gov.in/ferry-booking"
         }
@@ -101,7 +151,12 @@
           "name": "Government Ferry (via Rangat)",
           "type": "slow",
           "schedule": [
-            { "days": ["Tue", "Fri"], "departure": "05:30", "arrival": "14:00", "duration_hours": 8.5 }
+            {
+              "days": ["Tue", "Fri"],
+              "departure": "05:30",
+              "arrival": "14:00",
+              "duration_hours": 8.5
+            }
           ],
           "booking_url": "https://www.andamans.gov.in/ferry-booking"
         }
@@ -117,7 +172,12 @@
           "name": "Government Ferry",
           "type": "slow",
           "schedule": [
-            { "days": ["Mon", "Thu"], "departure": "05:00", "arrival": "11:00", "duration_hours": 6 }
+            {
+              "days": ["Mon", "Thu"],
+              "departure": "05:00",
+              "arrival": "11:00",
+              "duration_hours": 6
+            }
           ],
           "booking_url": "https://www.andamans.gov.in/ferry-booking"
         }
@@ -133,7 +193,13 @@
           "name": "M.V. Swaraj Dweep (Inter-Island)",
           "type": "slow",
           "schedule": [
-            { "days": ["Sat"], "departure": "16:00", "arrival": "08:00+1", "duration_hours": 16, "note": "Overnight journey" }
+            {
+              "days": ["Sat"],
+              "departure": "16:00",
+              "arrival": "08:00+1",
+              "duration_hours": 16,
+              "note": "Overnight journey"
+            }
           ],
           "booking_url": "https://www.andamans.gov.in/ferry-booking"
         }

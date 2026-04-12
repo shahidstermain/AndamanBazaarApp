@@ -13,12 +13,14 @@ This document provides procedures for rolling back production deployments to mai
 ## Rollback Triggers
 
 ### Automatic Triggers
+
 - Health check failures for > 5 minutes
 - Error rate > 10% for > 3 minutes
 - Payment processing failures
 - Critical user journey broken (login, listing creation)
 
 ### Manual Triggers
+
 - Critical bug discovered in production
 - Security vulnerability
 - Performance degradation
@@ -167,14 +169,14 @@ echo "🚨 MAINTENANCE MODE ACTIVATED - $(date)" | slack-notify #ops-channel
 
 ## Rollback Decision Matrix
 
-| Scenario | Method | Time | Risk |
-|----------|--------|------|------|
-| Payment broken | Method 1 (Firebase) | 30s | Low |
-| Login broken | Method 1 (Firebase) | 30s | Low |
-| Critical bug | Method 2 (Git) | 3-5m | Low |
-| Security issue | Method 4 (Maintenance) | 10s | High (full down) |
-| Performance | Method 2 (Git) | 3-5m | Low |
-| Data issue | Method 4 (Maintenance) | 10s | High (full down) |
+| Scenario       | Method                 | Time | Risk             |
+| -------------- | ---------------------- | ---- | ---------------- |
+| Payment broken | Method 1 (Firebase)    | 30s  | Low              |
+| Login broken   | Method 1 (Firebase)    | 30s  | Low              |
+| Critical bug   | Method 2 (Git)         | 3-5m | Low              |
+| Security issue | Method 4 (Maintenance) | 10s  | High (full down) |
+| Performance    | Method 2 (Git)         | 3-5m | Low              |
+| Data issue     | Method 4 (Maintenance) | 10s  | High (full down) |
 
 ---
 
@@ -183,10 +185,11 @@ echo "🚨 MAINTENANCE MODE ACTIVATED - $(date)" | slack-notify #ops-channel
 ### Standard Rollback Procedure
 
 1. **Assess Impact**
+
    ```bash
    # Check error rates
    curl -s https://andamanbazaar.in/health.json
-   
+
    # Review recent deployments
    firebase hosting:releases:list
    ```
@@ -197,6 +200,7 @@ echo "🚨 MAINTENANCE MODE ACTIVATED - $(date)" | slack-notify #ops-channel
    - Update status page if available
 
 3. **Execute Rollback**
+
    ```bash
    # Choose appropriate method above
    # Document action taken
@@ -204,10 +208,11 @@ echo "🚨 MAINTENANCE MODE ACTIVATED - $(date)" | slack-notify #ops-channel
    ```
 
 4. **Verify**
+
    ```bash
    # Health check
    curl https://andamanbazaar.in/health.json
-   
+
    # Smoke tests
    curl -s https://andamanbazaar.in/login | grep -i "login"
    curl -s https://andamanbazaar.in/listings | grep -i "listing"
@@ -243,11 +248,14 @@ echo "🚨 MAINTENANCE MODE ACTIVATED - $(date)" | slack-notify #ops-channel
 ## Version Management
 
 ### Build Artifacts
+
 GitHub Actions retains build artifacts for 14 days:
+
 - Staging builds: `build-staging`
 - Production builds: `build-production`
 
 ### Access Previous Builds
+
 ```bash
 # Download specific build via GitHub CLI
 gh run download <run-id> -n build-production
@@ -257,6 +265,7 @@ gh run list --workflow=deploy.yml
 ```
 
 ### Git Tags for Releases
+
 ```bash
 # Tag known good versions
 git tag -a v1.2.3-stable <commit-sha> -m "Stable release"
@@ -273,6 +282,7 @@ firebase deploy --only hosting
 ## Communication Templates
 
 ### Slack Notification - Rollback Initiated
+
 ```
 🔄 **ROLLBACK INITIATED**
 
@@ -287,6 +297,7 @@ Monitoring: https://andamanbazaar.in/health.json
 ```
 
 ### Slack Notification - Rollback Complete
+
 ```
 ✅ **ROLLBACK COMPLETE**
 
@@ -305,6 +316,7 @@ Next steps:
 ```
 
 ### Status Page Update
+
 ```
 **Incident**: Service degradation
 **Status**: Monitoring
@@ -328,14 +340,14 @@ on:
   workflow_dispatch:
     inputs:
       commit:
-        description: 'Commit SHA to rollback to'
+        description: "Commit SHA to rollback to"
         required: true
       reason:
-        description: 'Reason for rollback'
+        description: "Reason for rollback"
         required: true
       environment:
-        description: 'Environment'
-        default: 'production'
+        description: "Environment"
+        default: "production"
         type: choice
         options:
           - staging
@@ -345,32 +357,32 @@ jobs:
   rollback:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
-    
+
     steps:
       - name: Checkout to target commit
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.commit }}
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-      
+          node-version: "20"
+          cache: "npm"
+
       - name: Install and build
         run: |
           npm ci
           npm run build
-      
+
       - name: Deploy rollback
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          repoToken: '${{ secrets.GITHUB_TOKEN }}'
-          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT }}"
           projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
           channelId: ${{ github.event.inputs.environment == 'production' && 'live' || 'staging' }}
-      
+
       - name: Notify team
         run: |
           echo "🔄 Rollback complete: ${{ github.event.inputs.commit }}"
@@ -392,6 +404,7 @@ jobs:
 ### Coordination with Backend
 
 When rolling back frontend:
+
 - Verify Supabase project is compatible
 - Check edge function versions
 - Confirm database schema compatibility
@@ -402,18 +415,21 @@ When rolling back frontend:
 ## Post-Rollback Actions
 
 ### Immediate (0-1 hour)
+
 1. Monitor error rates and user feedback
 2. Verify all critical features working
 3. Confirm payment processing functional
 4. Check authentication flow
 
 ### Short-term (1-24 hours)
+
 1. Fix identified issues in main branch
 2. Add tests to prevent regression
 3. Update documentation
 4. Communicate with users if needed
 
 ### Long-term (1-7 days)
+
 1. Conduct post-mortem
 2. Identify root cause
 3. Implement preventive measures
@@ -423,9 +439,9 @@ When rolling back frontend:
 
 ## Rollback Log
 
-| Date | Time | Initiated By | Reason | Method | Duration | Outcome |
-|------|------|--------------|--------|--------|----------|---------|
-| [Date] | [Time] | [Name] | [Reason] | [Method] | [Duration] | [Success/Failure] |
+| Date   | Time   | Initiated By | Reason   | Method   | Duration   | Outcome           |
+| ------ | ------ | ------------ | -------- | -------- | ---------- | ----------------- |
+| [Date] | [Time] | [Name]       | [Reason] | [Method] | [Duration] | [Success/Failure] |
 
 ---
 

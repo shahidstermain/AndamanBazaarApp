@@ -1,7 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { usePerformanceMonitoring, usePerformanceBudget } from '@/hooks/usePerformanceMonitoring';
-import { Activity, AlertCircle, CheckCircle, Clock, Cpu, Zap } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import React, { useState, useEffect } from "react";
+import {
+  usePerformanceMonitoring,
+  usePerformanceBudget,
+} from "@/hooks/usePerformanceMonitoring";
+import {
+  Activity,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  Cpu,
+  Zap,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface PerformanceMonitorProps {
   enabled?: boolean;
@@ -10,9 +20,9 @@ interface PerformanceMonitorProps {
 }
 
 export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
-  enabled = process.env.NODE_ENV === 'development',
+  enabled = process.env.NODE_ENV === "development",
   showDetails = false,
-  className = '',
+  className = "",
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const performance = usePerformanceMonitoring(enabled);
@@ -21,13 +31,13 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
   // Toggle visibility with keyboard shortcut (Ctrl+Shift+P)
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'P') {
-        setIsVisible(prev => !prev);
+      if (e.ctrlKey && e.shiftKey && e.key === "P") {
+        setIsVisible((prev) => !prev);
       }
     };
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
   }, []);
 
   if (!enabled || !isVisible) return null;
@@ -44,7 +54,11 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 
   const getScoreColor = (value: number, threshold: number, inverse = false) => {
     const isGood = inverse ? value > threshold : value < threshold;
-    return isGood ? 'text-green-600' : value < threshold * 1.5 ? 'text-yellow-600' : 'text-red-600';
+    return isGood
+      ? "text-green-600"
+      : value < threshold * 1.5
+        ? "text-yellow-600"
+        : "text-red-600";
   };
 
   const getScoreIcon = (value: number, threshold: number, inverse = false) => {
@@ -53,10 +67,12 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
   };
 
   return (
-    <div className={cn(
-      'fixed bottom-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-sm z-50',
-      className
-    )}>
+    <div
+      className={cn(
+        "fixed bottom-4 right-4 bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-sm z-50",
+        className,
+      )}
+    >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Activity className="w-4 h-4 text-teal-600" />
@@ -74,7 +90,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
       {performance.metrics && (
         <div className="space-y-2 mb-3">
           <h4 className="text-xs font-medium text-gray-700">Core Web Vitals</h4>
-          
+
           <div className="flex items-center justify-between text-xs">
             <span className="flex items-center gap-1">
               <Zap className="w-3 h-3" />
@@ -111,13 +127,15 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
       {performance.memory && (
         <div className="space-y-2 mb-3">
           <h4 className="text-xs font-medium text-gray-700">Memory Usage</h4>
-          
+
           <div className="flex items-center justify-between text-xs">
             <span className="flex items-center gap-1">
               <Cpu className="w-3 h-3" />
               Used
             </span>
-            <span className={getScoreColor(performance.memory.usedJSHeapSize, 50)}>
+            <span
+              className={getScoreColor(performance.memory.usedJSHeapSize, 50)}
+            >
               {formatMemory(performance.memory.usedJSHeapSize)}
             </span>
           </div>
@@ -135,18 +153,24 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
       <div className="space-y-2 mb-3">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-medium text-gray-700">Budget Status</h4>
-          <span className={cn(
-            'text-xs px-2 py-1 rounded',
-            budget.passed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-          )}>
-            {budget.passed ? 'Passed' : 'Violations'}
+          <span
+            className={cn(
+              "text-xs px-2 py-1 rounded",
+              budget.passed
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700",
+            )}
+          >
+            {budget.passed ? "Passed" : "Violations"}
           </span>
         </div>
 
         {!budget.passed && budget.violations.length > 0 && (
           <div className="text-xs text-red-600 space-y-1">
             {budget.violations.slice(0, 3).map((violation, index) => (
-              <div key={index} className="truncate">• {violation}</div>
+              <div key={index} className="truncate">
+                • {violation}
+              </div>
             ))}
             {budget.violations.length > 3 && (
               <div>+{budget.violations.length - 3} more</div>
@@ -165,7 +189,9 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
         </button>
         {showDetails && (
           <button
-            onClick={() => console.log('Performance Details:', performance, budget)}
+            onClick={() =>
+              console.log("Performance Details:", performance, budget)
+            }
             className="text-xs px-3 py-1 bg-gray-50 text-gray-700 rounded hover:bg-gray-100 transition-colors"
           >
             Details
@@ -184,24 +210,37 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
 };
 
 // Performance score component
-export const PerformanceScore: React.FC<{ className?: string }> = ({ className = '' }) => {
+export const PerformanceScore: React.FC<{ className?: string }> = ({
+  className = "",
+}) => {
   const performance = usePerformanceMonitoring(false);
   const budget = usePerformanceBudget();
 
   if (!performance.metrics) return null;
 
   // Calculate overall performance score
-  const lcpScore = performance.metrics.lcp < 2500 ? 100 : Math.max(0, 100 - (performance.metrics.lcp - 2500) / 50);
-  const fidScore = (performance.metrics.fid || 0) < 100 ? 100 : Math.max(0, 100 - (performance.metrics.fid || 0) / 10);
-  const clsScore = (performance.metrics.cls || 0) < 0.1 ? 100 : Math.max(0, 100 - (performance.metrics.cls || 0) * 1000);
+  const lcpScore =
+    performance.metrics.lcp < 2500
+      ? 100
+      : Math.max(0, 100 - (performance.metrics.lcp - 2500) / 50);
+  const fidScore =
+    (performance.metrics.fid || 0) < 100
+      ? 100
+      : Math.max(0, 100 - (performance.metrics.fid || 0) / 10);
+  const clsScore =
+    (performance.metrics.cls || 0) < 0.1
+      ? 100
+      : Math.max(0, 100 - (performance.metrics.cls || 0) * 1000);
   const budgetScore = budget.passed ? 100 : 50;
 
-  const overallScore = Math.round((lcpScore + fidScore + clsScore + budgetScore) / 4);
+  const overallScore = Math.round(
+    (lcpScore + fidScore + clsScore + budgetScore) / 4,
+  );
 
   const getScoreColor = (score: number) => {
-    if (score >= 90) return 'text-green-600';
-    if (score >= 70) return 'text-yellow-600';
-    return 'text-red-600';
+    if (score >= 90) return "text-green-600";
+    if (score >= 70) return "text-yellow-600";
+    return "text-red-600";
   };
 
   const getScoreIcon = (score: number) => {
@@ -213,9 +252,9 @@ export const PerformanceScore: React.FC<{ className?: string }> = ({ className =
   const Icon = getScoreIcon(overallScore);
 
   return (
-    <div className={cn('flex items-center gap-2', className)}>
-      <Icon className={cn('w-4 h-4', getScoreColor(overallScore))} />
-      <span className={cn('text-sm font-medium', getScoreColor(overallScore))}>
+    <div className={cn("flex items-center gap-2", className)}>
+      <Icon className={cn("w-4 h-4", getScoreColor(overallScore))} />
+      <span className={cn("text-sm font-medium", getScoreColor(overallScore))}>
         {overallScore}
       </span>
     </div>

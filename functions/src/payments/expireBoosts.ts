@@ -1,6 +1,6 @@
-import * as functions from 'firebase-functions';
-import { logger } from 'firebase-functions/v2';
-import { admin } from '../utils/admin';
+import * as functions from "firebase-functions";
+import { logger } from "firebase-functions/v2";
+import { admin } from "../utils/admin";
 
 /**
  * Scheduled Cloud Function: Expire Boosts
@@ -14,21 +14,22 @@ import { admin } from '../utils/admin';
  * 4. Logs each expiry for audit
  */
 export const expireBoosts = functions.pubsub
-  .schedule('every 1 hours')
-  .timeZone('Asia/Kolkata')
+  .schedule("every 1 hours")
+  .timeZone("Asia/Kolkata")
   .onRun(async () => {
     const now = admin.firestore.Timestamp.now();
 
     try {
       // Find all listings with expired boosts
-      const expiredSnap = await admin.firestore()
-        .collection('listings')
-        .where('isBoosted', '==', true)
-        .where('boostExpiresAt', '<=', now)
+      const expiredSnap = await admin
+        .firestore()
+        .collection("listings")
+        .where("isBoosted", "==", true)
+        .where("boostExpiresAt", "<=", now)
         .get();
 
       if (expiredSnap.empty) {
-        logger.info('No expired boosts found');
+        logger.info("No expired boosts found");
         return;
       }
 
@@ -52,29 +53,33 @@ export const expireBoosts = functions.pubsub
 
       // Update corresponding listingBoosts records
       for (const listingId of expiredListingIds) {
-        const boostsSnap = await admin.firestore()
-          .collection('listingBoosts')
-          .where('listingId', '==', listingId)
-          .where('status', '==', 'paid')
+        const boostsSnap = await admin
+          .firestore()
+          .collection("listingBoosts")
+          .where("listingId", "==", listingId)
+          .where("status", "==", "paid")
           .get();
 
         for (const boostDoc of boostsSnap.docs) {
           const boost = boostDoc.data();
-          if (boost.boostExpiresAt && boost.boostExpiresAt.toMillis() <= now.toMillis()) {
+          if (
+            boost.boostExpiresAt &&
+            boost.boostExpiresAt.toMillis() <= now.toMillis()
+          ) {
             await boostDoc.ref.update({
-              status: 'expired',
+              status: "expired",
               updatedAt: admin.firestore.Timestamp.now(),
             });
 
             // Audit log
-            await admin.firestore().collection('paymentAuditLog').add({
-              type: 'BOOST_EXPIRED',
+            await admin.firestore().collection("paymentAuditLog").add({
+              type: "BOOST_EXPIRED",
               boostId: boostDoc.id,
               orderId: boost.orderId,
               listingId,
               userId: boost.userId,
               tier: boost.tier,
-              source: 'scheduled_cleanup',
+              source: "scheduled_cleanup",
               timestamp: admin.firestore.Timestamp.now(),
             });
           }
@@ -85,8 +90,8 @@ export const expireBoosts = functions.pubsub
         listingIds: expiredListingIds,
       });
     } catch (error) {
-      logger.error('expireBoosts scheduled function failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
+      logger.error("expireBoosts scheduled function failed", {
+        error: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
       });
     }

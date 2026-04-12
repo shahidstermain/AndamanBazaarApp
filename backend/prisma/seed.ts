@@ -88,7 +88,8 @@ const activitySeeds: ActivitySeed[] = [
     price_max: 5000,
     age_min: 10,
     images: ["/images/sea-walk-1.jpg", "/images/sea-walk-2.jpg"],
-    safety_notes: "Pregnant guests and guests with severe respiratory conditions should avoid this activity.",
+    safety_notes:
+      "Pregnant guests and guests with severe respiratory conditions should avoid this activity.",
   },
   {
     slug: "snorkeling-elephant-beach",

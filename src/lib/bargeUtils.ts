@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 // ===== TYPES =====
 
@@ -12,7 +12,7 @@ export interface FerrySchedule {
 
 export interface FerryOperator {
   name: string;
-  type: 'fast' | 'slow';
+  type: "fast" | "slow";
   schedule: FerrySchedule[];
   booking_url: string;
 }
@@ -29,7 +29,7 @@ export interface BargeSchedule {
   id: string;
   from: string;
   to: string;
-  type: 'cargo_barge';
+  type: "cargo_barge";
   frequency: string;
   schedule: string;
   contact: string;
@@ -55,9 +55,9 @@ export async function loadBargeSchedules(): Promise<BargeSchedulesData> {
     return cachedSchedules;
   }
 
-  const response = await fetch('/barge-schedules.json');
+  const response = await fetch("/barge-schedules.json");
   if (!response.ok) {
-    throw new Error('Failed to load barge schedules');
+    throw new Error("Failed to load barge schedules");
   }
 
   cachedSchedules = await response.json();
@@ -69,17 +69,17 @@ export async function loadBargeSchedules(): Promise<BargeSchedulesData> {
 export function findRoute(
   schedules: BargeSchedulesData,
   from: string,
-  to: string
+  to: string,
 ): FerryRoute | null {
   // Check direct routes
   const directRoute = schedules.routes.find(
-    (r) => r.from === from && r.to === to
+    (r) => r.from === from && r.to === to,
   );
   if (directRoute) return directRoute;
 
   // Check reverse routes (swap from/to)
   const reverseRoute = schedules.routes.find(
-    (r) => r.from === to && r.to === from
+    (r) => r.from === to && r.to === from,
   );
   if (reverseRoute) {
     return {
@@ -97,7 +97,7 @@ export function findRoute(
 
 export interface NextDeparture {
   operator: string;
-  type: 'fast' | 'slow';
+  type: "fast" | "slow";
   departure: string;
   arrival: string;
   days: string[];
@@ -108,24 +108,25 @@ export interface NextDeparture {
 
 export function getNextDepartures(
   route: FerryRoute,
-  referenceDate: Date = new Date()
+  referenceDate: Date = new Date(),
 ): NextDeparture[] {
   const departures: NextDeparture[] = [];
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const currentDay = dayNames[referenceDate.getDay()];
-  const currentTime = referenceDate.getHours() * 60 + referenceDate.getMinutes();
+  const currentTime =
+    referenceDate.getHours() * 60 + referenceDate.getMinutes();
 
   for (const operator of route.operators) {
     for (const schedule of operator.schedule) {
       const days = schedule.days.flatMap((d) => {
-        if (d === 'Daily') return dayNames.slice(1); // Mon-Sat
+        if (d === "Daily") return dayNames.slice(1); // Mon-Sat
         return [d];
       });
 
       // Find next available day
       let nextDay = days.find((d) => {
         if (d !== currentDay) return false;
-        const [hours, minutes] = schedule.departure.split(':').map(Number);
+        const [hours, minutes] = schedule.departure.split(":").map(Number);
         const departureMinutes = hours * 60 + minutes;
         return departureMinutes > currentTime;
       });
@@ -147,7 +148,7 @@ export function getNextDepartures(
       }
 
       if (nextDay) {
-        const [hours, minutes] = schedule.departure.split(':').map(Number);
+        const [hours, minutes] = schedule.departure.split(":").map(Number);
         const departureMinutes = hours * 60 + minutes;
         const timeUntilMinutes = isTomorrow
           ? 24 * 60 - currentTime + departureMinutes
@@ -175,8 +176,12 @@ export function getNextDepartures(
 
   // Sort by time until departure
   return departures.sort((a, b) => {
-    const aMinutes = parseInt(a.timeUntil.split('h')[0] || '0') * 60 + parseInt(a.timeUntil.split(' ')[1] || '0');
-    const bMinutes = parseInt(b.timeUntil.split('h')[0] || '0') * 60 + parseInt(b.timeUntil.split(' ')[1] || '0');
+    const aMinutes =
+      parseInt(a.timeUntil.split("h")[0] || "0") * 60 +
+      parseInt(a.timeUntil.split(" ")[1] || "0");
+    const bMinutes =
+      parseInt(b.timeUntil.split("h")[0] || "0") * 60 +
+      parseInt(b.timeUntil.split(" ")[1] || "0");
     return aMinutes - bMinutes;
   });
 }
@@ -187,12 +192,12 @@ export function formatRouteName(from: string, to: string): string {
   return `${from} → ${to}`;
 }
 
-export function getRouteEmoji(type: 'fast' | 'slow'): string {
-  return type === 'fast' ? '⚡' : '🚢';
+export function getRouteEmoji(type: "fast" | "slow"): string {
+  return type === "fast" ? "⚡" : "🚢";
 }
 
-export function getFerryTypeLabel(type: 'fast' | 'slow'): string {
-  return type === 'fast' ? 'Fast Ferry (1.5h)' : 'Govt Ferry (2.5h)';
+export function getFerryTypeLabel(type: "fast" | "slow"): string {
+  return type === "fast" ? "Fast Ferry (1.5h)" : "Govt Ferry (2.5h)";
 }
 
 // ===== HOOK =====
@@ -230,7 +235,7 @@ export function useBargeSchedule(from?: string, to?: string) {
     loading,
     error,
     hasMonsoonAlert: schedules?.monsoon_alerts?.active || false,
-    monsoonMessage: schedules?.monsoon_alerts?.message || '',
+    monsoonMessage: schedules?.monsoon_alerts?.message || "",
   };
 }
 
@@ -239,28 +244,28 @@ export function useBargeSchedule(from?: string, to?: string) {
 export function suggestPickupTimes(
   departures: NextDeparture[],
   buyerLocation: string,
-  sellerLocation: string
+  sellerLocation: string,
 ): string[] {
   const suggestions: string[] = [];
 
   for (const dep of departures.slice(0, 3)) {
     const arrivalTime = dep.arrival;
-    const [hours, minutes] = arrivalTime.split(':').map(Number);
-    
+    const [hours, minutes] = arrivalTime.split(":").map(Number);
+
     // Suggest meeting 30-60 minutes after arrival
     let meetHour = hours;
     let meetMinutes = minutes + 30;
-    
+
     // Handle hour overflow
     if (meetMinutes >= 60) {
       meetHour = (meetHour + 1) % 24;
       meetMinutes = meetMinutes - 60;
     }
-    
-    const formattedMeetTime = `${meetHour.toString().padStart(2, '0')}:${meetMinutes.toString().padStart(2, '0')}`;
-    
+
+    const formattedMeetTime = `${meetHour.toString().padStart(2, "0")}:${meetMinutes.toString().padStart(2, "0")}`;
+
     suggestions.push(
-      `Meet at ${sellerLocation} around ${formattedMeetTime} (${dep.operator} arrives at ${arrivalTime})`
+      `Meet at ${sellerLocation} around ${formattedMeetTime} (${dep.operator} arrives at ${arrivalTime})`,
     );
   }
 

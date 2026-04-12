@@ -29,7 +29,9 @@ const ActivitiesPage = () => {
   });
 
   const activityNames = useMemo(() => {
-    return Array.from(new Set([...KNOWN_ACTIVITY_NAMES, ...activities.map((activity) => activity.title)]));
+    return Array.from(
+      new Set([...KNOWN_ACTIVITY_NAMES, ...activities.map((activity) => activity.title)]),
+    );
   }, [activities]);
 
   const openLeadModal = (activity: Activity) => {
@@ -41,7 +43,9 @@ const ActivitiesPage = () => {
     <div className="space-y-6">
       <header>
         <h1 className="text-3xl font-bold">All Activities</h1>
-        <p className="mt-1 text-slate-600">Browse and compare water adventures across the islands.</p>
+        <p className="mt-1 text-slate-600">
+          Browse and compare water adventures across the islands.
+        </p>
       </header>
 
       <ActivityFilters
@@ -65,12 +69,18 @@ const ActivitiesPage = () => {
         <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {activities.map((activity) => (
-              <ActivityCard key={activity.id} activity={activity} onRequestBooking={openLeadModal} />
+              <ActivityCard
+                key={activity.id}
+                activity={activity}
+                onRequestBooking={openLeadModal}
+              />
             ))}
           </div>
 
           {activities.length === 0 && (
-            <p className="rounded-md border bg-white p-4">No activities found for selected filters.</p>
+            <p className="rounded-md border bg-white p-4">
+              No activities found for selected filters.
+            </p>
           )}
 
           {meta && meta.totalPages > 1 && (

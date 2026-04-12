@@ -5,6 +5,7 @@
 This document provides a comprehensive hardening plan for the Cashfree payment integration to address all critical security vulnerabilities identified in the payment risk audit. The plan focuses on **immediate security fixes**, **production readiness**, and **long-term maintainability**.
 
 ### Implementation Timeline:
+
 - **Phase 1 (Critical)**: 24-48 hours
 - **Phase 2 (Security Hardening)**: 1 week
 - **Phase 3 (Production Readiness)**: 2 weeks
@@ -35,10 +36,13 @@ Deno.serve(async (req: Request) => {
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } }
+    { global: { headers: { Authorization: authHeader } } },
   );
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
   if (authError || !user) {
     return new Response("Unauthorized", { status: 401 });
   }
@@ -52,7 +56,7 @@ Deno.serve(async (req: Request) => {
   // 3. Verify payment status server-side
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SERVICE_ROLE_KEY")!
+    Deno.env.get("SERVICE_ROLE_KEY")!,
   );
 
   const { data: boost, error: boostError } = await supabaseAdmin
@@ -71,26 +75,32 @@ Deno.serve(async (req: Request) => {
   }
 
   // 5. Return verified status
-  return new Response(JSON.stringify({
-    success: boost.status === "paid",
-    status: boost.status,
-    listing_id: boost.listing_id,
-    tier: boost.tier
-  }), {
-    status: 200,
-    headers: { "Content-Type": "application/json" }
-  });
+  return new Response(
+    JSON.stringify({
+      success: boost.status === "paid",
+      status: boost.status,
+      listing_id: boost.listing_id,
+      tier: boost.tier,
+    }),
+    {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    },
+  );
 });
 ```
 
 #### **Frontend Updates**:
+
 ```typescript
 // src/pages/BoostSuccess.tsx - FIXED VERSION
 const checkOrderStatus = async () => {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     if (!session) {
-      setStatus('failed');
+      setStatus("failed");
       return;
     }
 
@@ -98,30 +108,30 @@ const checkOrderStatus = async () => {
     const response = await fetch(
       `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-payment`,
       {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({ order_id: orderId }),
-      }
+      },
     );
 
     if (!response.ok) {
-      throw new Error('Payment verification failed');
+      throw new Error("Payment verification failed");
     }
 
     const data = await response.json();
 
-    if (data.success && data.status === 'paid') {
-      setStatus('success');
+    if (data.success && data.status === "paid") {
+      setStatus("success");
       setListingId(data.listing_id);
     } else {
-      setStatus('failed');
+      setStatus("failed");
     }
   } catch (err) {
     console.error("Payment verification error:", err);
-    setStatus('failed');
+    setStatus("failed");
   }
 };
 ```
@@ -145,10 +155,10 @@ if (!Number.isFinite(tsSeconds) || Math.abs(nowSeconds - tsSeconds) > 60) {
     raw_payload: { body: rawBody.substring(0, 500), timestamp },
   });
 
-  return new Response(
-    JSON.stringify({ error: "Invalid or stale timestamp" }),
-    { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
+  return new Response(JSON.stringify({ error: "Invalid or stale timestamp" }), {
+    status: 401,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 
 // Additional replay protection
@@ -161,10 +171,10 @@ if (webhookId) {
     .single();
 
   if (existingWebhook) {
-    return new Response(
-      JSON.stringify({ error: "Duplicate webhook" }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: "Duplicate webhook" }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 }
 ```
@@ -189,6 +199,7 @@ CASHFREE_ENV=production
 ```
 
 #### **Credential Validation**:
+
 ```typescript
 // supabase/functions/create-boost-order/index.ts - ADD VALIDATION
 function validateCredentials() {
@@ -234,14 +245,14 @@ DECLARE
 BEGIN
   lock_id := gen_random_uuid()::TEXT;
   lock_expires := NOW() + lock_duration;
-  
+
   -- Try to acquire lock
-  UPDATE listing_boosts 
+  UPDATE listing_boosts
   SET processing_lock_id = lock_id,
       processing_lock_until = lock_expires
-  WHERE cashfree_order_id = order_id 
+  WHERE cashfree_order_id = order_id
     AND (processing_lock_id IS NULL OR processing_lock_until < NOW);
-  
+
   -- Check if lock acquired
   IF FOUND THEN
     RETURN lock_id;
@@ -257,54 +268,55 @@ CREATE OR REPLACE FUNCTION release_payment_lock(
   lock_id TEXT
 ) RETURNS BOOLEAN AS $$
 BEGIN
-  UPDATE listing_boosts 
+  UPDATE listing_boosts
   SET processing_lock_id = NULL,
       processing_lock_until = NULL
-  WHERE cashfree_order_id = order_id 
+  WHERE cashfree_order_id = order_id
     AND processing_lock_id = lock_id;
-  
+
   RETURN FOUND;
 END;
 $$ LANGUAGE plpgsql;
 ```
 
 #### **Webhook Processing with Locks**:
+
 ```typescript
 // supabase/functions/cashfree-webhook/index.ts - ADD LOCKING
 const orderId = orderData.order_id;
 const webhookId = req.headers.get("x-webhook-id");
 
 // Acquire processing lock
-const { data: lockId } = await supabaseAdmin
-  .rpc("acquire_payment_lock", { 
-    order_id: orderId, 
-    lock_duration: "30 seconds" 
-  });
+const { data: lockId } = await supabaseAdmin.rpc("acquire_payment_lock", {
+  order_id: orderId,
+  lock_duration: "30 seconds",
+});
 
 if (!lockId) {
   return new Response(
     JSON.stringify({ error: "Payment already being processed" }),
-    { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    {
+      status: 429,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    },
   );
 }
 
 try {
   // Process payment with lock held
   // ... existing processing logic ...
-  
+
   // Update with webhook ID for idempotency
   await supabaseAdmin
     .from("listing_boosts")
     .update({ webhook_id })
     .eq("cashfree_order_id", orderId);
-    
 } finally {
   // Release lock
-  await supabaseAdmin
-    .rpc("release_payment_lock", { 
-      order_id: orderId, 
-      lock_id 
-    });
+  await supabaseAdmin.rpc("release_payment_lock", {
+    order_id: orderId,
+    lock_id,
+  });
 }
 ```
 
@@ -323,10 +335,11 @@ try {
 // Generate payment URL server-side
 const generatePaymentUrl = (paymentSessionId: string): string => {
   const env = Deno.env.get("CASHFREE_ENV") || "sandbox";
-  const baseUrl = env === "production"
-    ? "https://payments.cashfree.com/pg/view/order"
-    : "https://sandbox.cashfree.com/pg/view/order";
-  
+  const baseUrl =
+    env === "production"
+      ? "https://payments.cashfree.com/pg/view/order"
+      : "https://sandbox.cashfree.com/pg/view/order";
+
   return `${baseUrl}/${paymentSessionId}`;
 };
 
@@ -342,17 +355,18 @@ return new Response(
   {
     status: 200,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
-  }
+  },
 );
 ```
 
 #### **Frontend Simplification**:
+
 ```typescript
 // src/components/BoostListingModal.tsx - SIMPLIFIED
 if (data.payment_url) {
   window.location.href = data.payment_url;
 } else {
-  throw new Error('No payment URL received');
+  throw new Error("No payment URL received");
 }
 ```
 
@@ -368,7 +382,7 @@ if (data.payment_url) {
 // supabase/functions/cashfree-webhook/index.ts - COMPREHENSIVE HANDLING
 const handlePaymentRefund = async (orderData: any, paymentData: any) => {
   const orderId = orderData.order_id;
-  
+
   const { data: boost } = await supabaseAdmin
     .from("listing_boosts")
     .select("*")
@@ -419,12 +433,12 @@ const handlePaymentRefund = async (orderData: any, paymentData: any) => {
 
 const handleOrderExpired = async (orderData: any) => {
   const orderId = orderData.order_id;
-  
+
   await supabaseAdmin
     .from("listing_boosts")
-    .update({ 
-      status: "expired", 
-      updated_at: new Date().toISOString() 
+    .update({
+      status: "expired",
+      updated_at: new Date().toISOString(),
     })
     .eq("cashfree_order_id", orderId)
     .eq("status", "pending");
@@ -464,7 +478,7 @@ switch (eventType) {
 const logPaymentEvent = async (
   eventType: string,
   orderId: string,
-  additionalData: Record<string, any> = {}
+  additionalData: Record<string, any> = {},
 ) => {
   await supabaseAdmin.from("payment_audit_log").insert({
     event_type: eventType,
@@ -508,30 +522,35 @@ await logPaymentEvent("payment_confirmed", orderId, {
 // Rate limiting middleware
 const rateLimiter = new Map<string, { count: number; resetTime: number }>();
 
-const checkRateLimit = (key: string, limit: number, windowMs: number): boolean => {
+const checkRateLimit = (
+  key: string,
+  limit: number,
+  windowMs: number,
+): boolean => {
   const now = Date.now();
   const record = rateLimiter.get(key);
-  
+
   if (!record || now > record.resetTime) {
     rateLimiter.set(key, { count: 1, resetTime: now + windowMs });
     return true;
   }
-  
+
   if (record.count >= limit) {
     return false;
   }
-  
+
   record.count++;
   return true;
 };
 
 // Apply to webhook endpoint
 const clientIP = req.headers.get("x-forwarded-for") || "unknown";
-if (!checkRateLimit(clientIP, 10, 60000)) { // 10 requests per minute
-  return new Response(
-    JSON.stringify({ error: "Rate limit exceeded" }),
-    { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
+if (!checkRateLimit(clientIP, 10, 60000)) {
+  // 10 requests per minute
+  return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+    status: 429,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
 }
 ```
 
@@ -550,7 +569,7 @@ if (!checkRateLimit(clientIP, 10, 60000)) { // 10 requests per minute
 Deno.serve(async (req: Request) => {
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SERVICE_ROLE_KEY")!
+    Deno.env.get("SERVICE_ROLE_KEY")!,
   );
 
   // Find payments stuck in pending state > 30 minutes
@@ -563,8 +582,10 @@ Deno.serve(async (req: Request) => {
   for (const payment of stuckPayments || []) {
     // Check actual status with Cashfree
     try {
-      const cashfreeStatus = await checkCashfreeOrderStatus(payment.cashfree_order_id);
-      
+      const cashfreeStatus = await checkCashfreeOrderStatus(
+        payment.cashfree_order_id,
+      );
+
       if (cashfreeStatus === "PAID") {
         // Payment succeeded but webhook delayed
         await processDelayedSuccess(payment);
@@ -572,10 +593,10 @@ Deno.serve(async (req: Request) => {
         // Payment actually failed/timeout
         await supabaseAdmin
           .from("listing_boosts")
-          .update({ 
-            status: "failed", 
+          .update({
+            status: "failed",
             failure_reason: "timeout",
-            updated_at: new Date().toISOString() 
+            updated_at: new Date().toISOString(),
           })
           .eq("id", payment.id);
       }
@@ -600,18 +621,18 @@ Deno.serve(async (req: Request) => {
 // supabase/functions/poll-payment-status/index.ts
 Deno.serve(async (req: Request) => {
   const { order_id } = await req.json();
-  
+
   // Check payment status with Cashfree API
   const status = await checkCashfreeOrderStatus(order_id);
-  
+
   // Update database if status changed
   if (status !== "pending") {
     await updatePaymentStatus(order_id, status);
   }
-  
+
   return new Response(JSON.stringify({ status }), {
     status: 200,
-    headers: { "Content-Type": "application/json" }
+    headers: { "Content-Type": "application/json" },
   });
 });
 ```
@@ -628,7 +649,7 @@ Deno.serve(async (req: Request) => {
 // supabase/functions/reconcile-payments/index.ts
 Deno.serve(async (req: Request) => {
   const { date_range, status_filter } = await req.json();
-  
+
   // Get payments from database
   const { data: dbPayments } = await supabaseAdmin
     .from("listing_boosts")
@@ -639,13 +660,13 @@ Deno.serve(async (req: Request) => {
 
   // Get payments from Cashfree
   const cashfreePayments = await getCashfreePayments(date_range);
-  
+
   // Reconcile differences
   const reconciliation = reconcilePayments(dbPayments, cashfreePayments);
-  
+
   return new Response(JSON.stringify(reconciliation), {
     status: 200,
-    headers: { "Content-Type": "application/json" }
+    headers: { "Content-Type": "application/json" },
   });
 });
 ```
@@ -670,7 +691,9 @@ interface PaymentMetrics {
   disputesCount: number;
 }
 
-const collectPaymentMetrics = async (timeRange: TimeRange): Promise<PaymentMetrics> => {
+const collectPaymentMetrics = async (
+  timeRange: TimeRange,
+): Promise<PaymentMetrics> => {
   const { data: payments } = await supabaseAdmin
     .from("listing_boosts")
     .select("*")
@@ -713,23 +736,23 @@ const generateDailyReport = async (date: string) => {
 
   // Populate report data
   const payments = await getPaymentsForDate(date);
-  
-  payments.forEach(payment => {
+
+  payments.forEach((payment) => {
     report.totalTransactions++;
     report.grossRevenue += payment.amount_inr;
-    
+
     if (payment.status === "refunded") {
       report.refunds += payment.refund_amount || 0;
     }
-    
+
     // Break down by payment method
     const method = payment.payment_method || "unknown";
-    report.paymentMethodBreakdown[method] = 
+    report.paymentMethodBreakdown[method] =
       (report.paymentMethodBreakdown[method] || 0) + 1;
-    
+
     // Break down by tier
     const tier = payment.tier || "unknown";
-    report.tierBreakdown[tier] = 
+    report.tierBreakdown[tier] =
       (report.tierBreakdown[tier] || 0) + payment.amount_inr;
   });
 
@@ -737,7 +760,7 @@ const generateDailyReport = async (date: string) => {
 
   // Save report
   await saveFinancialReport(report);
-  
+
   return report;
 };
 ```
@@ -776,7 +799,7 @@ const runSecurityChecks = async () => {
   });
 
   // Send alerts if critical issues found
-  if (securityReport.alerts.some(a => a.severity === "critical")) {
+  if (securityReport.alerts.some((a) => a.severity === "critical")) {
     await sendSecurityAlert(securityReport);
   }
 
@@ -789,6 +812,7 @@ const runSecurityChecks = async () => {
 ## 📋 Implementation Checklist
 
 ### **Phase 1: Critical Fixes (24-48 hours)**
+
 ```bash
 □ Create verify-payment endpoint
 □ Update BoostSuccess.tsx with server verification
@@ -801,6 +825,7 @@ const runSecurityChecks = async () => {
 ```
 
 ### **Phase 2: Security Hardening (1 week)**
+
 ```bash
 □ Move URL generation to server-side
 □ Implement comprehensive webhook handling
@@ -813,6 +838,7 @@ const runSecurityChecks = async () => {
 ```
 
 ### **Phase 3: Production Readiness (2 weeks)**
+
 ```bash
 □ Implement payment timeout handling
 □ Create payment status polling
@@ -825,6 +851,7 @@ const runSecurityChecks = async () => {
 ```
 
 ### **Phase 4: Monitoring & Compliance (1 month)**
+
 ```bash
 □ Implement payment metrics dashboard
 □ Create automated financial reporting
@@ -841,6 +868,7 @@ const runSecurityChecks = async () => {
 ## 🧪 Testing Strategy
 
 ### **Security Testing**
+
 ```bash
 # Webhook signature testing
 curl -X POST https://your-app.com/functions/v1/cashfree-webhook \
@@ -863,6 +891,7 @@ curl -X POST https://your-app.com/functions/v1/cashfree-webhook \
 ```
 
 ### **Integration Testing**
+
 ```bash
 # End-to-end payment flow
 npm run test:payment-e2e
@@ -878,6 +907,7 @@ npm run test:refund-processing
 ```
 
 ### **Load Testing**
+
 ```bash
 # Concurrent webhook processing
 npm run test:webhook-concurrency
@@ -894,6 +924,7 @@ npm run test:database-performance
 ## 🚨 Rollback Procedures
 
 ### **Emergency Rollback**
+
 ```bash
 # 1. Disable new payments
 UPDATE listing_boosts SET status = 'maintenance_mode' WHERE status = 'pending';
@@ -909,6 +940,7 @@ UPDATE listing_boosts SET status = 'pending' WHERE status = 'maintenance_mode';
 ```
 
 ### **Partial Rollback**
+
 ```bash
 # Rollback specific features while keeping others active
 # Example: Disable timeout processing only
@@ -920,6 +952,7 @@ DELETE FROM cron_jobs WHERE job_name = 'process-payment-timeouts';
 ## 📈 Success Metrics
 
 ### **Security Metrics**
+
 ```bash
 □ Zero successful replay attacks
 □ Zero unauthorized payment verifications
@@ -929,6 +962,7 @@ DELETE FROM cron_jobs WHERE job_name = 'process-payment-timeouts';
 ```
 
 ### **Performance Metrics**
+
 ```bash
 □ < 500ms average payment verification time
 □ < 2 seconds webhook processing time
@@ -938,6 +972,7 @@ DELETE FROM cron_jobs WHERE job_name = 'process-payment-timeouts';
 ```
 
 ### **Business Metrics**
+
 ```bash
 □ No revenue loss during migration
 □ < 5% increase in customer support tickets

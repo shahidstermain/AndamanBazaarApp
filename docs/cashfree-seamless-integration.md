@@ -9,6 +9,7 @@
 The seamless integration allows you to collect payment details on your own checkout page and process payments server-side without redirecting users to Cashfree's hosted checkout page.
 
 **Requirements:**
+
 - S2S (Server-to-Server) flag enabled by Cashfree
 - PCI DSS compliance for card payments
 - Contact: care@cashfree.com to enable these flags
@@ -47,6 +48,7 @@ The seamless integration allows you to collect payment details on your own check
 **Endpoint:** `https://us-central1-andamanbazaarfirebase.cloudfunctions.net/createSeamlessOrder`
 
 **Request:**
+
 ```typescript
 {
   listingId: string;
@@ -60,6 +62,7 @@ The seamless integration allows you to collect payment details on your own check
 ```
 
 **Response:**
+
 ```typescript
 {
   success: true;
@@ -74,24 +77,26 @@ The seamless integration allows you to collect payment details on your own check
 ```
 
 **Frontend Usage:**
+
 ```typescript
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { getFunctions, httpsCallable } from "firebase/functions";
 
 const functions = getFunctions();
-const createOrder = httpsCallable(functions, 'createSeamlessOrder');
+const createOrder = httpsCallable(functions, "createSeamlessOrder");
 
 const result = await createOrder({
-  listingId: 'listing_123',
+  listingId: "listing_123",
   orderAmount: 5000,
-  customerEmail: 'buyer@example.com',
-  customerPhone: '9876543210',
-  customerName: 'Rahul Sharma',
+  customerEmail: "buyer@example.com",
+  customerPhone: "9876543210",
+  customerName: "Rahul Sharma",
 });
 
 const { paymentSessionId, orderId } = result.data;
 ```
 
 **Security Checks:**
+
 - ✓ User authentication required
 - ✓ Listing exists and is active
 - ✓ Prevents self-purchase
@@ -107,6 +112,7 @@ const { paymentSessionId, orderId } = result.data;
 **Endpoint:** `https://us-central1-andamanbazaarfirebase.cloudfunctions.net/processSeamlessPayment`
 
 **Request:**
+
 ```typescript
 {
   paymentSessionId: string;
@@ -131,38 +137,41 @@ const { paymentSessionId, orderId } = result.data;
 ```
 
 **Response:**
+
 ```typescript
 {
   success: true;
   orderId: string;
   cfPaymentId: string;
-  paymentStatus: 'SUCCESS' | 'PENDING' | 'FAILED';
+  paymentStatus: "SUCCESS" | "PENDING" | "FAILED";
   paymentMessage: string;
 }
 ```
 
 **Frontend Usage:**
+
 ```typescript
 // UPI Payment
-const processPayment = httpsCallable(functions, 'processSeamlessPayment');
+const processPayment = httpsCallable(functions, "processSeamlessPayment");
 
 const result = await processPayment({
   paymentSessionId: paymentSessionId,
   paymentMethod: {
-    type: 'upi',
+    type: "upi",
     upi: {
-      channel: 'collect',
-      upi_id: 'user@upi',
+      channel: "collect",
+      upi_id: "user@upi",
     },
   },
 });
 
-if (result.data.paymentStatus === 'SUCCESS') {
+if (result.data.paymentStatus === "SUCCESS") {
   // Payment successful
 }
 ```
 
 **Security Checks:**
+
 - ✓ User authentication required
 - ✓ Verifies user owns the order
 - ✓ Updates payment status in Firestore
@@ -176,6 +185,7 @@ if (result.data.paymentStatus === 'SUCCESS') {
 **Endpoint:** `https://us-central1-andamanbazaarfirebase.cloudfunctions.net/getOrderPayments`
 
 **Request:**
+
 ```typescript
 {
   orderId: string;
@@ -183,6 +193,7 @@ if (result.data.paymentStatus === 'SUCCESS') {
 ```
 
 **Response:**
+
 ```typescript
 {
   success: true;
@@ -201,16 +212,17 @@ if (result.data.paymentStatus === 'SUCCESS') {
 ```
 
 **Frontend Usage:**
+
 ```typescript
 // After redirect from payment gateway
 const urlParams = new URLSearchParams(window.location.search);
-const orderId = urlParams.get('order_id');
+const orderId = urlParams.get("order_id");
 
-const getPayments = httpsCallable(functions, 'getOrderPayments');
+const getPayments = httpsCallable(functions, "getOrderPayments");
 const result = await getPayments({ orderId });
 
 const latestPayment = result.data.payments[0];
-if (latestPayment.paymentStatus === 'SUCCESS') {
+if (latestPayment.paymentStatus === "SUCCESS") {
   // Show success message
 }
 ```
@@ -224,6 +236,7 @@ if (latestPayment.paymentStatus === 'SUCCESS') {
 **Endpoint:** `https://us-central1-andamanbazaarfirebase.cloudfunctions.net/verifyOrderStatus`
 
 **Request:**
+
 ```typescript
 {
   orderId: string;
@@ -231,12 +244,13 @@ if (latestPayment.paymentStatus === 'SUCCESS') {
 ```
 
 **Response:**
+
 ```typescript
 {
   success: true;
   orderId: string;
   cfOrderId: string;
-  orderStatus: 'ACTIVE' | 'PAID' | 'EXPIRED' | 'CANCELLED';
+  orderStatus: "ACTIVE" | "PAID" | "EXPIRED" | "CANCELLED";
   orderAmount: number;
   orderCurrency: string;
   orderExpiryTime: string;
@@ -265,7 +279,7 @@ const PaymentCheckout: React.FC<{ listingId: string; amount: number }> = ({ list
     try {
       const functions = getFunctions();
       const createOrder = httpsCallable(functions, 'createSeamlessOrder');
-      
+
       const result = await createOrder({
         listingId,
         orderAmount: amount,
@@ -277,7 +291,7 @@ const PaymentCheckout: React.FC<{ listingId: string; amount: number }> = ({ list
       const data = result.data as any;
       setPaymentSessionId(data.paymentSessionId);
       setOrderId(data.orderId);
-      
+
       console.log('Order created:', data.orderId);
     } catch (error) {
       console.error('Failed to create order:', error);
@@ -292,7 +306,7 @@ const PaymentCheckout: React.FC<{ listingId: string; amount: number }> = ({ list
     try {
       const functions = getFunctions();
       const processPayment = httpsCallable(functions, 'processSeamlessPayment');
-      
+
       const result = await processPayment({
         paymentSessionId,
         paymentMethod: {
@@ -305,7 +319,7 @@ const PaymentCheckout: React.FC<{ listingId: string; amount: number }> = ({ list
       });
 
       const data = result.data as any;
-      
+
       if (data.paymentStatus === 'SUCCESS') {
         // Payment successful - redirect to success page
         window.location.href = `/payment/success?order_id=${orderId}`;
@@ -332,8 +346,8 @@ const PaymentCheckout: React.FC<{ listingId: string; amount: number }> = ({ list
       ) : (
         <div className="payment-methods">
           <h3>Pay ₹{amount}</h3>
-          <input 
-            type="text" 
+          <input
+            type="text"
             placeholder="Enter UPI ID (e.g., user@upi)"
             onBlur={(e) => handlePayWithUPI(e.target.value)}
           />
@@ -364,10 +378,10 @@ const PaymentSuccess: React.FC = () => {
       try {
         const functions = getFunctions();
         const getPayments = httpsCallable(functions, 'getOrderPayments');
-        
+
         const result = await getPayments({ orderId });
         const data = result.data as any;
-        
+
         setPaymentDetails(data.payments[0]);
       } catch (error) {
         console.error('Failed to verify payment:', error);
@@ -404,11 +418,13 @@ The webhook handler (`cashfreeWebhookV2`) automatically processes payment status
 **Webhook URL:** `https://api.andamanbazaar.in/cashfree/webhook`
 
 **Events Handled:**
+
 - `PAYMENT_SUCCESS_WEBHOOK` → Marks listing as sold, creates purchase record
 - `PAYMENT_FAILED_WEBHOOK` → Releases listing reservation
 - `PAYMENT_USER_DROPPED_WEBHOOK` → Releases listing reservation
 
 **Security:**
+
 - Verifies `x-webhook-signature` header
 - Validates `x-webhook-timestamp` header
 - Idempotent processing (safe to receive duplicates)
@@ -474,10 +490,12 @@ The webhook handler (`cashfreeWebhookV2`) automatically processes payment status
 Set `CASHFREE_ENV=sandbox` in Cloud Functions environment.
 
 **Test UPI IDs:**
+
 - Success: `success@upi`
 - Failure: `failure@upi`
 
 **Test Cards:**
+
 - Success: `4111111111111111` (CVV: 123, Expiry: 12/25)
 - Failure: `4000000000000002`
 
@@ -503,11 +521,13 @@ Set `CASHFREE_ENV=sandbox` in Cloud Functions environment.
 1. **Enable S2S flag** - Contact care@cashfree.com
 2. **Enable PCI DSS flag** (for cards) - Contact care@cashfree.com
 3. **Set environment variables:**
+
    ```bash
    firebase functions:config:set cashfree.env="production"
    ```
 
 4. **Verify secrets are set:**
+
    ```bash
    firebase functions:secrets:access CASHFREE_APP_ID
    firebase functions:secrets:access CASHFREE_SECRET_KEY
@@ -533,13 +553,13 @@ Set `CASHFREE_ENV=sandbox` in Cloud Functions environment.
 
 ### Common Errors
 
-| Error | Cause | Solution |
-|-------|-------|----------|
-| `unauthenticated` | User not logged in | Redirect to login |
-| `not-found` | Listing/Order not found | Verify IDs |
-| `failed-precondition` | Listing not available | Show error message |
-| `permission-denied` | User doesn't own order | Security violation |
-| `invalid-argument` | Missing required fields | Validate input |
+| Error                 | Cause                   | Solution           |
+| --------------------- | ----------------------- | ------------------ |
+| `unauthenticated`     | User not logged in      | Redirect to login  |
+| `not-found`           | Listing/Order not found | Verify IDs         |
+| `failed-precondition` | Listing not available   | Show error message |
+| `permission-denied`   | User doesn't own order  | Security violation |
+| `invalid-argument`    | Missing required fields | Validate input     |
 
 ### Retry Logic
 
@@ -562,6 +582,6 @@ Set `CASHFREE_ENV=sandbox` in Cloud Functions environment.
 
 ---
 
-*Last updated: March 2026*
-*Version: 1.0*
-*API Version: 2023-08-01*
+_Last updated: March 2026_
+_Version: 1.0_
+_API Version: 2023-08-01_

@@ -20,7 +20,9 @@ This document provides comprehensive rollback procedures for the Firebase migrat
 **Trigger**: Audit incomplete or incorrect
 
 **Rollback Steps**:
+
 1. Delete audit documents
+
 ```bash
 rm MIGRATION_AUDIT.md
 ```
@@ -35,7 +37,9 @@ rm MIGRATION_AUDIT.md
 **Trigger**: Schema design issues, missing collections
 
 **Rollback Steps**:
+
 1. Delete schema documents
+
 ```bash
 rm FIRESTORE_SCHEMA.md
 rm SECURITY_RULES.md
@@ -52,11 +56,13 @@ rm ENV_MAPPING.md
 **Trigger**: Authentication failures, user session loss
 
 **Rollback Steps**:
+
 1. **Keep Supabase Auth Active**
    - Do NOT disable Supabase Auth providers
    - Keep Supabase auth URLs configured
 
 2. **Revert Frontend Auth Code**
+
 ```bash
 # Restore Supabase auth
 git checkout HEAD~1 -- src/lib/supabase.ts
@@ -65,6 +71,7 @@ git checkout HEAD~1 -- src/hooks/useAuth.ts
 ```
 
 3. **Update Environment**
+
 ```bash
 # Restore Supabase env vars
 echo "VITE_SUPABASE_URL=your-supabase-url" >> .env
@@ -72,6 +79,7 @@ echo "VITE_SUPABASE_ANON_KEY=your-supabase-key" >> .env
 ```
 
 4. **Verify Rollback**
+
 ```bash
 npm run dev
 # Test login with Supabase
@@ -87,11 +95,13 @@ npm run dev
 **Trigger**: Data corruption, query failures, performance issues
 
 **Rollback Steps**:
+
 1. **Stop All Firestore Writes**
    - Disable Cloud Functions
    - Update security rules to deny all writes
 
 2. **Restore Supabase Data Access**
+
 ```bash
 # Restore Supabase client usage
 git checkout HEAD~1 -- src/lib/supabase.ts
@@ -99,6 +109,7 @@ git checkout HEAD~1 -- src/pages/*.tsx
 ```
 
 3. **Update Environment Variables**
+
 ```bash
 # Remove Firebase env vars
 sed -i '/VITE_FIREBASE_/d' .env
@@ -121,24 +132,27 @@ echo "VITE_SUPABASE_ANON_KEY=..." >> .env
 **Trigger**: Image loss, storage failures, URL breaks
 
 **Rollback Steps**:
+
 1. **Keep Supabase Storage Active**
    - Do NOT delete Supabase buckets
    - Maintain Supabase Storage URLs
 
 2. **Update Image URLs in Database**
+
 ```sql
 -- In Supabase SQL
-UPDATE listings 
-SET images = 
+UPDATE listings
+SET images =
   jsonb_set(
-    images, 
-    '{0,url}', 
+    images,
+    '{0,url}',
     'https://[supabase-project].supabase.co/storage/v1/object/public/listings/' || (images->0->>'id')
   )
 WHERE status != 'deleted';
 ```
 
 3. **Restore Frontend Storage Code**
+
 ```bash
 git checkout HEAD~1 -- src/lib/storage.ts
 git checkout HEAD~1 -- src/pages/CreateListing.tsx
@@ -158,12 +172,15 @@ git checkout HEAD~1 -- src/pages/CreateListing.tsx
 **Trigger**: Payment failures, webhook issues, function errors
 
 **Rollback Steps**:
+
 1. **Disable Firebase Cloud Functions**
+
 ```bash
 firebase functions:disable --all
 ```
 
 2. **Re-enable Supabase Edge Functions**
+
 ```bash
 cd supabase
 supabase functions deploy
@@ -188,7 +205,9 @@ supabase functions deploy
 **Trigger**: Critical errors after Supabase removal
 
 **Rollback Steps**:
+
 1. **Restore Supabase Integration**
+
 ```bash
 # Restore all Supabase files
 git checkout HEAD~1 -- supabase/
@@ -197,12 +216,14 @@ git checkout HEAD~1 -- package.json  # Restore @supabase/supabase-js
 ```
 
 2. **Reinstall Dependencies**
+
 ```bash
 npm install @supabase/supabase-js
 npm install
 ```
 
 3. **Restore Environment**
+
 ```bash
 # Add back all Supabase env vars
 cat >> .env << EOF
@@ -214,6 +235,7 @@ EOF
 ```
 
 4. **Re-deploy Supabase Edge Functions**
+
 ```bash
 cd supabase
 supabase functions deploy
@@ -231,13 +253,16 @@ supabase functions deploy
 **Use when**: Critical system failure, data corruption, security breach
 
 **Steps**:
+
 1. **Activate Maintenance Mode**
+
 ```bash
 # Deploy maintenance page
 firebase deploy --only hosting --message "EMERGENCY ROLLBACK"
 ```
 
 2. **Roll Back Git to Pre-Migration**
+
 ```bash
 # Find pre-migration commit
 git log --oneline | grep "pre-firebase"
@@ -250,6 +275,7 @@ firebase deploy --only hosting
 ```
 
 3. **Restore Supabase**
+
 ```bash
 # Ensure Supabase is active
 supabase status
@@ -271,12 +297,14 @@ supabase functions deploy
 ### Before Each Phase
 
 1. **Create Supabase Backup**
+
 ```bash
 # Export all data
 supabase db dump --data-only > backup-phase-$(date +%Y%m%d).sql
 ```
 
 2. **Export Firebase Data** (if applicable)
+
 ```bash
 # Export Firestore collections
 firebase firestore:export --backup-path gs://[bucket]/backups/phase-$(date +%Y%m%d)
@@ -316,15 +344,15 @@ firebase firestore:export --backup-path gs://[bucket]/backups/phase-$(date +%Y%m
 
 ## Rollback Decision Matrix
 
-| Issue Type | Severity | Rollback Method | Time | Impact |
-|------------|----------|-----------------|------|---------|
-| Auth failure | Critical | Phase 3 rollback | 5-10m | Users can't login |
-| Data corruption | Critical | Phase 4 rollback | 15-30m | Data loss risk |
-| Image loss | High | Phase 5 rollback | 20-40m | Visual issues |
-| Payment failure | Critical | Phase 6 rollback | 10-20m | Revenue loss |
-| System crash | Critical | Complete rollback | 60-90m | Full downtime |
-| Performance issue | Medium | Phase-specific | 5-15m | Slow experience |
-| Minor bug | Low | Fix in place | N/A | Limited impact |
+| Issue Type        | Severity | Rollback Method   | Time   | Impact            |
+| ----------------- | -------- | ----------------- | ------ | ----------------- |
+| Auth failure      | Critical | Phase 3 rollback  | 5-10m  | Users can't login |
+| Data corruption   | Critical | Phase 4 rollback  | 15-30m | Data loss risk    |
+| Image loss        | High     | Phase 5 rollback  | 20-40m | Visual issues     |
+| Payment failure   | Critical | Phase 6 rollback  | 10-20m | Revenue loss      |
+| System crash      | Critical | Complete rollback | 60-90m | Full downtime     |
+| Performance issue | Medium   | Phase-specific    | 5-15m  | Slow experience   |
+| Minor bug         | Low      | Fix in place      | N/A    | Limited impact    |
 
 ---
 
@@ -339,7 +367,7 @@ on:
   workflow_dispatch:
     inputs:
       phase:
-        description: 'Migration phase to rollback'
+        description: "Migration phase to rollback"
         required: true
         type: choice
         options:
@@ -349,56 +377,56 @@ on:
           - phase6-functions
           - phase7-complete
       reason:
-        description: 'Reason for rollback'
+        description: "Reason for rollback"
         required: true
 
 jobs:
   rollback:
     runs-on: ubuntu-latest
     environment: production
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
+
       - name: Rollback Phase 3 (Auth)
         if: github.event.inputs.phase == 'phase3-auth'
         run: |
           echo "Rolling back authentication..."
           # Restore Supabase auth files
           git checkout HEAD~1 -- src/lib/supabase.ts src/pages/AuthView.tsx
-          
+
       - name: Rollback Phase 4 (Data)
         if: github.event.inputs.phase == 'phase4-data'
         run: |
           echo "Rolling back data layer..."
           # Restore Supabase data access
           git checkout HEAD~1 -- src/lib/supabase.ts src/pages/*.tsx
-          
+
       - name: Rollback Phase 5 (Storage)
         if: github.event.inputs.phase == 'phase5-storage'
         run: |
           echo "Rolling back storage..."
           # Restore Supabase storage
           git checkout HEAD~1 -- src/lib/storage.ts
-          
+
       - name: Rollback Phase 6 (Functions)
         if: github.event.inputs.phase == 'phase6-functions'
         run: |
           echo "Rolling back cloud functions..."
           firebase functions:disable --all
-          
+
       - name: Complete Rollback
         if: github.event.inputs.phase == 'phase7-complete'
         run: |
           echo "Complete system rollback..."
           git checkout <pre-migration-tag>
           npm ci && npm run build
-          
+
       - name: Deploy Rollback
         run: |
           firebase deploy --only hosting --message "Rollback: ${{ github.event.inputs.reason }}"
-          
+
       - name: Notify Team
         run: |
           echo "🔄 Rollback completed: ${{ github.event.inputs.phase }}"
@@ -473,11 +501,13 @@ jobs:
 ### Internal Communication
 
 **Slack Channels**:
+
 - `#engineering`: Technical updates
 - `#incidents`: Rollback notifications
 - `#deployments`: Deployment status
 
 **Alert Templates**:
+
 ```
 🔄 **ROLLBACK INITIATED**
 Phase: [Phase number]
@@ -490,6 +520,7 @@ Expected downtime: [X minutes]
 ### External Communication
 
 **User Notifications**:
+
 - In-app banner for critical issues
 - Email for extended downtime
 - Social media for major outages
@@ -538,13 +569,13 @@ Expected downtime: [X minutes]
 
 ## Emergency Contacts
 
-| Role | Contact | Availability |
-|------|---------|--------------|
-| Engineering Lead | [Phone/Slack] | 24/7 |
-| DevOps Engineer | [Phone/Slack] | 24/7 |
-| Product Manager | [Phone/Slack] | Business hours |
+| Role             | Contact                             | Availability   |
+| ---------------- | ----------------------------------- | -------------- |
+| Engineering Lead | [Phone/Slack]                       | 24/7           |
+| DevOps Engineer  | [Phone/Slack]                       | 24/7           |
+| Product Manager  | [Phone/Slack]                       | Business hours |
 | Firebase Support | https://firebase.google.com/support | Business hours |
-| Supabase Support | https://supabase.com/support | Business hours |
+| Supabase Support | https://supabase.com/support        | Business hours |
 
 ---
 

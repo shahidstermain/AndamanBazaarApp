@@ -25,27 +25,27 @@ The application currently uses a dual backend setup with significant overlap bet
 
 ## Feature Inventory
 
-| Feature | Current Backend | Supabase Method | Firebase Equivalent | Complexity | Risk | Dependent Features |
-|---|---|---|---|---|---|---|
-| **Authentication** | Supabase Auth | `supabase.auth.*` | Firebase Auth (`signInWithEmailAndPassword`) | Medium | High | All protected routes, user sessions |
-| **User Profiles** | Supabase | `profiles` table | Firestore `users` collection | Medium | High | Listings, chats, payments |
-| **Listings CRUD** | Supabase | `listings` table | Firestore `listings` collection | High | High | Search, favorites, messages |
-| **Listing Images** | Supabase Storage | `listings` bucket | Firebase Storage | Medium | Medium | Listing creation, display |
-| **Profile Photos** | Supabase Storage | `avatars` bucket | Firebase Storage | Low | Medium | User profiles |
-| **Chat System** | Supabase | `chats`, `messages` tables | Firestore `chats`, `messages` collections | High | High | Realtime messaging |
-| **Realtime Updates** | Supabase Realtime | `supabase.channel` | Firestore onSnapshot | High | High | Chat, notifications |
-| **Favorites** | Supabase | `favorites` table | Firestore `favorites` collection | Low | Low | User profiles |
-| **Reports** | Supabase | `reports` table | Firestore `reports` collection | Low | Low | Admin moderation |
-| **Payment Processing** | Supabase Edge Functions | `create-boost-order`, `cashfree-webhook` | Cloud Functions | High | High | Revenue, featured listings |
-| **Invoice Generation** | Supabase Edge Functions | `generate-invoice`, `send-invoice-email` | Cloud Functions | Medium | Medium | Payment receipts |
-| **Location Verification** | Supabase Edge Functions | `verify-location` | Cloud Functions | Medium | Medium | User verification |
-| **Rate Limiting** | Supabase | `rate_limits` table | Firestore + Cloud Functions | Medium | Medium | API protection |
-| **Audit Logging** | Supabase | `audit_logs` table | Firestore `audit_logs` collection | Medium | Low | Security monitoring |
-| **Security Events** | Supabase | `security_events` table | Firestore `security_events` collection | Low | Low | Threat detection |
-| **User Roles** | Supabase | `user_roles` table | Firestore `users.role` field | Low | Medium | Admin features |
-| **Listing Views** | Supabase | `listing_views` table | Firestore `listing_views` collection | Low | Low | Analytics |
-| **Recommendations** | Supabase | `recommendations_cache` table | Firestore `recommendations` collection | Low | Low | Discovery |
-| **Trending Listings** | Supabase | `trending_listings` table | Firestore `trending` collection | Low | Low | Discovery |
+| Feature                   | Current Backend         | Supabase Method                          | Firebase Equivalent                          | Complexity | Risk   | Dependent Features                  |
+| ------------------------- | ----------------------- | ---------------------------------------- | -------------------------------------------- | ---------- | ------ | ----------------------------------- |
+| **Authentication**        | Supabase Auth           | `supabase.auth.*`                        | Firebase Auth (`signInWithEmailAndPassword`) | Medium     | High   | All protected routes, user sessions |
+| **User Profiles**         | Supabase                | `profiles` table                         | Firestore `users` collection                 | Medium     | High   | Listings, chats, payments           |
+| **Listings CRUD**         | Supabase                | `listings` table                         | Firestore `listings` collection              | High       | High   | Search, favorites, messages         |
+| **Listing Images**        | Supabase Storage        | `listings` bucket                        | Firebase Storage                             | Medium     | Medium | Listing creation, display           |
+| **Profile Photos**        | Supabase Storage        | `avatars` bucket                         | Firebase Storage                             | Low        | Medium | User profiles                       |
+| **Chat System**           | Supabase                | `chats`, `messages` tables               | Firestore `chats`, `messages` collections    | High       | High   | Realtime messaging                  |
+| **Realtime Updates**      | Supabase Realtime       | `supabase.channel`                       | Firestore onSnapshot                         | High       | High   | Chat, notifications                 |
+| **Favorites**             | Supabase                | `favorites` table                        | Firestore `favorites` collection             | Low        | Low    | User profiles                       |
+| **Reports**               | Supabase                | `reports` table                          | Firestore `reports` collection               | Low        | Low    | Admin moderation                    |
+| **Payment Processing**    | Supabase Edge Functions | `create-boost-order`, `cashfree-webhook` | Cloud Functions                              | High       | High   | Revenue, featured listings          |
+| **Invoice Generation**    | Supabase Edge Functions | `generate-invoice`, `send-invoice-email` | Cloud Functions                              | Medium     | Medium | Payment receipts                    |
+| **Location Verification** | Supabase Edge Functions | `verify-location`                        | Cloud Functions                              | Medium     | Medium | User verification                   |
+| **Rate Limiting**         | Supabase                | `rate_limits` table                      | Firestore + Cloud Functions                  | Medium     | Medium | API protection                      |
+| **Audit Logging**         | Supabase                | `audit_logs` table                       | Firestore `audit_logs` collection            | Medium     | Low    | Security monitoring                 |
+| **Security Events**       | Supabase                | `security_events` table                  | Firestore `security_events` collection       | Low        | Low    | Threat detection                    |
+| **User Roles**            | Supabase                | `user_roles` table                       | Firestore `users.role` field                 | Low        | Medium | Admin features                      |
+| **Listing Views**         | Supabase                | `listing_views` table                    | Firestore `listing_views` collection         | Low        | Low    | Analytics                           |
+| **Recommendations**       | Supabase                | `recommendations_cache` table            | Firestore `recommendations` collection       | Low        | Low    | Discovery                           |
+| **Trending Listings**     | Supabase                | `trending_listings` table                | Firestore `trending` collection              | Low        | Low    | Discovery                           |
 
 ---
 
@@ -53,17 +53,17 @@ The application currently uses a dual backend setup with significant overlap bet
 
 ### Frontend Components Using Supabase
 
-| Component | Supabase Usage | Lines | Criticality |
-|---|---|---|---|
-| `src/lib/supabase.ts` | Client initialization | 22 | Critical |
-| `src/pages/AuthView.tsx` | Auth flows, session management | 373 | Critical |
-| `src/pages/Profile.tsx` | Profile CRUD, listings management | 593 | Critical |
-| `src/pages/CreateListing.tsx` | Listing creation, image uploads | 966 | Critical |
-| `src/pages/ListingDetail.tsx` | Listing fetch, favorites, bump | ~300 | Critical |
-| `src/pages/ChatRoom.tsx` | Realtime messaging | ~200 | Critical |
-| `src/lib/security.ts` | Rate limiting, audit logging | 342 | High |
-| `src/hooks/useAuth.ts` | Auth state management | ~50 | Critical |
-| `src/hooks/useSupabase.ts` | Database queries | ~100 | Critical |
+| Component                     | Supabase Usage                    | Lines | Criticality |
+| ----------------------------- | --------------------------------- | ----- | ----------- |
+| `src/lib/supabase.ts`         | Client initialization             | 22    | Critical    |
+| `src/pages/AuthView.tsx`      | Auth flows, session management    | 373   | Critical    |
+| `src/pages/Profile.tsx`       | Profile CRUD, listings management | 593   | Critical    |
+| `src/pages/CreateListing.tsx` | Listing creation, image uploads   | 966   | Critical    |
+| `src/pages/ListingDetail.tsx` | Listing fetch, favorites, bump    | ~300  | Critical    |
+| `src/pages/ChatRoom.tsx`      | Realtime messaging                | ~200  | Critical    |
+| `src/lib/security.ts`         | Rate limiting, audit logging      | 342   | High        |
+| `src/hooks/useAuth.ts`        | Auth state management             | ~50   | Critical    |
+| `src/hooks/useSupabase.ts`    | Database queries                  | ~100  | Critical    |
 
 ### Database Schema Overview
 
@@ -99,13 +99,13 @@ The application currently uses a dual backend setup with significant overlap bet
 
 ### Edge Functions to Migrate (5 total)
 
-| Function | Purpose | Firebase Equivalent | Priority |
-|---|---|---|---|
-| `create-boost-order` | Create Cashfree payment order | Cloud Function | Critical |
-| `cashfree-webhook` | Process payment webhooks | Cloud Function | Critical |
-| `verify-location` | GPS location verification | Cloud Function | High |
-| `generate-invoice` | Create PDF invoices | Cloud Function | Medium |
-| `send-invoice-email` | Email invoices via Resend | Cloud Function | Medium |
+| Function             | Purpose                       | Firebase Equivalent | Priority |
+| -------------------- | ----------------------------- | ------------------- | -------- |
+| `create-boost-order` | Create Cashfree payment order | Cloud Function      | Critical |
+| `cashfree-webhook`   | Process payment webhooks      | Cloud Function      | Critical |
+| `verify-location`    | GPS location verification     | Cloud Function      | High     |
+| `generate-invoice`   | Create PDF invoices           | Cloud Function      | Medium   |
+| `send-invoice-email` | Email invoices via Resend     | Cloud Function      | Medium   |
 
 ---
 
@@ -254,12 +254,14 @@ The application currently uses a dual backend setup with significant overlap bet
 ## Next Steps
 
 **Immediate Actions**:
+
 1. Create Firebase project and configure services
 2. Set up development environment with Firebase SDK
 3. Begin Phase 2: Firestore schema design
 4. Create migration scripts for existing data
 
 **Documentation to Create**:
+
 - FIRESTORE_SCHEMA.md
 - SECURITY_RULES.md
 - ROLLBACK_PLAN.md

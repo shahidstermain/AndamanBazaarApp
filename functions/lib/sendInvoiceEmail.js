@@ -1,37 +1,58 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || function (mod) {
+var __createBinding =
+  (this && this.__createBinding) ||
+  (Object.create
+    ? function (o, m, k, k2) {
+        if (k2 === undefined) k2 = k;
+        var desc = Object.getOwnPropertyDescriptor(m, k);
+        if (
+          !desc ||
+          ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)
+        ) {
+          desc = {
+            enumerable: true,
+            get: function () {
+              return m[k];
+            },
+          };
+        }
+        Object.defineProperty(o, k2, desc);
+      }
+    : function (o, m, k, k2) {
+        if (k2 === undefined) k2 = k;
+        o[k2] = m[k];
+      });
+var __setModuleDefault =
+  (this && this.__setModuleDefault) ||
+  (Object.create
+    ? function (o, v) {
+        Object.defineProperty(o, "default", { enumerable: true, value: v });
+      }
+    : function (o, v) {
+        o["default"] = v;
+      });
+var __importStar =
+  (this && this.__importStar) ||
+  function (mod) {
     if (mod && mod.__esModule) return mod;
     var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    if (mod != null)
+      for (var k in mod)
+        if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k))
+          __createBinding(result, mod, k);
     __setModuleDefault(result, mod);
     return result;
-};
+  };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.processSendInvoiceEmail = exports.generateEmailHtml = void 0;
 const admin = __importStar(require("firebase-admin"));
 function generateEmailHtml(invoice) {
-    const paidDate = new Date(invoice.paid_at).toLocaleDateString("en-IN", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-    });
-    return `<!DOCTYPE html>
+  const paidDate = new Date(invoice.paid_at).toLocaleDateString("en-IN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
@@ -97,7 +118,9 @@ function generateEmailHtml(invoice) {
                           </table>
 
                           <!-- CTA Button -->
-                          ${invoice.invoice_pdf_url ? `
+                          ${
+                            invoice.invoice_pdf_url
+                              ? `
                           <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
                               <tr>
                                   <td align="center">
@@ -107,7 +130,9 @@ function generateEmailHtml(invoice) {
                                       </a>
                                   </td>
                               </tr>
-                          </table>` : ""}
+                          </table>`
+                              : ""
+                          }
 
                           <p style="font-size:13px;color:#888;line-height:1.6;margin:0;">
                               Your boost is now live! Buyers across the Andaman Islands will see your listing with priority placement.
@@ -131,93 +156,97 @@ function generateEmailHtml(invoice) {
 }
 exports.generateEmailHtml = generateEmailHtml;
 async function processSendInvoiceEmail(invoice_id) {
-    const db = admin.firestore();
-    // 1. Fetch invoice
-    const invoiceDoc = await db.collection("invoices").doc(invoice_id).get();
-    if (!invoiceDoc.exists) {
-        throw new Error("Invoice not found");
-    }
-    const invoice = invoiceDoc.data();
-    // 2. Skip if already sent
-    if (invoice.email_sent) {
-        console.log(`Email already sent for invoice ${invoice.invoice_number}`);
-        return { success: true, message: "Email already sent" };
-    }
-    // 3. Generate email HTML
-    const emailHtml = generateEmailHtml({
-        invoice_number: invoice.invoice_number,
-        customer_name: invoice.customer_name,
-        item_description: invoice.item_description,
-        amount_total: parseFloat(invoice.amount_total),
-        paid_at: invoice.paid_at || invoice.created_at || new Date().toISOString(),
-        invoice_pdf_url: invoice.invoice_pdf_url || "",
-    });
-    // 4. Send email via Resend
-    const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
-    if (!RESEND_API_KEY) {
-        console.warn("RESEND_API_KEY not set — logging email instead of sending");
-        console.log(`📧 Would send to: ${invoice.customer_email}`);
-        console.log(`📧 Subject: Your AndamanBazaar Invoice #${invoice.invoice_number}`);
-        // Mark as sent (dev mode)
-        await invoiceDoc.ref.update({
-            email_sent: true,
-            email_sent_at: new Date().toISOString()
-        });
-        return {
-            success: true,
-            message: "Email logged (no API key configured)",
-            to: invoice.customer_email,
-        };
-    }
-    const emailResponse = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${RESEND_API_KEY}`,
-        },
-        body: JSON.stringify({
-            from: "AndamanBazaar <noreply@andamanbazaar.in>",
-            to: [invoice.customer_email],
-            subject: `Your AndamanBazaar Invoice #${invoice.invoice_number}`,
-            html: emailHtml,
-        }),
-    });
-    const emailResult = await emailResponse.json();
-    if (!emailResponse.ok) {
-        console.error("Resend API error:", emailResult);
-        // Audit log the failure
-        await db.collection("payment_audit_log").add({
-            boost_id: invoice.boost_id,
-            event_type: "email_failed",
-            cashfree_order_id: invoice.cashfree_order_id,
-            raw_payload: emailResult,
-            created_at: admin.firestore.FieldValue.serverTimestamp()
-        });
-        throw new Error(`Failed to send email: ${JSON.stringify(emailResult)}`);
-    }
-    // 5. Update invoice
+  const db = admin.firestore();
+  // 1. Fetch invoice
+  const invoiceDoc = await db.collection("invoices").doc(invoice_id).get();
+  if (!invoiceDoc.exists) {
+    throw new Error("Invoice not found");
+  }
+  const invoice = invoiceDoc.data();
+  // 2. Skip if already sent
+  if (invoice.email_sent) {
+    console.log(`Email already sent for invoice ${invoice.invoice_number}`);
+    return { success: true, message: "Email already sent" };
+  }
+  // 3. Generate email HTML
+  const emailHtml = generateEmailHtml({
+    invoice_number: invoice.invoice_number,
+    customer_name: invoice.customer_name,
+    item_description: invoice.item_description,
+    amount_total: parseFloat(invoice.amount_total),
+    paid_at: invoice.paid_at || invoice.created_at || new Date().toISOString(),
+    invoice_pdf_url: invoice.invoice_pdf_url || "",
+  });
+  // 4. Send email via Resend
+  const RESEND_API_KEY = process.env.RESEND_API_KEY || "";
+  if (!RESEND_API_KEY) {
+    console.warn("RESEND_API_KEY not set — logging email instead of sending");
+    console.log(`📧 Would send to: ${invoice.customer_email}`);
+    console.log(
+      `📧 Subject: Your AndamanBazaar Invoice #${invoice.invoice_number}`,
+    );
+    // Mark as sent (dev mode)
     await invoiceDoc.ref.update({
-        email_sent: true,
-        email_sent_at: new Date().toISOString()
+      email_sent: true,
+      email_sent_at: new Date().toISOString(),
     });
-    // 6. Audit log
-    await db.collection("payment_audit_log").add({
-        boost_id: invoice.boost_id,
-        event_type: "invoice_emailed",
-        cashfree_order_id: invoice.cashfree_order_id,
-        raw_payload: {
-            invoice_number: invoice.invoice_number,
-            to: invoice.customer_email,
-            resend_id: emailResult.id,
-        },
-        created_at: admin.firestore.FieldValue.serverTimestamp()
-    });
-    console.log(`📧 Invoice email sent: ${invoice.invoice_number} → ${invoice.customer_email}`);
     return {
-        success: true,
-        message: "Invoice email sent",
-        resend_id: emailResult.id,
+      success: true,
+      message: "Email logged (no API key configured)",
+      to: invoice.customer_email,
     };
+  }
+  const emailResponse = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${RESEND_API_KEY}`,
+    },
+    body: JSON.stringify({
+      from: "AndamanBazaar <noreply@andamanbazaar.in>",
+      to: [invoice.customer_email],
+      subject: `Your AndamanBazaar Invoice #${invoice.invoice_number}`,
+      html: emailHtml,
+    }),
+  });
+  const emailResult = await emailResponse.json();
+  if (!emailResponse.ok) {
+    console.error("Resend API error:", emailResult);
+    // Audit log the failure
+    await db.collection("payment_audit_log").add({
+      boost_id: invoice.boost_id,
+      event_type: "email_failed",
+      cashfree_order_id: invoice.cashfree_order_id,
+      raw_payload: emailResult,
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    throw new Error(`Failed to send email: ${JSON.stringify(emailResult)}`);
+  }
+  // 5. Update invoice
+  await invoiceDoc.ref.update({
+    email_sent: true,
+    email_sent_at: new Date().toISOString(),
+  });
+  // 6. Audit log
+  await db.collection("payment_audit_log").add({
+    boost_id: invoice.boost_id,
+    event_type: "invoice_emailed",
+    cashfree_order_id: invoice.cashfree_order_id,
+    raw_payload: {
+      invoice_number: invoice.invoice_number,
+      to: invoice.customer_email,
+      resend_id: emailResult.id,
+    },
+    created_at: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  console.log(
+    `📧 Invoice email sent: ${invoice.invoice_number} → ${invoice.customer_email}`,
+  );
+  return {
+    success: true,
+    message: "Invoice email sent",
+    resend_id: emailResult.id,
+  };
 }
 exports.processSendInvoiceEmail = processSendInvoiceEmail;
 //# sourceMappingURL=sendInvoiceEmail.js.map

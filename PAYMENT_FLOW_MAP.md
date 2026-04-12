@@ -3,6 +3,7 @@
 Complete mapping of the payment architecture, Cashfree integration, and financial workflows in AndamanBazaar.
 
 ## 📋 Table of Contents
+
 - [Payment Architecture Overview](#payment-architecture-overview)
 - [Cashfree Integration](#cashfree-integration)
 - [Payment Flow States](#payment-flow-states)
@@ -35,6 +36,7 @@ graph TD
 ```
 
 **Components**:
+
 - **Frontend**: React modal with pricing tiers
 - **Backend**: Supabase Edge Functions (Deno runtime)
 - **Payment Gateway**: Cashfree Payments
@@ -63,9 +65,9 @@ CASHFREE_SECRET_KEY=your_cashfree_secret_key
 import { Cashfree } from "cashfree-pg";
 
 const cashfree = new Cashfree({
-  environment: process.env.CASHFREE_ENV || 'sandbox',
+  environment: process.env.CASHFREE_ENV || "sandbox",
   appId: process.env.CASHFREE_APP_ID,
-  secretKey: process.env.CASHFREE_SECRET_KEY
+  secretKey: process.env.CASHFREE_SECRET_KEY,
 });
 ```
 
@@ -80,7 +82,7 @@ const paymentMethods = {
   upi: "UPI",
   card: "Credit/Debit Card",
   netbanking: "Net Banking",
-  wallet: "Wallet"
+  wallet: "Wallet",
 };
 ```
 
@@ -95,14 +97,14 @@ const paymentMethods = {
 
 ```typescript
 // Payment States
-type PaymentStatus = 'pending' | 'paid' | 'failed' | 'expired';
+type PaymentStatus = "pending" | "paid" | "failed" | "expired";
 
 // State Transitions
 const stateTransitions = {
-  pending: ['paid', 'failed', 'expired'],
+  pending: ["paid", "failed", "expired"],
   paid: [], // Terminal state
-  failed: ['pending'], // Can retry
-  expired: ['pending'] // Can retry
+  failed: ["pending"], // Can retry
+  expired: ["pending"], // Can retry
 };
 ```
 
@@ -112,17 +114,18 @@ const stateTransitions = {
 ### **Payment Flow Steps** ✅ **CONFIRMED IN USE**
 
 #### **Step 1: Initiation**
+
 ```typescript
 // User selects boost tier
-const selectedTier = BOOST_TIERS.find(t => t.key === tierKey);
+const selectedTier = BOOST_TIERS.find((t) => t.key === tierKey);
 
 // Call Edge Function
-const { data, error } = await supabase.functions.invoke('create-boost-order', {
+const { data, error } = await supabase.functions.invoke("create-boost-order", {
   body: {
     listingId,
     tier: selectedTier.key,
-    priceInr: selectedTier.priceInr
-  }
+    priceInr: selectedTier.priceInr,
+  },
 });
 ```
 
@@ -130,6 +133,7 @@ const { data, error } = await supabase.functions.invoke('create-boost-order', {
 **Status**: ✅ **Active**
 
 #### **Step 2: Order Creation**
+
 ```typescript
 // Edge Function: create-boost-order
 const orderData = {
@@ -139,13 +143,13 @@ const orderData = {
   customer_details: {
     customer_id: user.id,
     customer_email: user.email,
-    customer_phone: user.phone
+    customer_phone: user.phone,
   },
   order_meta: {
     listing_id: listingId,
     tier: tier,
-    return_url: `${window.location.origin}/boost-success`
-  }
+    return_url: `${window.location.origin}/boost-success`,
+  },
 };
 ```
 
@@ -153,12 +157,14 @@ const orderData = {
 **Status**: ✅ **Active**
 
 #### **Step 3: Payment Redirect**
+
 ```typescript
 // Redirect to Cashfree
-const cashfreeEnv = import.meta.env.VITE_CASHFREE_ENV || 'sandbox';
-const baseUrl = cashfreeEnv === 'production'
-  ? 'https://payments.cashfree.com/pg/view/order'
-  : 'https://sandbox.cashfree.com/pg/view/order';
+const cashfreeEnv = import.meta.env.VITE_CASHFREE_ENV || "sandbox";
+const baseUrl =
+  cashfreeEnv === "production"
+    ? "https://payments.cashfree.com/pg/view/order"
+    : "https://sandbox.cashfree.com/pg/view/order";
 
 window.location.href = `${baseUrl}/${paymentSessionId}`;
 ```
@@ -167,6 +173,7 @@ window.location.href = `${baseUrl}/${paymentSessionId}`;
 **Status**: ✅ **Active**
 
 #### **Step 4: Payment Processing**
+
 ```mermaid
 graph TD
     A[Cashfree Payment Page] --> B[User Selects Payment Method]
@@ -179,15 +186,16 @@ graph TD
 **Status**: ✅ **Active** - Handled by Cashfree
 
 #### **Step 5: Webhook Processing**
+
 ```typescript
 // Edge Function: cashfree-webhook
 const webhookData = await req.json();
-const signature = req.headers.get('x-cashfree-signature');
+const signature = req.headers.get("x-cashfree-signature");
 
 // Verify signature
 const isValidSignature = verifySignature(webhookData, signature);
 
-if (webhookData.event === 'PAYMENT_SUCCESS_WEBHOOK') {
+if (webhookData.event === "PAYMENT_SUCCESS_WEBHOOK") {
   // Update database
   // Activate boost
   // Generate invoice
@@ -198,13 +206,14 @@ if (webhookData.event === 'PAYMENT_SUCCESS_WEBHOOK') {
 **Status**: ✅ **Active**
 
 #### **Step 6: Completion**
+
 ```typescript
 // Boost Success Page
 const checkOrderStatus = async () => {
   const { data } = await supabase
-    .from('listing_boosts')
-    .select('status, listing_id')
-    .eq('cashfree_order_id', orderId)
+    .from("listing_boosts")
+    .select("status, listing_id")
+    .eq("cashfree_order_id", orderId)
     .single();
 };
 ```
@@ -222,42 +231,46 @@ const checkOrderStatus = async () => {
 // supabase/functions/create-boost-order/index.ts
 Deno.serve(async (req) => {
   // 1. Authenticate user
-  const { data: { user } } = await supabase.auth.getUser();
-  
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   // 2. Validate listing ownership
   const { data: listing } = await supabase
-    .from('listings')
-    .select('user_id')
-    .eq('id', listingId)
+    .from("listings")
+    .select("user_id")
+    .eq("id", listingId)
     .single();
-  
+
   // 3. Create pending boost record
   const { data: boost } = await supabase
-    .from('listing_boosts')
-    .insert([{
-      listing_id: listingId,
-      user_id: user.id,
-      tier: tier,
-      price_in_cents: priceInPaise,
-      status: 'pending',
-      cashfree_order_id: orderId
-    }])
+    .from("listing_boosts")
+    .insert([
+      {
+        listing_id: listingId,
+        user_id: user.id,
+        tier: tier,
+        price_in_cents: priceInPaise,
+        status: "pending",
+        cashfree_order_id: orderId,
+      },
+    ])
     .select()
     .single();
-  
+
   // 4. Create Cashfree order
   const order = await cashfree.createOrder(orderData);
-  
+
   // 5. Log audit event
   await logAuditEvent({
-    event_type: 'payment_initiated',
+    event_type: "payment_initiated",
     user_id: user.id,
-    details: { orderId, tier, amount: priceInPaise }
+    details: { orderId, tier, amount: priceInPaise },
   });
-  
-  return Response.json({ 
+
+  return Response.json({
     payment_session_id: order.order_session_id,
-    order_id: orderId 
+    order_id: orderId,
   });
 });
 ```
@@ -272,55 +285,55 @@ Deno.serve(async (req) => {
 // supabase/functions/cashfree-webhook/index.ts
 Deno.serve(async (req) => {
   // 1. Verify webhook signature
-  const signature = req.headers.get('x-cashfree-signature');
+  const signature = req.headers.get("x-cashfree-signature");
   const payload = await req.text();
-  
+
   const isValidSignature = verifySignature(payload, signature);
   if (!isValidSignature) {
-    return new Response('Invalid signature', { status: 401 });
+    return new Response("Invalid signature", { status: 401 });
   }
-  
+
   // 2. Parse webhook data
   const webhookData = JSON.parse(payload);
-  
+
   // 3. Process based on event type
-  if (webhookData.event === 'PAYMENT_SUCCESS_WEBHOOK') {
+  if (webhookData.event === "PAYMENT_SUCCESS_WEBHOOK") {
     await handlePaymentSuccess(webhookData.data);
-  } else if (webhookData.event === 'PAYMENT_FAILED_WEBHOOK') {
+  } else if (webhookData.event === "PAYMENT_FAILED_WEBHOOK") {
     await handlePaymentFailure(webhookData.data);
   }
-  
-  return new Response('Webhook processed', { status: 200 });
+
+  return new Response("Webhook processed", { status: 200 });
 });
 
 async function handlePaymentSuccess(paymentData) {
   // 1. Update boost status
   const { error } = await supabase
-    .from('listing_boosts')
+    .from("listing_boosts")
     .update({
-      status: 'paid',
-      featured_until: calculateExpiryDate(tier)
+      status: "paid",
+      featured_until: calculateExpiryDate(tier),
     })
-    .eq('cashfree_order_id', paymentData.order_id);
-  
+    .eq("cashfree_order_id", paymentData.order_id);
+
   // 2. Activate listing boost
   await supabase
-    .from('listings')
+    .from("listings")
     .update({
       is_featured: true,
       featured_until: calculateExpiryDate(tier),
-      featured_tier: tier
+      featured_tier: tier,
     })
-    .eq('id', listingId);
-  
+    .eq("id", listingId);
+
   // 3. Generate invoice
   await generateInvoice(boostData);
-  
+
   // 4. Log audit event
   await logAuditEvent({
-    event_type: 'payment_success',
+    event_type: "payment_success",
     user_id: userId,
-    details: paymentData
+    details: paymentData,
   });
 }
 ```
@@ -335,50 +348,52 @@ async function handlePaymentSuccess(paymentData) {
 // supabase/functions/generate-invoice/index.ts
 Deno.serve(async (req) => {
   const { boostId } = await req.json();
-  
+
   // 1. Get boost details
   const { data: boost } = await supabase
-    .from('listing_boosts')
-    .select('*, listings(title), users(email, name)')
-    .eq('id', boostId)
+    .from("listing_boosts")
+    .select("*, listings(title), users(email, name)")
+    .eq("id", boostId)
     .single();
-  
+
   // 2. Generate invoice number
   const invoiceNumber = `INV-${Date.now()}-${boost.id.slice(-6)}`;
-  
+
   // 3. Create invoice record
   const { data: invoice } = await supabase
-    .from('invoices')
-    .insert([{
-      user_id: boost.user_id,
-      listing_boost_id: boost.id,
-      invoice_number: invoiceNumber,
-      amount_in_cents: boost.price_in_cents,
-      status: 'paid',
-      cashfree_order_id: boost.cashfree_order_id,
-      payment_method: paymentData.payment_method
-    }])
+    .from("invoices")
+    .insert([
+      {
+        user_id: boost.user_id,
+        listing_boost_id: boost.id,
+        invoice_number: invoiceNumber,
+        amount_in_cents: boost.price_in_cents,
+        status: "paid",
+        cashfree_order_id: boost.cashfree_order_id,
+        payment_method: paymentData.payment_method,
+      },
+    ])
     .select()
     .single();
-  
+
   // 4. Generate PDF invoice
   const pdfBuffer = await generateInvoicePDF(invoice, boost);
-  
+
   // 5. Upload to Supabase Storage
   const filePath = `invoices/${invoiceNumber}.pdf`;
   const { data } = await supabase.storage
-    .from('invoice-pdfs')
+    .from("invoice-pdfs")
     .upload(filePath, pdfBuffer);
-  
+
   // 6. Update invoice with PDF URL
   await supabase
-    .from('invoices')
+    .from("invoices")
     .update({ invoice_pdf_url: data.publicUrl })
-    .eq('id', invoice.id);
-  
-  return Response.json({ 
+    .eq("id", invoice.id);
+
+  return Response.json({
     invoice_id: invoice.id,
-    invoice_url: data.publicUrl 
+    invoice_url: data.publicUrl,
   });
 });
 ```
@@ -393,31 +408,31 @@ Deno.serve(async (req) => {
 // supabase/functions/send-invoice-email/index.ts
 Deno.serve(async (req) => {
   const { invoiceId } = await req.json();
-  
+
   // 1. Get invoice details
   const { data: invoice } = await supabase
-    .from('invoices')
-    .select('*, users(email, name)')
-    .eq('id', invoiceId)
+    .from("invoices")
+    .select("*, users(email, name)")
+    .eq("id", invoiceId)
     .single();
-  
+
   // 2. Send email
   await sendEmail({
     to: invoice.users.email,
     subject: `Invoice ${invoice.invoice_number} - AndamanBazaar`,
-    template: 'invoice',
-    data: invoice
+    template: "invoice",
+    data: invoice,
   });
-  
+
   // 3. Update email status
   await supabase
-    .from('invoices')
-    .update({ 
+    .from("invoices")
+    .update({
       email_sent: true,
-      email_sent_at: new Date().toISOString()
+      email_sent_at: new Date().toISOString(),
     })
-    .eq('id', invoiceId);
-  
+    .eq("id", invoiceId);
+
   return Response.json({ success: true });
 });
 ```
@@ -497,12 +512,12 @@ CREATE TABLE payment_audit_log (
 ```typescript
 // Signature verification function
 function verifySignature(payload: string, signature: string): boolean {
-  const secret = Deno.env.get('CASHFREE_SECRET_KEY');
+  const secret = Deno.env.get("CASHFREE_SECRET_KEY");
   const expectedSignature = crypto
-    .createHmac('sha256', secret)
+    .createHmac("sha256", secret)
     .update(payload)
-    .digest('base64');
-  
+    .digest("base64");
+
   return signature === expectedSignature;
 }
 ```
@@ -518,7 +533,7 @@ function validateTimestamp(webhookData: any): boolean {
   const webhookTime = new Date(webhookData.created_at);
   const currentTime = new Date();
   const timeDiff = Math.abs(currentTime.getTime() - webhookTime.getTime());
-  
+
   // Reject webhooks older than 5 minutes
   return timeDiff < 5 * 60 * 1000;
 }
@@ -532,13 +547,13 @@ function validateTimestamp(webhookData: any): boolean {
 ```typescript
 // Ownership verification
 const { data: listing } = await supabase
-  .from('listings')
-  .select('user_id')
-  .eq('id', listingId)
+  .from("listings")
+  .select("user_id")
+  .eq("id", listingId)
   .single();
 
 if (listing.user_id !== user.id) {
-  return new Response('Unauthorized', { status: 403 });
+  return new Response("Unauthorized", { status: 403 });
 }
 ```
 
@@ -549,20 +564,20 @@ if (listing.user_id !== user.id) {
 
 ```typescript
 // Validate boost tier
-const validTiers = ['spark', 'boost', 'power'];
+const validTiers = ["spark", "boost", "power"];
 if (!validTiers.includes(tier)) {
-  return new Response('Invalid tier', { status: 400 });
+  return new Response("Invalid tier", { status: 400 });
 }
 
 // Validate amount
 const tierPrices = {
-  spark: 4900,  // ₹49
-  boost: 9900,  // ₹99
-  power: 19900  // ₹199
+  spark: 4900, // ₹49
+  boost: 9900, // ₹99
+  power: 19900, // ₹199
 };
 
 if (priceInPaise !== tierPrices[tier]) {
-  return new Response('Invalid amount', { status: 400 });
+  return new Response("Invalid amount", { status: 400 });
 }
 ```
 
@@ -580,20 +595,20 @@ if (priceInPaise !== tierPrices[tier]) {
 async function handlePaymentFailure(paymentData) {
   // 1. Update boost status
   await supabase
-    .from('listing_boosts')
-    .update({ status: 'failed' })
-    .eq('cashfree_order_id', paymentData.order_id);
-  
+    .from("listing_boosts")
+    .update({ status: "failed" })
+    .eq("cashfree_order_id", paymentData.order_id);
+
   // 2. Log audit event
   await logAuditEvent({
-    event_type: 'payment_failed',
+    event_type: "payment_failed",
     user_id: userId,
     details: {
       order_id: paymentData.order_id,
-      error: paymentData.error_message
-    }
+      error: paymentData.error_message,
+    },
   });
-  
+
   // 3. Notify user (optional)
   // Could implement notification system here
 }
@@ -609,16 +624,16 @@ async function handlePaymentFailure(paymentData) {
 try {
   // Payment processing logic
 } catch (error) {
-  console.error('Payment processing error:', error);
-  
+  console.error("Payment processing error:", error);
+
   // Log audit event
   await logAuditEvent({
-    event_type: 'payment_error',
+    event_type: "payment_error",
     user_id: user?.id,
-    details: { error: error.message }
+    details: { error: error.message },
   });
-  
-  return new Response('Internal server error', { status: 500 });
+
+  return new Response("Internal server error", { status: 500 });
 }
 ```
 
@@ -630,18 +645,21 @@ try {
 ```typescript
 // BoostListingModal error handling
 try {
-  const { data, error } = await supabase.functions.invoke('create-boost-order', {
-    body: { listingId, tier }
-  });
-  
+  const { data, error } = await supabase.functions.invoke(
+    "create-boost-order",
+    {
+      body: { listingId, tier },
+    },
+  );
+
   if (error) {
-    throw new Error(error.message || 'Failed to create payment order');
+    throw new Error(error.message || "Failed to create payment order");
   }
-  
+
   // Redirect to payment
   window.location.href = paymentUrl;
 } catch (error) {
-  console.error('Payment initiation error:', error);
+  console.error("Payment initiation error:", error);
   // Show error to user
   setError(error.message);
 }
@@ -659,9 +677,9 @@ try {
 ```typescript
 // Supported webhook events
 const webhookEvents = {
-  'PAYMENT_SUCCESS_WEBHOOK': handlePaymentSuccess,
-  'PAYMENT_FAILED_WEBHOOK': handlePaymentFailure,
-  'PAYMENT_EXPIRED_WEBHOOK': handlePaymentExpiry
+  PAYMENT_SUCCESS_WEBHOOK: handlePaymentSuccess,
+  PAYMENT_FAILED_WEBHOOK: handlePaymentFailure,
+  PAYMENT_EXPIRED_WEBHOOK: handlePaymentExpiry,
 };
 ```
 
@@ -672,13 +690,13 @@ const webhookEvents = {
 ```typescript
 // Prevent duplicate processing
 const existingBoost = await supabase
-  .from('listing_boosts')
-  .select('status')
-  .eq('cashfree_order_id', orderId)
+  .from("listing_boosts")
+  .select("status")
+  .eq("cashfree_order_id", orderId)
   .single();
 
-if (existingBoost.status === 'paid') {
-  return new Response('Already processed', { status: 200 });
+if (existingBoost.status === "paid") {
+  return new Response("Already processed", { status: 200 });
 }
 ```
 
@@ -692,7 +710,7 @@ if (existingBoost.status === 'paid') {
 const webhookConfig = {
   maxRetries: 3,
   retryDelay: 1000, // 1 second
-  backoffMultiplier: 2
+  backoffMultiplier: 2,
 };
 
 // Retry failed webhook processing
@@ -701,8 +719,13 @@ async function processWebhookWithRetry(webhookData, retryCount = 0) {
     await processWebhook(webhookData);
   } catch (error) {
     if (retryCount < webhookConfig.maxRetries) {
-      const delay = webhookConfig.retryDelay * Math.pow(webhookConfig.backoffMultiplier, retryCount);
-      setTimeout(() => processWebhookWithRetry(webhookData, retryCount + 1), delay);
+      const delay =
+        webhookConfig.retryDelay *
+        Math.pow(webhookConfig.backoffMultiplier, retryCount);
+      setTimeout(
+        () => processWebhookWithRetry(webhookData, retryCount + 1),
+        delay,
+      );
     } else {
       throw error;
     }
@@ -722,24 +745,26 @@ async function processWebhookWithRetry(webhookData, retryCount = 0) {
 ```typescript
 // Invoice data structure
 const invoiceData = {
-  invoice_number: 'INV-123456789',
+  invoice_number: "INV-123456789",
   date: new Date().toISOString(),
   due_date: new Date().toISOString(),
   customer: {
     name: user.name,
     email: user.email,
-    phone: user.phone
+    phone: user.phone,
   },
-  items: [{
-    description: `${tier.charAt(0).toUpperCase() + tier.slice(1)} Boost - ${listing.title}`,
-    quantity: 1,
-    unit_price: priceInr,
-    total: priceInr
-  }],
+  items: [
+    {
+      description: `${tier.charAt(0).toUpperCase() + tier.slice(1)} Boost - ${listing.title}`,
+      quantity: 1,
+      unit_price: priceInr,
+      total: priceInr,
+    },
+  ],
   total_amount: priceInr,
   tax_amount: 0,
   payment_method: paymentData.payment_method,
-  status: 'Paid'
+  status: "Paid",
 };
 ```
 
@@ -751,27 +776,35 @@ const invoiceData = {
 // PDF generation (using library like jsPDF or similar)
 async function generateInvoicePDF(invoice, boost) {
   const pdf = new jsPDF();
-  
+
   // Add invoice header
   pdf.setFontSize(20);
-  pdf.text('INVOICE', 20, 20);
-  
+  pdf.text("INVOICE", 20, 20);
+
   // Add invoice details
   pdf.setFontSize(12);
   pdf.text(`Invoice Number: ${invoice.invoice_number}`, 20, 40);
-  pdf.text(`Date: ${new Date(invoice.created_at).toLocaleDateString()}`, 20, 50);
-  
+  pdf.text(
+    `Date: ${new Date(invoice.created_at).toLocaleDateString()}`,
+    20,
+    50,
+  );
+
   // Add customer details
-  pdf.text('Customer Details:', 20, 70);
+  pdf.text("Customer Details:", 20, 70);
   pdf.text(`Name: ${boost.users.name}`, 20, 80);
   pdf.text(`Email: ${boost.users.email}`, 20, 90);
-  
+
   // Add item details
-  pdf.text('Item Details:', 20, 110);
-  pdf.text(`Description: ${boost.tier} Boost - ${boost.listings.title}`, 20, 120);
+  pdf.text("Item Details:", 20, 110);
+  pdf.text(
+    `Description: ${boost.tier} Boost - ${boost.listings.title}`,
+    20,
+    120,
+  );
   pdf.text(`Amount: ₹${(boost.price_in_cents / 100).toFixed(2)}`, 20, 130);
-  
-  return pdf.output('arraybuffer');
+
+  return pdf.output("arraybuffer");
 }
 ```
 
@@ -798,12 +831,14 @@ async function sendInvoiceEmail(invoice, boost) {
       Best regards,
       AndamanBazaar Team
     `,
-    attachments: [{
-      filename: `${invoice.invoice_number}.pdf`,
-      content: invoice.pdf_buffer
-    }]
+    attachments: [
+      {
+        filename: `${invoice.invoice_number}.pdf`,
+        content: invoice.pdf_buffer,
+      },
+    ],
   };
-  
+
   await sendEmail(emailContent);
 }
 ```
@@ -816,6 +851,7 @@ async function sendInvoiceEmail(invoice, boost) {
 ## 🚀 Migration Impact
 
 ### **No Impact Components** (95%)
+
 - ✅ Cashfree integration (Edge Functions remain on Supabase)
 - ✅ Payment processing logic
 - ✅ Database schema and tables
@@ -825,6 +861,7 @@ async function sendInvoiceEmail(invoice, boost) {
 - ✅ Error handling
 
 ### **Configuration Updates Required** (5%)
+
 - ⚠️ Webhook URL update (new Firebase hosting URL)
 - ⚠️ Environment variable verification
 - ⚠️ Return URL configuration
@@ -866,6 +903,7 @@ async function sendInvoiceEmail(invoice, boost) {
 ## 🎯 Migration Readiness Assessment
 
 ### **✅ Ready for Migration**
+
 - All payment processing stays on Supabase Edge Functions
 - Cashfree integration remains unchanged
 - Database schema is complete and tested
@@ -873,11 +911,13 @@ async function sendInvoiceEmail(invoice, boost) {
 - Error handling is robust
 
 ### **⚠️ Migration Work Required**
+
 - Update webhook URL to point to new Firebase hosting
 - Verify return URLs are correct
 - Test webhook connectivity after migration
 
 ### **🎯 Post-Migration Benefits**
+
 - Improved frontend performance (Firebase CDN)
 - Better security headers (Firebase hosting)
 - Easier maintenance (single hosting platform)

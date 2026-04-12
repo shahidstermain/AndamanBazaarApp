@@ -7,15 +7,17 @@ This document outlines the complete migration of AndamanBazaar from Supabase to 
 ## Migration Phases
 
 ### Phase 1: Firebase Authentication ✅
+
 - **Status**: Complete
 - **Files Modified**: `src/lib/auth.ts`
-- **Key Changes**: 
+- **Key Changes**:
   - Dual-auth system supporting both Firebase and Supabase
   - Environment-based provider selection
   - Automatic fallback between providers
 - **Environment Variables**: `VITE_AUTH_PROVIDER` (firebase/supabase/dual)
 
 ### Phase 2: Firebase Firestore Setup ✅
+
 - **Status**: Complete
 - **Files Modified**: `src/lib/firebase.ts`
 - **Key Changes**:
@@ -25,6 +27,7 @@ This document outlines the complete migration of AndamanBazaar from Supabase to 
 - **Configuration**: Firebase project configuration
 
 ### Phase 3: Firebase Security Rules ✅
+
 - **Status**: Complete
 - **Files Modified**: `firestore.rules`, `storage.rules`
 - **Key Changes**:
@@ -34,6 +37,7 @@ This document outlines the complete migration of AndamanBazaar from Supabase to 
 - **Security**: All rules enforce `request.auth.uid` validation
 
 ### Phase 4: Firestore Data Layer Migration ✅
+
 - **Status**: Complete
 - **Files Modified**: `src/lib/database.ts`
 - **Key Changes**:
@@ -44,6 +48,7 @@ This document outlines the complete migration of AndamanBazaar from Supabase to 
 - **Environment Variables**: `VITE_DATABASE_PROVIDER` (firebase/supabase/dual)
 
 ### Phase 5: Firebase Storage Migration ✅
+
 - **Status**: Complete
 - **Files Modified**: `src/lib/storage.ts`
 - **Key Changes**:
@@ -54,6 +59,7 @@ This document outlines the complete migration of AndamanBazaar from Supabase to 
 - **Environment Variables**: `VITE_STORAGE_PROVIDER` (firebase/supabase/dual)
 
 ### Phase 6: Edge Functions Migration ✅
+
 - **Status**: Complete
 - **Files Modified**: `src/lib/functions.ts`, `functions/src/*.ts`
 - **Key Changes**:
@@ -64,6 +70,7 @@ This document outlines the complete migration of AndamanBazaar from Supabase to 
 - **Environment Variables**: `VITE_FUNCTION_PROVIDER` (firebase/supabase/dual)
 
 ### Phase 7: Frontend Integration & Testing 🔄
+
 - **Status**: In Progress
 - **Files Modified**: Various components
 - **Key Changes**:
@@ -114,22 +121,25 @@ VITE_FIREBASE_HEALTH_FUNCTION=https://your-region-your-project.cloudfunctions.ne
 ## Migration Strategy
 
 ### Dual-Provider Mode
+
 During migration, all systems operate in dual mode:
+
 1. **Primary Provider**: Firebase (new system)
 2. **Fallback Provider**: Supabase (existing system)
 3. **Automatic Failover**: If Firebase fails, system falls back to Supabase
 4. **Gradual Migration**: Features can be migrated individually
 
 ### Provider Selection Logic
+
 ```typescript
 // Example: Database provider selection
 const provider = getDatabaseProvider();
 
-if (provider === 'firebase' && isFirebaseAvailable()) {
+if (provider === "firebase" && isFirebaseAvailable()) {
   // Use Firebase Firestore
-} else if (provider === 'supabase' && isSupabaseAvailable()) {
+} else if (provider === "supabase" && isSupabaseAvailable()) {
   // Use Supabase PostgreSQL
-} else if (provider === 'dual') {
+} else if (provider === "dual") {
   // Try Firebase first, fallback to Supabase
 }
 ```
@@ -137,16 +147,19 @@ if (provider === 'firebase' && isFirebaseAvailable()) {
 ## Data Migration
 
 ### Database Schema Conversion
+
 - **Supabase (PostgreSQL)**: Snake_case, relational tables
 - **Firebase (Firestore)**: CamelCase, document collections
 - **Conversion Layer**: Automatic field mapping and type conversion
 
 ### Storage Migration
+
 - **Supabase Storage**: Bucket-based with public URLs
 - **Firebase Storage**: Path-based with security rules
 - **Migration Utilities**: URL conversion and bulk transfer tools
 
 ### Function Migration
+
 - **Supabase Edge Functions**: Deno-based runtime
 - **Firebase Cloud Functions**: Node.js runtime
 - **API Compatibility**: Same interface, different implementations
@@ -154,16 +167,19 @@ if (provider === 'firebase' && isFirebaseAvailable()) {
 ## Security Considerations
 
 ### Authentication
+
 - Firebase Auth tokens for Firebase services
 - Supabase JWT tokens for Supabase services
 - Dual token management during migration
 
 ### Data Access
+
 - Firestore Security Rules enforce ownership
 - Storage Security Rules enforce path-based access
 - Function authentication validates user context
 
 ### API Security
+
 - Webhook signature verification
 - Rate limiting and abuse prevention
 - Input validation and sanitization
@@ -171,16 +187,19 @@ if (provider === 'firebase' && isFirebaseAvailable()) {
 ## Testing Strategy
 
 ### Unit Tests
+
 - Provider detection logic
 - Data format conversion
 - Error handling and fallbacks
 
 ### Integration Tests
+
 - End-to-end user flows
 - Cross-provider data consistency
 - Performance benchmarks
 
 ### Load Testing
+
 - Concurrent operations
 - Provider failover scenarios
 - Resource utilization
@@ -188,17 +207,20 @@ if (provider === 'firebase' && isFirebaseAvailable()) {
 ## Monitoring & Observability
 
 ### Migration Dashboard
+
 - Provider health status
 - Performance metrics
 - Error rates and alerts
 - Migration progress tracking
 
 ### Logging
+
 - Structured logging for all operations
 - Provider-specific log levels
 - Error tracking and alerting
 
 ### Metrics
+
 - Response times by provider
 - Success/error rates
 - Resource utilization
@@ -207,16 +229,19 @@ if (provider === 'firebase' && isFirebaseAvailable()) {
 ## Rollback Plan
 
 ### Immediate Rollback
+
 1. Set all provider environment variables to `supabase`
 2. Restart application services
 3. Verify Supabase functionality
 
 ### Partial Rollback
+
 1. Individual provider rollback by feature
 2. Component-level provider selection
 3. Gradual fallback to Supabase
 
 ### Data Consistency
+
 - No data loss during migration
 - Dual-write ensures data consistency
 - Point-in-time recovery options
@@ -224,16 +249,19 @@ if (provider === 'firebase' && isFirebaseAvailable()) {
 ## Performance Optimization
 
 ### Caching Strategy
+
 - Firebase offline persistence
 - Supabase connection pooling
 - Application-level caching
 
 ### Load Balancing
+
 - Provider-based load distribution
 - Geographic proximity routing
 - Automatic failover handling
 
 ### Resource Optimization
+
 - Connection pooling
 - Batch operations
 - Lazy loading strategies
@@ -241,16 +269,19 @@ if (provider === 'firebase' && isFirebaseAvailable()) {
 ## Deployment Strategy
 
 ### Blue-Green Deployment
+
 - Parallel environments
 - Traffic splitting
 - Gradual cutover
 
 ### Canary Releases
+
 - Feature flags for provider selection
 - A/B testing of providers
 - Gradual user migration
 
 ### Monitoring During Deployment
+
 - Real-time health checks
 - Performance metrics
 - Error rate monitoring
@@ -258,16 +289,19 @@ if (provider === 'firebase' && isFirebaseAvailable()) {
 ## Post-Migration Tasks
 
 ### Cleanup
+
 - Remove dual-provider code
 - Optimize Firebase-specific implementations
 - Update documentation
 
 ### Optimization
+
 - Fine-tune Firebase security rules
 - Optimize Cloud Functions
 - Implement Firebase-specific features
 
 ### Training
+
 - Team training on Firebase
 - Updated operational procedures
 - New monitoring practices
@@ -275,12 +309,14 @@ if (provider === 'firebase' && isFirebaseAvailable()) {
 ## Troubleshooting
 
 ### Common Issues
+
 1. **Provider Availability**: Check provider health endpoints
 2. **Data Consistency**: Verify dual-write synchronization
 3. **Performance**: Monitor provider-specific latencies
 4. **Authentication**: Validate token exchange
 
 ### Debug Tools
+
 - Migration dashboard
 - Provider-specific logs
 - Performance monitoring
@@ -289,11 +325,13 @@ if (provider === 'firebase' && isFirebaseAvailable()) {
 ## Support Contacts
 
 ### Firebase Support
+
 - Firebase documentation
 - Google Cloud support
 - Community forums
 
 ### Internal Support
+
 - Migration team
 - DevOps team
 - Application support
@@ -301,6 +339,7 @@ if (provider === 'firebase' && isFirebaseAvailable()) {
 ## Appendix
 
 ### Migration Checklist
+
 - [ ] Environment variables configured
 - [ ] Firebase project set up
 - [ ] Security rules implemented
@@ -313,6 +352,7 @@ if (provider === 'firebase' && isFirebaseAvailable()) {
 - [ ] Rollback plan tested
 
 ### References
+
 - [Firebase Documentation](https://firebase.google.com/docs)
 - [Supabase Documentation](https://supabase.com/docs)
 - [Migration Best Practices](https://cloud.google.com/architecture/best-practices-for-migrating-to-firebase)

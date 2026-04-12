@@ -1,28 +1,28 @@
 /* stylelint-disable at-rule-no-unknown */
 @tailwind base;
 @tailwind components;
-@tailwind utilities;/* ============================================
+@tailwind utilities; /* ============================================
    CSS CUSTOM PROPERTIES — ISLAND DESIGN TOKENS
    Refined from Stitch designs: Ocean + Coral palette
    ============================================ */
 :root {
   /* Brand Colors */
-  --color-ocean: #006D77;
-  --color-teal: #83C5BE;
-  --color-coral: #FF6B6B;
-  --color-coral-deep: #E05A5A;
+  --color-ocean: #006d77;
+  --color-teal: #83c5be;
+  --color-coral: #ff6b6b;
+  --color-coral-deep: #e05a5a;
   --color-sandy: #f5c842;
 
   /* Surfaces */
-  --color-surface: #F8FAFC;
-  --color-surface-card: #FFFFFF;
-  --color-dark: #0F172A;
-  --color-dark-card: #1E293B;
+  --color-surface: #f8fafc;
+  --color-surface-card: #ffffff;
+  --color-dark: #0f172a;
+  --color-dark-card: #1e293b;
 
   /* Text */
-  --color-text-main: #1E293B;
-  --color-text-sub: #64748B;
-  --color-text-muted: #94A3B8;
+  --color-text-main: #1e293b;
+  --color-text-sub: #64748b;
+  --color-text-muted: #94a3b8;
 
   /* Radii */
   --radius-card: 16px;
@@ -31,19 +31,43 @@
   --radius-pill: 9999px;
 
   /* Gradients */
-  --gradient-ocean: linear-gradient(135deg, #006D77 0%, #0d9e8a 50%, #83C5BE 100%);
-  --gradient-ocean-deep: linear-gradient(180deg, #0b1a2e 0%, #006D77 60%, #0d9e8a 100%);
-  --gradient-coral-warm: linear-gradient(135deg, #FF6B6B 0%, #ff8a76 50%, #fcd34d 100%);
-  --gradient-sand-mist: linear-gradient(180deg, rgba(250, 250, 247, 0) 0%, rgba(250, 250, 247, 1) 100%);
+  --gradient-ocean: linear-gradient(
+    135deg,
+    #006d77 0%,
+    #0d9e8a 50%,
+    #83c5be 100%
+  );
+  --gradient-ocean-deep: linear-gradient(
+    180deg,
+    #0b1a2e 0%,
+    #006d77 60%,
+    #0d9e8a 100%
+  );
+  --gradient-coral-warm: linear-gradient(
+    135deg,
+    #ff6b6b 0%,
+    #ff8a76 50%,
+    #fcd34d 100%
+  );
+  --gradient-sand-mist: linear-gradient(
+    180deg,
+    rgba(250, 250, 247, 0) 0%,
+    rgba(250, 250, 247, 1) 100%
+  );
 
   /* Shadows */
-  --shadow-card: 0 2px 12px -2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-card-hover: 0 20px 60px rgba(0, 109, 119, 0.12), 0 8px 20px rgba(0, 109, 119, 0.08);
-  --shadow-soft: 0 2px 8px -2px rgba(15, 23, 42, 0.08), 0 1px 4px -2px rgba(15, 23, 42, 0.04);
-  --shadow-floating: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  --shadow-card:
+    0 2px 12px -2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover:
+    0 20px 60px rgba(0, 109, 119, 0.12), 0 8px 20px rgba(0, 109, 119, 0.08);
+  --shadow-soft:
+    0 2px 8px -2px rgba(15, 23, 42, 0.08), 0 1px 4px -2px rgba(15, 23, 42, 0.04);
+  --shadow-floating:
+    0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
   --shadow-coral-glow: 0 8px 32px rgba(255, 107, 107, 0.25);
   --shadow-ocean-glow: 0 8px 32px rgba(0, 109, 119, 0.25);
-  --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  --shadow-glass:
+    0 8px 32px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
   --shadow-nav: 0 -4px 24px rgba(0, 0, 0, 0.06);
   --shadow-elevated: 0 24px 48px -12px rgba(0, 0, 0, 0.12);
 
@@ -58,7 +82,7 @@
   --mesh-1: hsla(180, 52%, 24%, 0.4);
   --mesh-2: hsla(13, 100%, 71%, 0.15);
   --mesh-3: hsla(174, 38%, 64%, 0.2);
-  --mesh-bg: #F8FAFC;
+  --mesh-bg: #f8fafc;
 }
 
 /* ============================================
@@ -70,11 +94,19 @@
   }
 
   .bg-radial-teal-glow {
-    background: radial-gradient(circle, rgba(131, 197, 190, 0.6) 0%, transparent 70%);
+    background: radial-gradient(
+      circle,
+      rgba(131, 197, 190, 0.6) 0%,
+      transparent 70%
+    );
   }
 
   .bg-radial-sandy-glow {
-    background: radial-gradient(circle, rgba(245, 200, 66, 0.4) 0%, transparent 70%);
+    background: radial-gradient(
+      circle,
+      rgba(245, 200, 66, 0.4) 0%,
+      transparent 70%
+    );
   }
 
   .ease-out-expo {
@@ -82,15 +114,23 @@
   }
 
   .bg-gradient-flash {
-    background: linear-gradient(135deg, #FF6B6B 0%, #ff8a76 40%, #fcd34d 100%);
+    background: linear-gradient(135deg, #ff6b6b 0%, #ff8a76 40%, #fcd34d 100%);
   }
 
   .bg-flash-highlight {
-    background-image: radial-gradient(circle at 80% 20%, white 0%, transparent 50%);
+    background-image: radial-gradient(
+      circle at 80% 20%,
+      white 0%,
+      transparent 50%
+    );
   }
 
   .bg-gradient-verified {
-    background: linear-gradient(135deg, rgba(0, 109, 119, 0.06) 0%, rgba(131, 197, 190, 0.12) 100%);
+    background: linear-gradient(
+      135deg,
+      rgba(0, 109, 119, 0.06) 0%,
+      rgba(131, 197, 190, 0.12) 100%
+    );
   }
 
   .bg-radial-verified-glow {
@@ -98,7 +138,11 @@
   }
 
   .bg-seasonal-highlight {
-    background-image: radial-gradient(ellipse at 70% 30%, rgba(131, 197, 190, 0.4) 0%, transparent 60%);
+    background-image: radial-gradient(
+      ellipse at 70% 30%,
+      rgba(131, 197, 190, 0.4) 0%,
+      transparent 60%
+    );
   }
 }
 
@@ -161,7 +205,7 @@
 
   ::selection {
     background-color: rgba(0, 109, 119, 0.2);
-    color: #0F172A;
+    color: #0f172a;
   }
 
   h1,
@@ -183,8 +227,14 @@
    ============================================ */
 @layer components {
   /* --- Typography Scale --- */
-  .text-2xs { font-size: 0.625rem; line-height: 0.75rem; } /* 10px - labels, badges */
-  .text-3xs { font-size: 0.5rem; line-height: 0.625rem; } /* 8px - tiny badges */
+  .text-2xs {
+    font-size: 0.625rem;
+    line-height: 0.75rem;
+  } /* 10px - labels, badges */
+  .text-3xs {
+    font-size: 0.5rem;
+    line-height: 0.625rem;
+  } /* 8px - tiny badges */
 
   .app-container {
     @apply max-w-7xl mx-auto px-4 md:px-6;
@@ -201,7 +251,6 @@
       max-width: 100rem;
     }
   }
-
 
   /* --- Glass Morphism --- */
   .glass {
@@ -230,7 +279,8 @@
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-card);
     border: 1px solid rgba(226, 232, 240, 0.6);
-    transition: transform var(--duration-normal) var(--ease-out-expo),
+    transition:
+      transform var(--duration-normal) var(--ease-out-expo),
       box-shadow var(--duration-normal) var(--ease-out-expo),
       border-color var(--duration-normal) ease;
   }
@@ -443,7 +493,7 @@
   }
 
   .seller-card .verified {
-    color: #3B82F6;
+    color: #3b82f6;
   }
 
   /* --- Safety Tips Box (Stitch Listing Detail) --- */
@@ -461,7 +511,7 @@
   }
 
   .safety-tips li::before {
-    content: '';
+    content: "";
     @apply w-1.5 h-1.5 rounded-full bg-gray-400 mt-2 flex-shrink-0;
   }
 
@@ -607,12 +657,22 @@
   /* --- Onboarding (Stitch Welcome Screen) --- */
   .onboarding-overlay {
     @apply absolute inset-0;
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2), transparent, rgba(0, 0, 0, 0.6));
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.2),
+      transparent,
+      rgba(0, 0, 0, 0.6)
+    );
   }
 
   .onboarding-teal-wash {
     @apply absolute inset-0 mix-blend-multiply opacity-90;
-    background: linear-gradient(to top, var(--color-ocean), rgba(131, 197, 190, 0.4), transparent);
+    background: linear-gradient(
+      to top,
+      var(--color-ocean),
+      rgba(131, 197, 190, 0.4),
+      transparent
+    );
   }
 
   .onboarding-cta {
@@ -680,14 +740,17 @@
 }
 
 @keyframes glowPulse {
-
   0%,
   100% {
-    box-shadow: 0 0 20px rgba(255, 107, 107, 0.2), 0 0 40px rgba(255, 107, 107, 0.1);
+    box-shadow:
+      0 0 20px rgba(255, 107, 107, 0.2),
+      0 0 40px rgba(255, 107, 107, 0.1);
   }
 
   50% {
-    box-shadow: 0 0 30px rgba(255, 107, 107, 0.4), 0 0 60px rgba(255, 107, 107, 0.2);
+    box-shadow:
+      0 0 30px rgba(255, 107, 107, 0.4),
+      0 0 60px rgba(255, 107, 107, 0.2);
   }
 }
 
@@ -696,8 +759,12 @@
 }
 
 @keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .animate-spin-slow {
@@ -900,13 +967,14 @@
 }
 
 .wave-divider::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: -1px;
   left: 0;
   width: 100%;
   height: 60px;
-  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 1200 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M321.39 56.44c58-10.79 114.16-30.13 172-41.86 82.39-16.72 168.19-17.73 250.45-.39C823.78 31 906.67 72 985.66 92.83c70.05 18.48 146.53 26.09 214.34 3V120H0V95.8c57.1-22.56 127.63-40.33 197.39-50.08 43.26-6 86.34-7.42 124-10.72z' fill='%23fafaf7'/%3E%3C/svg%3E") no-repeat bottom;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 1200 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M321.39 56.44c58-10.79 114.16-30.13 172-41.86 82.39-16.72 168.19-17.73 250.45-.39C823.78 31 906.67 72 985.66 92.83c70.05 18.48 146.53 26.09 214.34 3V120H0V95.8c57.1-22.56 127.63-40.33 197.39-50.08 43.26-6 86.34-7.42 124-10.72z' fill='%23fafaf7'/%3E%3C/svg%3E")
+    no-repeat bottom;
   background-size: cover;
 }
 
@@ -914,7 +982,6 @@
    REDUCED MOTION
    ============================================ */
 @media (prefers-reduced-motion: reduce) {
-
   *,
   *::before,
   *::after {

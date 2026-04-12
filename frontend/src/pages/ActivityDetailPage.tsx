@@ -56,14 +56,16 @@ export const ActivityDetailPage = () => {
       </header>
 
       <section className="grid gap-3 md:grid-cols-2">
-        {(activity.images.length > 0 ? activity.images : ["/images/placeholder.jpg"]).map((image) => (
-          <img
-            key={image}
-            src={image}
-            alt={`${activity.title} experience`}
-            className="h-64 w-full rounded-xl object-cover"
-          />
-        ))}
+        {(activity.images.length > 0 ? activity.images : ["/images/placeholder.jpg"]).map(
+          (image) => (
+            <img
+              key={image}
+              src={image}
+              alt={`${activity.title} experience`}
+              className="h-64 w-full rounded-xl object-cover"
+            />
+          ),
+        )}
       </section>
 
       <section className="grid gap-4 rounded-xl border bg-white p-5 md:grid-cols-2">
