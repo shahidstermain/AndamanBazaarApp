@@ -71,5 +71,5 @@ These instructions apply to the entire repository.
 
 ## Agent Expectations
 - Read nearby files before editing to preserve local patterns.
-- Do not remove or rotate credentials unless the user explicitly requests a security cleanup.
+- Do not rotate or revoke credentials as part of unrelated work unless the user explicitly requests a security cleanup, but when you encounter hardcoded secrets, you may flag them and migrate them to safer configuration patterns without changing the secret values.
 - Flag any mismatch between docs, config, and runtime behavior in your final response.
