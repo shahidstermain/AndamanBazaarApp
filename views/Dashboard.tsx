@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { AlertsSection, DashboardHero, KPISection, PrimaryInsightsSection, SecondaryPanelsSection } from './dashboard/DashboardSections';
 import { DEFAULT_PROFILE } from './dashboard/types';
 import type { DashboardState } from './dashboard/types';
-import { daysAgo } from './dashboard/utils';
+import { DASHBOARD_TARGETS, daysAgo } from './dashboard/utils';
 import { useDashboardMetrics } from './dashboard/useDashboardMetrics';
 
 const EMPTY_DASHBOARD_STATE: DashboardState = {
@@ -33,7 +33,7 @@ export const Dashboard: React.FC = () => {
         return;
       }
 
-      const recentTrendStart = daysAgo(13).toISOString();
+      const recentTrendStart = daysAgo(DASHBOARD_TARGETS.trendWindowDays * 2 - 1).toISOString();
 
       const [profileResult, listingsResult, chatsResult, recentChatsResult] = await Promise.all([
         supabase
